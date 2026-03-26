@@ -1,0 +1,151 @@
+{% extends 'staff/base.html' %}
+{% block title %}My Dashboard — Catrin Boys{% endblock %}
+{% block nav_dash %}active{% endblock %}
+{% block page_title %}Welcome, {{ me.first_name }} 👋{% endblock %}
+
+{% block content %}
+
+<div class="stats-row">
+  <div class="stat-card" style="--c:var(--teal)">
+    <div class="stat-icon">📋</div>
+    <div class="stat-val">{{ total_bookings }}</div>
+    <div class="stat-lbl">My Bookings</div>
+  </div>
+  <div class="stat-card" style="--c:var(--green)">
+    <div class="stat-icon">✅</div>
+    <div class="stat-val">{{ confirmed_count }}</div>
+    <div class="stat-lbl">Confirmed</div>
+  </div>
+  <div class="stat-card" style="--c:var(--gold)">
+    <div class="stat-icon">💰</div>
+    <div class="stat-val">₹{{ my_revenue|floatformat:0 }}</div>
+    <div class="stat-lbl">Revenue Generated</div>
+  </div>
+  <div class="stat-card" style="--c:var(--orange)">
+    <div class="stat-icon">💵</div>
+    <div class="stat-val">₹{{ total_earned|floatformat:0 }}</div>
+    <div class="stat-lbl">My Total Earnings</div>
+  </div>
+</div>
+
+<div class="grid2">
+  <!-- Upcoming Events -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">Upcoming Events</div>
+      <a href="{% url 'staff_bookings' %}" class="panel-link">All →</a>
+    </div>
+    {% for ev in upcoming %}
+    <div class="ev-item">
+      <div class="ev-box">
+        <div class="ev-day">{{ ev.event_date|date:"d" }}</div>
+        <div class="ev-mon">{{ ev.event_date|date:"M" }}</div>
+      </div>
+      <div>
+        <div class="ev-name">{{ ev.name }}</div>
+        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests</div>
+        <div class="ev-meta">📍 {{ ev.venue|default:"Venue TBD" }}</div>
+      </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center;color:var(--muted);padding:24px;font-size:0.83rem">
+      <i class="fas fa-calendar" style="font-size:1.8rem;margin-bottom:8px;display:block;opacity:0.3"></i>
+      No upcoming events
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Available Events to Claim -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">Available Shifts <span class="badge b-confirmed" style="font-size:0.6rem;margin-left:4px">{{ available_bookings|length }} Open</span></div>
+    </div>
+    {% for ev in available_bookings %}
+    <div class="ev-item" style="align-items:center">
+      <div class="ev-box" style="background:rgba(212,168,82,0.1);border-color:rgba(212,168,82,0.2)">
+        <div class="ev-day" style="color:var(--gold)">{{ ev.event_date|date:"d" }}</div>
+        <div class="ev-mon">{{ ev.event_date|date:"M" }}</div>
+      </div>
+      <div style="flex:1">
+        <div class="ev-name">{{ ev.name }}</div>
+        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests</div>
+        <div class="ev-meta">📍 {{ ev.venue|default:"Venue TBD" }}</div>
+      </div>
+      <form method="post" action="{% url 'staff_claim_booking' ev.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--surface);border:1px solid var(--gold);color:var(--gold)"><i class="fas fa-hand-paper"></i> Claim</button>
+      </form>
+    </div>
+    {% empty %}
+    <div style="text-align:center;color:var(--muted);padding:24px;font-size:0.83rem">
+      <i class="fas fa-check-circle" style="font-size:1.8rem;margin-bottom:8px;display:block;opacity:0.3;color:var(--green)"></i>
+      No open shifts right now
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid2">
+  <!-- Recent Bookings -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">Recently Created</div>
+      <a href="{% url 'staff_create_booking' %}" class="btn btn-teal btn-sm"><i class="fas fa-plus"></i> New</a>
+    </div>
+    {% for b in recent_bookings %}
+    <div class="ev-item" style="cursor:pointer" onclick="location.href='{% url 'staff_booking_detail' b.pk %}'">
+      <div>
+        <div class="ev-name">{{ b.name }}</div>
+        <div class="ev-meta">{{ b.get_event_type_display }} · {{ b.event_date|date:"d M" }}</div>
+        <div style="margin-top:4px">
+          <span class="badge b-{{ b.status }}">{{ b.get_status_display }}</span>
+          <span class="badge b-{{ b.payment_status }}" style="margin-left:4px">{{ b.get_payment_status_display }}</span>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center;color:var(--muted);padding:24px;font-size:0.83rem">No bookings yet. <a href="{% url 'staff_create_booking' %}" style="color:var(--teal)">Create one →</a></div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Earnings Summary -->
+<div class="panel">
+  <div class="panel-hdr">
+    <div class="panel-title">My Earnings Summary</div>
+    <a href="{% url 'staff_payouts' %}" class="panel-link">View all →</a>
+  </div>
+  <div class="responsive-grid cols-3" style="text-align:center;padding:10px 0;gap:10px">
+    <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--green)">₹{{ total_earned|floatformat:0 }}</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Total Received</div>
+    </div>
+    <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--orange)">₹{{ pending_pay|floatformat:0 }}</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Pending Payment</div>
+    </div>
+    <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--teal)">{{ me.daily_rate|floatformat:0 }}</div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Daily Rate (₹)</div>
+    </div>
+  </div>
+
+  {% if my_payouts %}
+  <table style="margin-top:16px">
+    <thead><tr><th>Type</th><th>Amount</th><th>Status</th><th>Date</th><th>Ref</th></tr></thead>
+    <tbody>
+      {% for p in my_payouts %}
+      <tr>
+        <td>{{ p.get_payout_type_display }}</td>
+        <td style="color:var(--teal);font-weight:600">₹{{ p.amount }}</td>
+        <td><span class="badge b-{{ p.status }}">{{ p.get_status_display }}</span></td>
+        <td style="color:var(--muted)">{{ p.paid_on|date:"d M Y"|default:"—" }}</td>
+        <td style="color:var(--muted);font-family:monospace;font-size:0.75rem">{{ p.reference|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Add Staff — Catrin Boys Admin{% endblock %}
+{% block page_title %}Add Staff Member{% endblock %}
+
+{% block content %}
+
+<div style="max-width:640px">
+  <a href="{% url 'admin_staff' %}" class="btn btn-ghost" style="margin-bottom:24px">
+    <i class="fas fa-arrow-left"></i> Back to Staff List
+  </a>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">New Staff Member</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" name="full_name" required placeholder="e.g. John Doe"/>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Role *</label>
+          <select name="role" required>
+            <option value="server">Server / Waiter</option>
+            <option value="chef">Chef</option>
+            <option value="driver">Driver</option>
+            <option value="manager">Manager</option>
+            <option value="cleaner">Cleaner</option>
+            <option value="admin">Admin</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Daily Rate (₹) *</label>
+          <input type="number" name="daily_rate" required step="1" value="0"/>
+        </div>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="text" name="phone" placeholder="e.g. 9876543210"/>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="e.g. john@example.com"/>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding:12px;background:rgba(212,168,82,0.1);border-left:3px solid var(--gold);border-radius:4px;font-size:0.9rem;color:var(--text-light)">
+        <i class="fas fa-info-circle" style="color:var(--gold)"></i> 
+        Upon creation, a unique Staff ID will be generated automatically. 
+        The default login password will be set to <strong>password123</strong>.
+      </div>
+
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;margin-top:20px">
+        <i class="fas fa-user-plus"></i> Add Staff Member
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

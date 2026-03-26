@@ -1,0 +1,93 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Create Booking — Catrin Boys Admin{% endblock %}
+{% block page_title %}New Manual Booking{% endblock %}
+
+{% block content %}
+
+<div style="max-width:800px">
+  <a href="{% url 'admin_bookings' %}" class="btn btn-ghost" style="margin-bottom:24px">
+    <i class="fas fa-arrow-left"></i> Back to Bookings
+  </a>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Client &amp; Event Details</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:20px">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" required placeholder="Client Name"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number *</label>
+          <input type="text" name="phone" required placeholder="e.g. 9876543210"/>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="client@example.com"/>
+        </div>
+        <div class="form-group">
+          <label>Company/Org (Optional)</label>
+          <input type="text" name="company" placeholder="Corporate Name"/>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">
+        <div class="panel-title" style="margin-bottom:16px;font-size:0.9rem">Event Specifications</div>
+        
+        <div class="responsive-grid cols-2" style=" 1fr;gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label>Event Type *</label>
+            <select name="event_type" required>
+              <option value="wedding">Wedding / Reception</option>
+              <option value="corporate">Corporate Event</option>
+              <option value="party">Private Party / Birthday</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Event Date *</label>
+            <input type="date" name="event_date" required/>
+          </div>
+          <div class="form-group">
+            <label>Guest Count *</label>
+            <input type="number" name="guest_count" required value="50"/>
+          </div>
+        </div>
+
+        <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label>Event Time</label>
+            <input type="time" name="event_time"/>
+          </div>
+          <div class="form-group">
+            <label>Expected Budget (₹)</label>
+            <input type="number" name="budget" step="100" placeholder="e.g. 150000"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Venue / Location</label>
+          <input type="text" name="venue" placeholder="Full address or Venue Name"/>
+        </div>
+        <div class="form-group">
+          <label>Dietary Requirements &amp; Special Requests</label>
+          <textarea name="dietary_requirements" rows="2" placeholder="e.g. 20 veg meals, 5 vegan..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Additional Notes</label>
+          <textarea name="message" rows="2" placeholder="Internal admin notes or specific client requests..."></textarea>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;margin-top:10px;padding:12px">
+        <i class="fas fa-calendar-check"></i> Submit &amp; Confirm Booking
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

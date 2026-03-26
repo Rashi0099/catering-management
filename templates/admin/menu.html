@@ -1,0 +1,67 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Menu — Catrin Boys{% endblock %}
+{% block page_title %}Menu Management{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+  <a href="{% url 'admin_menu_add' %}" class="btn btn-gold"><i class="fas fa-plus"></i> Add Item</a>
+</div>
+
+{% for category in categories %}
+<div class="panel" style="margin-bottom:20px">
+  <div class="panel-header">
+    <div class="panel-title">{{ category.icon }} {{ category.name }}</div>
+    <span style="font-size:0.8rem;color:var(--muted)">{{ category.items.count }} items</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Dish Name</th>
+        <th>Description</th>
+        <th>Price</th>
+        <th>Tags</th>
+        <th>Available</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in category.items.all %}
+      <tr>
+        <td style="font-weight:500">{{ item.name }}</td>
+        <td style="color:var(--muted);font-size:0.82rem">{{ item.description|truncatechars:60 }}</td>
+        <td style="color:var(--gold);font-weight:500">₹{{ item.price }}</td>
+        <td>
+          {% if item.is_vegetarian %}<span class="badge" style="background:rgba(46,204,133,0.12);color:var(--green)">🌿 Veg</span>{% endif %}
+          {% if item.is_vegan %}<span class="badge" style="background:rgba(46,204,133,0.12);color:var(--green)">🌱 Vegan</span>{% endif %}
+          {% if item.is_gluten_free %}<span class="badge" style="background:rgba(91,141,238,0.12);color:var(--blue)">GF</span>{% endif %}
+        </td>
+        <td>
+          {% if item.is_available %}
+          <span style="color:var(--green);font-size:0.82rem">✓ Yes</span>
+          {% else %}
+          <span style="color:var(--red);font-size:0.82rem">✗ No</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{% url 'admin_menu_delete' item.pk %}"
+             onclick="return confirm('Remove {{ item.name }} from menu?')"
+             class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem">
+            <i class="fas fa-trash"></i>
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="color:var(--muted);padding:20px">No items in this category</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% empty %}
+<div class="panel" style="text-align:center;padding:60px;color:var(--muted)">
+  <i class="fas fa-utensils" style="font-size:3rem;margin-bottom:16px;display:block;color:var(--border)"></i>
+  <p>No menu categories yet. <a href="/django-admin/menu/menucategory/add/" style="color:var(--gold)">Add one in Django Admin</a></p>
+</div>
+{% endfor %}
+
+{% endblock %}

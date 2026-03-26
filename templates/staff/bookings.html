@@ -1,0 +1,60 @@
+{% extends 'staff/base.html' %}
+{% block title %}My Bookings  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}
+{% block nav_book %}active  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}
+{% block page_title %}My Bookings  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+  <form method="get" style="display:flex;gap:8px;flex:1;min-width:280px">
+    <input type="text" name="q" placeholder="Search by name or phone..." value="{{ search }}" style="flex:1"/>
+    <select name="status" style="width:auto" onchange="this.form.submit()">
+      <option value="">All</option>
+      <option value="pending"     {% if status_filter == 'pending'     %}selected{% endif %}>Pending</option>
+      <option value="confirmed"   {% if status_filter == 'confirmed'   %}selected{% endif %}>Confirmed</option>
+      <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+      <option value="completed"   {% if status_filter == 'completed'   %}selected{% endif %}>Completed</option>
+      <option value="cancelled"   {% if status_filter == 'cancelled'   %}selected{% endif %}>Cancelled</option>
+    </select>
+    <button type="submit" class="btn btn-teal btn-sm"><i class="fas fa-search"></i></button>
+  </form>
+  <a href="{% url 'staff_create_booking' %}" class="btn btn-teal"><i class="fas fa-plus"></i> New Booking</a>
+</div>
+
+<div class="panel">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Client</th><th>Event</th><th>Date</th><th>Guests</th>
+        <th>Quoted</th><th>Received</th><th>Status</th><th>Payment</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr>
+        <td style="color:var(--muted);font-size:0.75rem">#{{ b.pk }}</td>
+        <td>
+          <div style="font-weight:500">{{ b.name }}</div>
+          <div style="font-size:0.73rem;color:var(--muted)">{{ b.phone }}</div>
+        </td>
+        <td>{{ b.get_event_type_display }}</td>
+        <td style="font-size:0.8rem">{{ b.event_date|date:"d M Y" }}</td>
+        <td>{{ b.guest_count }}</td>
+        <td style="color:var(--teal)">{% if b.quoted_price %}₹{{ b.quoted_price }}{% else %}—{% endif %}</td>
+        <td style="color:var(--green)">₹{{ b.amount_received }}</td>
+        <td><span class="badge b-{{ b.status }}">{{ b.get_status_display }}</span></td>
+        <td><span class="badge b-{{ b.payment_status }}">{{ b.get_payment_status_display }}</span></td>
+        <td><a href="{% url 'staff_booking_detail' b.pk %}" class="btn btn-ghost btn-sm">View</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">
+        No bookings found. <a href="{% url 'staff_create_booking' %}" style="color:var(--teal)">Create your first →</a>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}

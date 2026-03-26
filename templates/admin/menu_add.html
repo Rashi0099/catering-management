@@ -1,0 +1,59 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Add Menu Item — Catrin Boys{% endblock %}
+{% block page_title %}Add Menu Item{% endblock %}
+
+{% block content %}
+
+<div style="max-width:640px">
+  <a href="{% url 'admin_menu' %}" class="btn btn-ghost" style="margin-bottom:24px">
+    <i class="fas fa-arrow-left"></i> Back to Menu
+  </a>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">New Menu Item</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Category *</label>
+        <select name="category" required>
+          <option value="">Select category...</option>
+          {% for cat in categories %}
+          <option value="{{ cat.pk }}">{{ cat.icon }} {{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Dish Name *</label>
+          <input type="text" name="name" required placeholder="e.g. Chicken Biryani"/>
+        </div>
+        <div class="form-group">
+          <label>Price (₹) *</label>
+          <input type="number" name="price" required step="0.01" placeholder="e.g. 299"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea name="description" required rows="3" placeholder="Describe the dish..."></textarea>
+      </div>
+      <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_vegetarian" style="width:auto;padding:0"/> Vegetarian
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_vegan" style="width:auto;padding:0"/> Vegan
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_featured" style="width:auto;padding:0"/> Featured on Homepage
+        </label>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
+        <i class="fas fa-plus"></i> Add to Menu
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

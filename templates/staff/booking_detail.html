@@ -1,0 +1,139 @@
+{% extends 'staff/base.html' %}
+{% block title %}Booking #{{ booking.pk }}{% endblock %}
+{% block nav_book %}active{% endblock %}
+{% block page_title %}Booking #{{ booking.pk }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px">
+  <a href="{% url 'staff_bookings' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+</div>
+
+<div class="responsive-grid cols-2" style="gap:18px">
+
+  <!-- LEFT -->
+  <div>
+    <!-- Client -->
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-hdr"><div class="panel-title">Client Details</div>
+        <span class="badge b-{{ booking.status }}">{{ booking.get_status_display }}</span>
+      </div>
+      <div class="form-row cols-3">
+        <div><label>Name</label><div style="font-weight:500">{{ booking.name }}</div></div>
+        <div><label>Phone</label><div>{{ booking.phone }}</div></div>
+        <div><label>Email</label><div style="font-size:0.8rem">{{ booking.email }}</div></div>
+        <div><label>Event</label><div>{{ booking.get_event_type_display }}</div></div>
+        <div><label>Date</label><div>{{ booking.event_date|date:"d M Y" }}</div></div>
+        <div><label>Guests</label><div>{{ booking.guest_count }} pax</div></div>
+        {% if booking.venue %}
+        <div style="grid-column:1/-1"><label>Venue</label><div>{{ booking.venue }}</div></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Payment Summary -->
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-hdr">
+        <div class="panel-title">Payment Summary</div>
+        <span class="badge b-{{ booking.payment_status }}">{{ booking.get_payment_status_display }}</span>
+      </div>
+      <div class="responsive-grid cols-3" style="gap:12px;margin-bottom:18px">
+        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--teal)">
+            {% if booking.quoted_price %}₹{{ booking.quoted_price }}{% else %}—{% endif %}
+          </div>
+          <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Quoted</div>
+        </div>
+        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--green)">₹{{ booking.amount_received }}</div>
+          <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Received</div>
+        </div>
+        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--orange)">₹{{ booking.balance_due }}</div>
+          <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Balance Due</div>
+        </div>
+      </div>
+
+      <!-- Payment history -->
+      {% if payments %}
+      <table>
+        <thead><tr><th>Amount</th><th>Method</th><th>Date</th><th>Ref</th><th>By</th></tr></thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td style="color:var(--green);font-weight:600">₹{{ p.amount }}</td>
+            <td>{{ p.get_method_display }}</td>
+            <td style="color:var(--muted)">{{ p.received_on|date:"d M Y" }}</td>
+            <td style="font-family:monospace;font-size:0.75rem;color:var(--muted)">{{ p.reference|default:"—" }}</td>
+            <td style="font-size:0.78rem">{{ p.received_by.full_name|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--muted);font-size:0.83rem;text-align:center;padding:14px">No payments recorded yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div>
+    <!-- Record Payment -->
+    {% if booking.status != 'cancelled' %}
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-hdr"><div class="panel-title">Record Payment</div></div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_payment"/>
+        <div class="form-group">
+          <label>Amount (₹) *</label>
+          <input type="number" name="amount" step="0.01" required placeholder="Enter amount received"/>
+        </div>
+        <div class="form-group">
+          <label>Payment Method *</label>
+          <select name="method" required>
+            <option value="cash">💵 Cash</option>
+            <option value="upi">📱 UPI / GPay</option>
+            <option value="bank">🏦 Bank Transfer</option>
+            <option value="card">💳 Card</option>
+            <option value="cheque">📄 Cheque</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date Received *</label>
+          <input type="date" name="received_on" required value="{{ today }}"/>
+        </div>
+        <div class="form-group">
+          <label>Reference / TXN ID</label>
+          <input type="text" name="reference" placeholder="UPI ref or cheque no."/>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea name="notes" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-teal" style="width:100%;justify-content:center">
+          <i class="fas fa-plus"></i> Add Payment
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- Booking Info Box -->
+    <div class="panel">
+      <div style="font-size:0.76rem;color:var(--muted)">
+        <div style="margin-bottom:6px"><i class="fas fa-user" style="margin-right:6px"></i>
+          Created by: {{ booking.created_by.full_name|default:"—" }}</div>
+        <div style="margin-bottom:6px"><i class="fas fa-plus-circle" style="margin-right:6px"></i>
+          {{ booking.created_at|date:"d M Y, h:i A" }}</div>
+        <div><i class="fas fa-edit" style="margin-right:6px"></i>
+          Updated: {{ booking.updated_at|date:"d M Y" }}</div>
+      </div>
+      {% if booking.admin_notes %}
+      <div style="margin-top:12px;padding:10px;background:var(--surface);border-radius:8px;font-size:0.8rem;border-left:3px solid var(--teal)">
+        <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px">ADMIN NOTE</div>
+        {{ booking.admin_notes }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

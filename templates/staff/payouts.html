@@ -1,0 +1,59 @@
+{% extends 'staff/base.html' %}
+{% block title %}My Earnings  {% include 'pagination.html' with page_obj=payouts %}
+{% endblock %}
+{% block nav_pay %}active  {% include 'pagination.html' with page_obj=payouts %}
+{% endblock %}
+{% block page_title %}My Earnings & Payouts  {% include 'pagination.html' with page_obj=payouts %}
+{% endblock %}
+
+{% block content %}
+
+<div class="responsive-grid cols-3" style="gap:16px;margin-bottom:24px">
+  <div class="stat-card" style="--c:var(--green)">
+    <div class="stat-icon">✅</div>
+    <div class="stat-val">₹{{ total_earned|floatformat:0 }}</div>
+    <div class="stat-lbl">Total Received</div>
+  </div>
+  <div class="stat-card" style="--c:var(--orange)">
+    <div class="stat-icon">⏳</div>
+    <div class="stat-val">₹{{ pending_amt|floatformat:0 }}</div>
+    <div class="stat-lbl">Pending</div>
+  </div>
+  <div class="stat-card" style="--c:var(--teal)">
+    <div class="stat-icon">📅</div>
+    <div class="stat-val">₹{{ request.user.daily_rate|floatformat:0 }}</div>
+    <div class="stat-lbl">My Daily Rate</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr">
+    <div class="panel-title">All Payouts</div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Amount</th><th>For Event</th><th>Status</th><th>Paid On</th><th>Paid By</th><th>Reference</th></tr>
+    </thead>
+    <tbody>
+      {% for p in payouts %}
+      <tr>
+        <td>{{ p.get_payout_type_display }}</td>
+        <td style="font-weight:600;color:{% if p.status == 'paid' %}var(--green){% else %}var(--orange){% endif %}">
+          ₹{{ p.amount }}
+        </td>
+        <td style="font-size:0.8rem;color:var(--muted)">
+          {% if p.booking %}{{ p.booking.name }} ({{ p.booking.get_event_type_display }}){% else %}—{% endif %}
+        </td>
+        <td><span class="badge b-{{ p.status }}">{{ p.get_status_display }}</span></td>
+        <td style="color:var(--muted);font-size:0.8rem">{{ p.paid_on|date:"d M Y"|default:"—" }}</td>
+        <td style="font-size:0.8rem">{{ p.paid_by|default:"—" }}</td>
+        <td style="font-family:monospace;font-size:0.75rem;color:var(--muted)">{{ p.reference|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">No payouts recorded yet. Your manager will add them.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+  {% include 'pagination.html' with page_obj=payouts %}
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Bookings — Catrin Boys  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}
+{% block page_title %}Bookings  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}
+
+{% block content %}
+
+<div class="search-bar">
+  <form method="get" style="display:flex;gap:10px;flex:1">
+    <div class="search-input-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" name="search" placeholder="Search by name, email or event type..." value="{{ search }}"/>
+    </div>
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+      <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+      <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+      <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+      <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+    <button type="submit" class="btn btn-gold">Filter</button>
+  </form>
+</div>
+
+<div class="panel">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Client</th>
+        <th>Event Type</th>
+        <th>Date</th>
+        <th>Guests</th>
+        <th>Venue</th>
+        <th>Status</th>
+        <th>Received</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr>
+        <td style="color:var(--muted);font-size:0.78rem">#{{ b.pk }}</td>
+        <td>
+          <div style="font-weight:500">{{ b.name }}</div>
+          <div style="font-size:0.75rem;color:var(--muted)">{{ b.phone }}</div>
+        </td>
+        <td>{{ b.get_event_type_display }}</td>
+        <td>
+          <div>{{ b.event_date|date:"d M Y" }}</div>
+          {% if b.event_time %}<div style="font-size:0.75rem;color:var(--muted)">{{ b.event_time|time:"h:i A" }}</div>{% endif %}
+        </td>
+        <td>{{ b.guest_count }} pax</td>
+        <td style="font-size:0.82rem;color:var(--muted)">{{ b.venue|truncatechars:25|default:"—" }}</td>
+        <td>
+          <select onchange="updateStatus({{ b.pk }}, this.value, this)" class="status-select" style="width:auto;padding:4px 8px;font-size:0.78rem">
+            <option value="pending"     {% if b.status == 'pending'     %}selected{% endif %}>⏳ Pending</option>
+            <option value="confirmed"   {% if b.status == 'confirmed'   %}selected{% endif %}>✅ Confirmed</option>
+            <option value="in_progress" {% if b.status == 'in_progress' %}selected{% endif %}>🔄 In Progress</option>
+            <option value="completed"   {% if b.status == 'completed'   %}selected{% endif %}>🏁 Completed</option>
+            <option value="cancelled"   {% if b.status == 'cancelled'   %}selected{% endif %}>❌ Cancelled</option>
+          </select>
+        </td>
+        <td style="font-size:0.78rem;color:var(--muted)">{{ b.created_at|date:"d M" }}</td>
+        <td>
+          <a href="{% url 'admin_booking_detail' b.pk %}" class="btn btn-ghost" style="padding:5px 12px;font-size:0.78rem">
+            View <i class="fas fa-arrow-right"></i>
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" style="text-align:center;padding:50px;color:var(--muted)">
+          <i class="fas fa-calendar-times" style="font-size:2.5rem;margin-bottom:12px;display:block"></i>
+          No bookings found
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateStatus(bookingId, status, sel) {
+  fetch(`/admin-panel/bookings/${bookingId}/update-status/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: `status=${status}`
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      // Flash row green briefly
+      sel.closest('tr').style.background = 'rgba(46,204,133,0.08)';
+      setTimeout(() => sel.closest('tr').style.background = '', 800);
+    }
+  });
+}
+</script>
+  {% include 'pagination.html' with page_obj=bookings %}
+{% endblock %}

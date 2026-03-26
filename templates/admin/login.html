@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — Catrin Boys</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0d0f14;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e8eaf0;
+    }
+
+    /* Decorative background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at 30% 20%, rgba(212,168,82,0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(91,141,238,0.05) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .login-box {
+      width: 100%; max-width: 400px;
+      background: #161a22;
+      border: 1px solid #252c3d;
+      border-radius: 20px;
+      padding: 44px 40px;
+      position: relative;
+    }
+
+    .login-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 60%; height: 2px;
+      background: linear-gradient(90deg, transparent, #d4a852, transparent);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .logo .icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+    .logo h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      color: #d4a852;
+    }
+    .logo p { font-size: 0.78rem; color: #7a849a; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 0.75rem; color: #7a849a; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.07em; }
+    input {
+      width: 100%; padding: 12px 16px;
+      background: #0d0f14;
+      border: 1px solid #252c3d;
+      border-radius: 10px;
+      color: #e8eaf0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+    input:focus { outline: none; border-color: #d4a852; }
+
+    .btn-login {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #d4a852, #b8902a);
+      border: none; border-radius: 10px;
+      color: #0d0f14; font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; margin-top: 8px;
+      letter-spacing: 0.03em;
+      transition: filter 0.2s;
+    }
+    .btn-login:hover { filter: brightness(1.1); }
+
+    .error-msg {
+      background: rgba(224,92,92,0.1);
+      border: 1px solid rgba(224,92,92,0.25);
+      color: #e05c5c;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.83rem;
+      margin-bottom: 18px;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: #7a849a;
+    }
+  </style>
+</head>
+<body>
+<div class="login-box">
+  <div class="logo">
+    <span class="icon">🍽️</span>
+    <h1>Catrin Boys</h1>
+    <p>Admin Panel</p>
+  </div>
+
+  {% for message in messages %}
+  <div class="error-msg">{{ message }}</div>
+  {% endfor %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" name="username" placeholder="Enter your username" autofocus required/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="••••••••" required/>
+    </div>
+    <button type="submit" class="btn-login">Sign In →</button>
+  </form>
+
+  <div class="footer-note">Only staff members can access this panel</div>
+</div>
+</body>
+</html>

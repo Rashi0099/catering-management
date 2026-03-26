@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}About Us — Catrin Boys{% endblock %}
+{% block nav_about %}active{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div style="padding:120px 5% 70px;background:linear-gradient(160deg,#fdf9f3,#f5ede0);text-align:center">
+  <div class="section-tag">Our Story</div>
+  <h1 class="section-title">About Catrin Boys</h1>
+  <div class="divider"></div>
+  <p class="section-sub" style="margin:0 auto">A passionate team of culinary professionals dedicated to making every event taste extraordinary.</p>
+</div>
+
+<!-- Story Section -->
+<section>
+  <div style="max-width:800px;margin:0 auto;text-align:center">
+    <div class="section-tag">Who We Are</div>
+    <h2 class="section-title">Born from a Passion for Food</h2>
+    <div class="divider"></div>
+    <p style="color:var(--muted);line-height:1.9;font-size:1.02rem;margin-bottom:20px">
+      Catrin Boys started as a small family catering business in Kozhikode, Kerala — built on the belief that great food brings people together. Over the years, we've grown into one of the most trusted catering teams in the region.
+    </p>
+    <p style="color:var(--muted);line-height:1.9;font-size:1.02rem">
+      From intimate family dinners to grand weddings with 1000+ guests, we bring the same care, freshness, and love to every single plate. Our chefs are trained in traditional Kerala cuisine as well as modern continental cooking, giving you the best of both worlds.
+    </p>
+  </div>
+</section>
+
+<!-- Values -->
+<section style="background:var(--warm)">
+  <div class="section-header">
+    <div class="section-tag">What Drives Us</div>
+    <h2 class="section-title">Our Values</h2>
+    <div class="divider"></div>
+  </div>
+  <div class="services-grid">
+    <div class="service-card">
+      <span class="service-icon">🌿</span>
+      <h3>Fresh Ingredients</h3>
+      <p>We source fresh, local ingredients every single day. No frozen shortcuts — only the real thing on your plate.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">⏰</span>
+      <h3>Always On Time</h3>
+      <p>We understand events run on tight schedules. Our team arrives early, sets up perfectly, and serves on time — every time.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">❤️</span>
+      <h3>Made with Love</h3>
+      <p>Every dish is prepared with genuine care. We treat your event like our own family celebration.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🤝</span>
+      <h3>Transparent Pricing</h3>
+      <p>No hidden charges. We give you a clear, detailed quote upfront so you can plan your event budget with confidence.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section>
+  <div class="responsive-grid cols-4" style="gap:24px;text-align:center">
+    {% for stat in stats %}
+    <div style="padding:32px;background:var(--white);border:1px solid var(--border);border-radius:16px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;color:var(--gold);font-weight:600">{{ stat.num }}</div>
+      <div style="font-size:0.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:6px">{{ stat.label }}</div>
+    </div>
+    {% empty %}
+    <div style="padding:32px;background:var(--white);border:1px solid var(--border);border-radius:16px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;color:var(--gold);font-weight:600">500+</div>
+      <div style="font-size:0.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:6px">Events Catered</div>
+    </div>
+    <div style="padding:32px;background:var(--white);border:1px solid var(--border);border-radius:16px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;color:var(--gold);font-weight:600">12+</div>
+      <div style="font-size:0.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:6px">Years Experience</div>
+    </div>
+    <div style="padding:32px;background:var(--white);border:1px solid var(--border);border-radius:16px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;color:var(--gold);font-weight:600">20+</div>
+      <div style="font-size:0.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:6px">Team Members</div>
+    </div>
+    <div style="padding:32px;background:var(--white);border:1px solid var(--border);border-radius:16px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:2.8rem;color:var(--gold);font-weight:600">98%</div>
+      <div style="font-size:0.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:6px">Happy Clients</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-band">
+  <h2>Ready to Work With Us?</h2>
+  <p>Let's make your next event the one people talk about for years.</p>
+  <a href="{% url 'booking' %}" class="btn-light">Book Your Event <i class="fas fa-arrow-right"></i></a>
+</div>
+
+{% endblock %}

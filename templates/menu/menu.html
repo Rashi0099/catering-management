@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Our Menu — Catrin Boys{% endblock %}
+{% block nav_menu %}active{% endblock %}
+
+{% block content %}
+<div style="padding:120px 5% 80px">
+  <div class="section-header" style="margin-bottom:40px">
+    <div class="section-tag">What We Serve</div>
+    <h1 class="section-title">Our Menu</h1>
+    <div class="divider"></div>
+    <p class="section-sub">Freshly prepared with locally sourced ingredients. Every dish is crafted with love.</p>
+  </div>
+
+  <!-- Category Tabs -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:48px">
+    <a href="{% url 'menu' %}" style="padding:9px 22px;border-radius:50px;border:1.5px solid var(--border);text-decoration:none;font-size:0.85rem;font-weight:500;color:{% if not active_category %}var(--white){% else %}var(--muted){% endif %};background:{% if not active_category %}var(--brown){% else %}transparent{% endif %};transition:all 0.2s">
+      All Items
+    </a>
+    {% for cat in categories %}
+    <a href="{% url 'menu_category' cat.slug %}" style="padding:9px 22px;border-radius:50px;border:1.5px solid var(--border);text-decoration:none;font-size:0.85rem;font-weight:500;color:{% if active_category.slug == cat.slug %}var(--white){% else %}var(--muted){% endif %};background:{% if active_category.slug == cat.slug %}var(--brown){% else %}transparent{% endif %};transition:all 0.2s">
+      {{ cat.icon }} {{ cat.name }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Menu Items -->
+  <div class="menu-grid">
+    {% for item in items %}
+    <div class="menu-card">
+      <div class="menu-card-img">
+        {% if item.image %}
+        <img src="{{ item.image.url }}" style="width:100%;height:100%;object-fit:cover" alt="{{ item.name }}"/>
+        {% else %}
+        🍽️
+        {% endif %}
+      </div>
+      <div class="menu-card-body">
+        <h4>{{ item.name }}</h4>
+        <p>{{ item.description }}</p>
+        <div class="menu-card-footer">
+          <span class="price">₹{{ item.price }}</span>
+          <div style="display:flex;gap:6px">
+            {% if item.is_vegetarian %}
+            <span style="font-size:0.7rem;background:rgba(46,125,50,0.1);color:#2e7d32;padding:3px 8px;border-radius:20px;border:1px solid rgba(46,125,50,0.3)">🌿 Veg</span>
+            {% endif %}
+            {% if item.is_gluten_free %}
+            <span style="font-size:0.7rem;background:rgba(91,141,238,0.1);color:#3b6bc9;padding:3px 8px;border-radius:20px;border:1px solid rgba(91,141,238,0.3)">GF</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">
+      <div style="font-size:3rem;margin-bottom:16px">🍽️</div>
+      <p>Menu items coming soon. Check back later!</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<div class="cta-band">
+  <h2>Want a Custom Menu?</h2>
+  <p>We tailor every menu to your event, preferences, and budget. Let's create something special.</p>
+  <a href="{% url 'booking' %}" class="btn-light">Request Custom Quote</a>
+</div>
+{% endblock %}

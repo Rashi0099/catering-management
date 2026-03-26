@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Staff Portal — Catrin Boys{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:      #0f1117;
+      --surface: #171c26;
+      --card:    #1e2535;
+      --border:  #2a3347;
+      --teal:    #38c9b0;
+      --teal-dk: #24a090;
+      --gold:    #d4a852;
+      --text:    #e2e8f0;
+      --muted:   #6b7fa3;
+      --green:   #34d399;
+      --red:     #f87171;
+      --orange:  #fb923c;
+      --blue:    #60a5fa;
+      --sw: 220px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* Sidebar */
+    .sidebar { width: var(--sw); min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; }
+    .s-logo { padding: 24px 20px 18px; border-bottom: 1px solid var(--border); }
+    .s-logo .brand { font-family: 'Playfair Display', serif; font-size: 1.25rem; color: var(--teal); display: flex; align-items: center; gap: 8px; }
+    .s-logo .role-badge { display: inline-block; margin-top: 6px; font-size: 0.65rem; background: rgba(56,201,176,0.15); color: var(--teal); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(56,201,176,0.25); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+
+    .s-nav { padding: 14px 10px; flex: 1; }
+    .s-label { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; padding: 10px 12px 5px; }
+    .s-item { display: flex; align-items: center; gap: 11px; padding: 9px 13px; border-radius: 9px; margin-bottom: 2px; color: var(--muted); text-decoration: none; font-size: 0.86rem; font-weight: 500; transition: all 0.2s; }
+    .s-item:hover { background: var(--card); color: var(--text); }
+    .s-item.active { background: rgba(56,201,176,0.12); color: var(--teal); border: 1px solid rgba(56,201,176,0.2); }
+    .s-item i { width: 18px; text-align: center; font-size: 0.9rem; }
+
+    .s-footer { padding: 14px; border-top: 1px solid var(--border); }
+    .s-user { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .s-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--teal), #1a8070); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: #fff; flex-shrink: 0; }
+    .s-name { font-size: 0.84rem; font-weight: 600; }
+    .s-id { font-size: 0.7rem; color: var(--muted); font-family: monospace; }
+    .s-logout { display: flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 8px; background: rgba(248,113,113,0.1); color: var(--red); text-decoration: none; font-size: 0.8rem; font-weight: 500; transition: background 0.2s; }
+    .s-logout:hover { background: rgba(248,113,113,0.2); }
+
+    /* Main */
+    .main { margin-left: var(--sw); flex: 1; display: flex; flex-direction: column; }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+    .topbar-right { display: flex; gap: 12px; align-items: center; }
+
+    .content { padding: 28px; }
+
+    /* Cards */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--c, var(--teal)); }
+    .stat-icon { font-size: 1.6rem; margin-bottom: 12px; }
+    .stat-val { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--text); }
+    .stat-lbl { font-size: 0.74rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .panel-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .panel-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; }
+    .panel-link { font-size: 0.76rem; color: var(--teal); text-decoration: none; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    td { padding: 11px 12px; font-size: 0.83rem; border-bottom: 1px solid rgba(42,51,71,0.5); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.01); }
+
+    /* Badge */
+    .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 0.71rem; font-weight: 600; }
+    .b-pending    { background: rgba(251,146,60,0.15);  color: var(--orange); }
+    .b-confirmed  { background: rgba(52,211,153,0.15);  color: var(--green); }
+    .b-completed  { background: rgba(107,127,163,0.12); color: var(--muted); }
+    .b-cancelled  { background: rgba(248,113,113,0.12); color: var(--red); }
+    .b-paid       { background: rgba(52,211,153,0.15);  color: var(--green); }
+    .b-partial    { background: rgba(96,165,250,0.15);  color: var(--blue); }
+    .b-unpaid     { background: rgba(248,113,113,0.12); color: var(--red); }
+
+    /* Btn */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 500; cursor: pointer; text-decoration: none; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+    .btn-teal   { background: linear-gradient(135deg, var(--teal), var(--teal-dk)); color: #0f1117; font-weight: 600; }
+    .btn-teal:hover { filter: brightness(1.1); }
+    .btn-ghost  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+    .btn-sm     { padding: 5px 12px; font-size: 0.76rem; }
+
+    /* Form */
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 0.74rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
+    input, select, textarea { width: 100%; padding: 10px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.87rem; transition: border-color 0.2s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--teal); }
+    textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* Alert */
+    .alert { padding: 11px 15px; border-radius: 8px; margin-bottom: 16px; font-size: 0.84rem; }
+    .alert-success { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); color: var(--green); }
+    .alert-error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--red); }
+
+    /* Event item */
+    .ev-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(42,51,71,0.5); }
+    .ev-item:last-child { border-bottom: none; }
+    .ev-box { min-width: 40px; height: 44px; background: rgba(56,201,176,0.1); border: 1px solid rgba(56,201,176,0.2); border-radius: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ev-day { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--teal); line-height: 1; }
+    .ev-mon { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; }
+    .ev-name { font-size: 0.86rem; font-weight: 500; }
+    .ev-meta { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
+
+    /* Responsive Utilities */
+    .responsive-grid { display: grid; gap: 14px; }
+    .cols-2 { grid-template-columns: 1fr 1fr; }
+    .cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .mobile-menu-btn {
+      display: none; background: none; border: none; font-size: 1.4rem; color: var(--text); cursor: pointer;
+    }
+    
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px);
+    }
+
+    @media (max-width: 1000px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; z-index: 100;}
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .mobile-menu-btn { display: block; }
+      .sidebar-overlay.active { display: block; }
+      
+      .stats-row { grid-template-columns: 1fr; margin-bottom: 20px; }
+      .cols-2, .cols-3, .cols-4, .grid2, .form-row { grid-template-columns: 1fr !important; }
+      .topbar { padding: 14px 20px; }
+      .content { padding: 20px; }
+      .form-group { margin-bottom: 12px; }
+      .ev-item { flex-direction: column; }
+      .ev-box { flex-direction: row; height: auto; width: 100%; padding: 8px; gap: 8px; }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="s-logo">
+    <div class="brand">🍽️ Catrin Boys</div>
+    <span class="role-badge">{{ request.user.get_role_display }}</span>
+  </div>
+  <nav class="s-nav">
+    <div class="s-label">My Portal</div>
+    <a href="{% url 'staff_dashboard' %}" class="s-item {% block nav_dash %}{% endblock %}">
+      <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="{% url 'staff_bookings' %}" class="s-item {% block nav_book %}{% endblock %}">
+      <i class="fas fa-calendar-alt"></i> My Bookings
+    </a>
+    <a href="{% url 'staff_create_booking' %}" class="s-item {% block nav_new %}{% endblock %}">
+      <i class="fas fa-plus-circle"></i> New Booking
+    </a>
+    <div class="s-label">Finance</div>
+    <a href="{% url 'staff_payouts' %}" class="s-item {% block nav_pay %}{% endblock %}">
+      <i class="fas fa-wallet"></i> My Earnings
+    </a>
+    <div class="s-label">Settings</div>
+    <a href="{% url 'staff_change_password' %}" class="s-item {% block nav_sec %}{% endblock %}">
+      <i class="fas fa-lock"></i> Password
+    </a>
+  </nav>
+  <div class="s-footer">
+    <div class="s-user">
+      <div class="s-avatar">{{ request.user.full_name|first|upper }}</div>
+      <div>
+        <div class="s-name">{{ request.user.full_name }}</div>
+        <div class="s-id">{{ request.user.staff_id }}</div>
+      </div>
+    </div>
+    <a href="{% url 'staff_logout' %}" class="s-logout">
+      <i class="fas fa-sign-out-alt"></i> Sign Out
+    </a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+    </div>
+    <div class="topbar-right">
+      <a href="{% url 'staff_create_booking' %}" class="btn btn-teal btn-sm">
+        <i class="fas fa-plus"></i> New Booking
+      </a>
+    </div>
+  </div>
+  <div class="content">
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }}"><i class="fas fa-{% if msg.tags == 'success' %}check{% else %}exclamation{% endif %}-circle"></i> {{ msg }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<script>
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(el => {
+      el.style.transition = 'opacity 0.4s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 400);
+    });
+  }, 3500);
+
+  // Toggle Sidebar
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('active');
+    document.body.style.overflow = document.getElementById('sidebar').classList.contains('open') ? 'hidden' : 'auto';
+  }
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

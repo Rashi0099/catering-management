@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Staff Login — Catrin Boys</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root { --teal:#38c9b0; --bg:#0f1117; --surface:#171c26; --border:#2a3347; --text:#e2e8f0; --muted:#6b7fa3; --red:#f87171; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; color:var(--text); }
+    body::before {
+      content:''; position:fixed; inset:0;
+      background: radial-gradient(ellipse at 25% 30%, rgba(56,201,176,0.07) 0%, transparent 55%),
+                  radial-gradient(ellipse at 75% 70%, rgba(212,168,82,0.05) 0%, transparent 55%);
+      pointer-events:none;
+    }
+    .box { width:100%; max-width:400px; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:42px 38px; position:relative; }
+    .box::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:50%; height:2px; background:linear-gradient(90deg,transparent,var(--teal),transparent); }
+    .logo { text-align:center; margin-bottom:32px; }
+    .logo .icon { font-size:2.2rem; display:block; margin-bottom:10px; }
+    .logo h1 { font-family:'Playfair Display',serif; font-size:1.6rem; color:var(--teal); }
+    .logo p { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:4px; }
+    .form-group { margin-bottom:16px; }
+    label { display:block; font-size:0.72rem; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.07em; }
+    input { width:100%; padding:12px 15px; background:#0f1117; border:1px solid var(--border); border-radius:9px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; transition:border-color 0.2s; font-weight:500; }
+    input:focus { outline:none; border-color:var(--teal); }
+    .btn { width:100%; padding:13px; background:linear-gradient(135deg, var(--teal), #24a090); border:none; border-radius:9px; color:#0f1117; font-family:'DM Sans',sans-serif; font-size:0.95rem; font-weight:700; cursor:pointer; margin-top:6px; letter-spacing:0.02em; transition:filter 0.2s; }
+    .btn:hover { filter:brightness(1.08); }
+    .error { background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.25); color:var(--red); padding:10px 14px; border-radius:8px; font-size:0.82rem; margin-bottom:16px; }
+    .hint { text-align:center; margin-top:20px; font-size:0.74rem; color:var(--muted); }
+    .hint a { color:var(--teal); text-decoration:none; }
+    .id-hint { font-size:0.7rem; color:var(--muted); margin-top:4px; font-family:monospace; }
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">
+    <span class="icon">🍽️</span>
+    <h1>Staff Portal</h1>
+    <p>Catrin Boys — Team Login</p>
+  </div>
+
+  {% for msg in messages %}
+  <div class="error">{{ msg }}</div>
+  {% endfor %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Staff ID</label>
+      <input type="text" name="staff_id" placeholder="e.g. CB-2024-0042" autofocus required style="text-transform:uppercase"/>
+      <div class="id-hint">Your ID is printed on your staff card</div>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="••••••••" required/>
+    </div>
+    <button type="submit" class="btn">Sign In →</button>
+  </form>
+
+  <div class="hint">
+    Forgot password? Contact your <a href="#">manager</a>
+  </div>
+</div>
+</body>
+</html>

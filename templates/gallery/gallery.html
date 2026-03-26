@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Gallery — Catrin Boys{% endblock %}
+{% block nav_gallery %}active{% endblock %}
+
+{% block content %}
+<div style="padding:120px 5% 80px">
+  <div class="section-header">
+    <div class="section-tag">Our Work</div>
+    <h1 class="section-title">Event Gallery</h1>
+    <div class="divider"></div>
+    <p class="section-sub">A glimpse into the beautiful events we've had the privilege to serve.</p>
+  </div>
+
+  <!-- Category Filter -->
+  {% if categories %}
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:40px">
+    <a href="{% url 'gallery' %}" style="padding:8px 20px;border-radius:50px;border:1.5px solid var(--border);text-decoration:none;font-size:0.83rem;color:var(--muted);font-weight:500">All</a>
+    {% for cat in categories %}
+    <a href="?cat={{ cat.id }}" style="padding:8px 20px;border-radius:50px;border:1.5px solid var(--border);text-decoration:none;font-size:0.83rem;color:var(--muted);font-weight:500">{{ cat.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Image Grid -->
+  <div class="responsive-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+    {% for img in images %}
+    <div style="border-radius:14px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3;background:var(--warm);position:relative;cursor:pointer" onclick="openLightbox('{{ img.image.url }}', '{{ img.title }}')">
+      <img src="{{ img.image.url }}" alt="{{ img.title }}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.4s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
+      <div style="position:absolute;bottom:0;left:0;right:0;padding:14px 16px;background:linear-gradient(transparent,rgba(30,20,16,0.8));color:#fff">
+        <div style="font-size:0.85rem;font-weight:500">{{ img.title }}</div>
+        {% if img.category %}<div style="font-size:0.72rem;opacity:0.7">{{ img.category.name }}</div>{% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1;text-align:center;padding:80px;color:var(--muted)">
+      <div style="font-size:3.5rem;margin-bottom:16px">📸</div>
+      <p>Gallery photos coming soon!</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1000;align-items:center;justify-content:center;flex-direction:column;padding:20px" onclick="closeLightbox()">
+  <img id="lb-img" src="" style="max-width:90vw;max-height:80vh;border-radius:12px;object-fit:contain"/>
+  <div id="lb-title" style="color:#fff;margin-top:14px;font-size:0.92rem;opacity:0.8"></div>
+  <div style="position:absolute;top:24px;right:24px;color:#fff;font-size:1.8rem;cursor:pointer;line-height:1">✕</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openLightbox(src, title) {
+  document.getElementById('lb-img').src = src;
+  document.getElementById('lb-title').textContent = title;
+  const lb = document.getElementById('lightbox');
+  lb.style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
+</script>
+{% endblock %}

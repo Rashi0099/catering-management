@@ -1,0 +1,46 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}The Team — Catrin Boys{% endblock %}
+{% block page_title %}The Team 👨‍🍳{% endblock %}
+
+{% block content %}
+
+<div style="text-align:center;margin-bottom:36px">
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold);margin-bottom:8px">The Catrin Boys</h2>
+  <p style="color:var(--muted);font-size:0.9rem">The talented team behind every event</p>
+</div>
+
+<div class="responsive-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:32px">
+  {% for member in team %}
+  <div class="panel" style="text-align:center;padding:32px 24px">
+    <div style="font-size:3rem;margin-bottom:14px">{{ member.emoji }}</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:4px">{{ member.name }}</div>
+    <div style="font-size:0.78rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em">{{ member.role }}</div>
+    <div style="margin-top:16px;display:flex;justify-content:center;gap:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--green)" title="Online"></div>
+      <span style="font-size:0.73rem;color:var(--muted)">Active</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">Team Stats</div>
+  </div>
+  <div class="responsive-grid cols-3" style="gap:20px;text-align:center;padding:10px 0">
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold)">{{ team|length }}</div>
+      <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Team Members</div>
+    </div>
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--green)">500+</div>
+      <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Events Served</div>
+    </div>
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--blue)">5★</div>
+      <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Average Rating</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

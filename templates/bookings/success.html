@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Booking Received — Catrin Boys{% endblock %}
+
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:120px 5% 80px;text-align:center">
+  <div style="max-width:500px">
+    <div style="font-size:4rem;margin-bottom:24px">🎉</div>
+    <h1 style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;color:var(--brown);margin-bottom:16px">
+      Booking Received!
+    </h1>
+    <p style="color:var(--muted);line-height:1.7;margin-bottom:32px">
+      Thank you for reaching out to Catrin Boys! Our team will review your request and get back to you within <strong>24 hours</strong> with a personalised quote.
+    </p>
+    <div style="background:var(--warm);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:32px">
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px">Questions? Reach us at</div>
+      <a href="tel:+919876543210" style="font-size:1.1rem;font-weight:600;color:var(--brown);text-decoration:none">📞 +91 98765 43210</a>
+    </div>
+    <a href="{% url 'home' %}" class="btn-primary">Back to Home <i class="fas fa-arrow-right"></i></a>
+  </div>
+</div>
+{% endblock %}

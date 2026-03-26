@@ -1,0 +1,163 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Booking #{{ booking.pk }} — Admin{% endblock %}
+{% block page_title %}Booking #{{ booking.pk }}{% endblock %}
+
+{% block content %}
+<div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;align-items:center">
+  <a href="{% url 'admin_bookings' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> All Bookings</a>
+  <span class="badge badge-{{ booking.status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_status_display }}</span>
+  <span class="badge badge-{{ booking.payment_status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_payment_status_display }}</span>
+</div>
+
+<div class="responsive-grid cols-2" style="gap:20px">
+
+  <!-- LEFT -->
+  <div>
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-header"><div class="panel-title">Client & Event</div></div>
+      <div class="responsive-grid cols-3" style="gap:14px">
+        <div><label>Name</label><div style="font-weight:500">{{ booking.name }}</div></div>
+        <div><label>Phone</label><div>{{ booking.phone }}</div></div>
+        <div><label>Email</label><div style="font-size:0.82rem"><a href="mailto:{{ booking.email }}" style="color:var(--gold)">{{ booking.email }}</a></div></div>
+        <div><label>Event Type</label><div>{{ booking.get_event_type_display }}</div></div>
+        <div><label>Date</label><div>{{ booking.event_date|date:"d M Y" }}</div></div>
+        <div><label>Guests</label><div>{{ booking.guest_count }} pax</div></div>
+        {% if booking.venue %}<div style="grid-column:1/-1"><label>Venue</label><div>{{ booking.venue }}</div></div>{% endif %}
+        {% if booking.budget %}<div><label>Client Budget</label><div style="color:var(--gold)">₹{{ booking.budget }}</div></div>{% endif %}
+      </div>
+      {% if booking.message %}
+      <div style="margin-top:14px;padding:12px;background:var(--surface);border-radius:8px;font-size:0.85rem;border-left:3px solid var(--gold)">
+        <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px">CLIENT MESSAGE</div>
+        {{ booking.message }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-header"><div class="panel-title">Payment Tracking</div></div>
+      <div class="responsive-grid cols-3" style="gap:12px;margin-bottom:18px">
+        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold)">{% if booking.quoted_price %}₹{{ booking.quoted_price }}{% else %}—{% endif %}</div>
+          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Quoted</div>
+        </div>
+        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--green)">₹{{ booking.amount_received }}</div>
+          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Received</div>
+        </div>
+        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
+          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--orange)">₹{{ booking.balance_due }}</div>
+          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Balance Due</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Amount</th><th>Method</th><th>Date</th><th>Reference</th><th>By</th></tr></thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td style="color:var(--green);font-weight:600">₹{{ p.amount }}</td>
+            <td>{{ p.get_method_display }}</td>
+            <td style="color:var(--muted)">{{ p.received_on|date:"d M Y" }}</td>
+            <td style="font-family:monospace;font-size:0.75rem;color:var(--muted)">{{ p.reference|default:"—" }}</td>
+            <td style="font-size:0.78rem">{{ p.received_by.full_name|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">No payments yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title">Assigned Staff</div></div>
+      {% if booking.assigned_to.all %}
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        {% for s in booking.assigned_to.all %}
+        <div style="background:var(--surface);border:1px solid var(--border);padding:8px 14px;border-radius:8px;font-size:0.82rem">
+          <span style="color:var(--gold);font-family:monospace">{{ s.staff_id }}</span>
+          <span style="margin-left:8px">{{ s.full_name }}</span>
+          <span style="margin-left:6px;color:var(--muted);font-size:0.73rem">({{ s.get_role_display }})</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<p style="color:var(--muted);font-size:0.83rem">No staff assigned yet.</p>{% endif %}
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div>
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-header"><div class="panel-title">Update Booking</div></div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_booking"/>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status">
+            <option value="pending"     {% if booking.status == 'pending'     %}selected{% endif %}>⏳ Pending</option>
+            <option value="confirmed"   {% if booking.status == 'confirmed'   %}selected{% endif %}>✅ Confirmed</option>
+            <option value="in_progress" {% if booking.status == 'in_progress' %}selected{% endif %}>🔄 In Progress</option>
+            <option value="completed"   {% if booking.status == 'completed'   %}selected{% endif %}>🏁 Completed</option>
+            <option value="cancelled"   {% if booking.status == 'cancelled'   %}selected{% endif %}>❌ Cancelled</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quoted Price (₹)</label>
+          <input type="number" name="quoted_price" step="0.01" value="{{ booking.quoted_price|default:'' }}" placeholder="Enter quote..."/>
+        </div>
+        <div class="form-group">
+          <label>Assign Staff</label>
+          <select name="assigned_to" multiple style="height:110px">
+            {% for s in all_staff %}
+            <option value="{{ s.pk }}" {% if s in booking.assigned_to.all %}selected{% endif %}>
+              {{ s.full_name }} ({{ s.get_role_display }})
+            </option>
+            {% endfor %}
+          </select>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">Ctrl/Cmd + click to select multiple</div>
+        </div>
+        <div class="form-group">
+          <label>Admin Notes</label>
+          <textarea name="admin_notes" rows="3">{{ booking.admin_notes }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title">Record Payment</div></div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_payment"/>
+        <div class="form-group">
+          <label>Amount (₹) *</label>
+          <input type="number" name="amount" step="0.01" required placeholder="Amount received"/>
+        </div>
+        <div class="form-group">
+          <label>Method *</label>
+          <select name="method" required>
+            <option value="cash">💵 Cash</option>
+            <option value="upi">📱 UPI / GPay</option>
+            <option value="bank">🏦 Bank Transfer</option>
+            <option value="card">💳 Card</option>
+            <option value="cheque">📄 Cheque</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date *</label>
+          <input type="date" name="received_on" required value="{{ today }}"/>
+        </div>
+        <div class="form-group">
+          <label>Reference / TXN ID</label>
+          <input type="text" name="reference" placeholder="UPI ref / cheque no."/>
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
+          <i class="fas fa-plus"></i> Add Payment
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

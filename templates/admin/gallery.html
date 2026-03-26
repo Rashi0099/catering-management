@@ -1,0 +1,40 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Gallery — Catrin Boys{% endblock %}
+{% block page_title %}Gallery{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+  <a href="/django-admin/gallery/galleryimage/add/" class="btn btn-gold" target="_blank">
+    <i class="fas fa-upload"></i> Upload Image
+  </a>
+</div>
+
+<div class="responsive-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+  {% for img in images %}
+  <div class="panel" style="padding:0;overflow:hidden">
+    <div style="height:150px;background:var(--border);overflow:hidden">
+      <img src="{{ img.image.url }}" style="width:100%;height:100%;object-fit:cover" alt="{{ img.title }}"/>
+    </div>
+    <div style="padding:14px">
+      <div style="font-size:0.88rem;font-weight:500;margin-bottom:4px">{{ img.title }}</div>
+      <div style="font-size:0.75rem;color:var(--muted)">{{ img.category.name|default:"Uncategorised" }}</div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        {% if img.is_featured %}
+        <span class="badge badge-confirmed">Featured</span>
+        {% endif %}
+        <a href="/django-admin/gallery/galleryimage/{{ img.pk }}/delete/" class="btn btn-danger" style="padding:4px 10px;font-size:0.72rem;margin-left:auto" onclick="return confirm('Delete this image?')">
+          <i class="fas fa-trash"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">
+    <i class="fas fa-images" style="font-size:3rem;margin-bottom:16px;display:block;opacity:0.3"></i>
+    No images uploaded yet.
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

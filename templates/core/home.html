@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}Catrin Boys — Premium Catering in Kozhikode{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-tag">✦ Premium Catering Service</div>
+    <h1>Every Event Deserves <em>Extraordinary</em> Food</h1>
+    <p>From intimate gatherings to grand celebrations — the Catrin Boys team crafts menus that delight every guest and make memories that last a lifetime.</p>
+    <div class="hero-btns">
+      <a href="{% url 'booking' %}" class="btn-primary">Book Your Event <i class="fas fa-arrow-right"></i></a>
+      <a href="{% url 'menu' %}" class="btn-outline">Explore Menu</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="num">500+</div>
+        <div class="lbl">Events Catered</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">12+</div>
+        <div class="lbl">Years Experience</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">98%</div>
+        <div class="lbl">Happy Clients</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section>
+  <div class="section-header">
+    <div class="section-tag">What We Do</div>
+    <h2 class="section-title">We Cater Every Occasion</h2>
+    <div class="divider"></div>
+    <p class="section-sub">From family functions to corporate dinners, our team brings passion and precision to every plate.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card">
+      <span class="service-icon">💒</span>
+      <h3>Weddings</h3>
+      <p>Make your special day unforgettable with customised menus, elegant presentation, and flawless service for your guests.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🏢</span>
+      <h3>Corporate Events</h3>
+      <p>Professional catering for conferences, product launches, team lunches, and business dinners. We match your brand standards.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🎂</span>
+      <h3>Birthday Parties</h3>
+      <p>From kids' birthdays to milestone celebrations — we design menus that reflect your personality and wow your guests.</p>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🎓</span>
+      <h3>Graduations & More</h3>
+      <p>Anniversaries, graduations, religious events — every occasion is handled with care, culture, and culinary excellence.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED MENU -->
+{% if featured_items %}
+<section class="menu-bg">
+  <div class="section-header">
+    <div class="section-tag">From Our Kitchen</div>
+    <h2 class="section-title">Featured Dishes</h2>
+    <div class="divider"></div>
+    <p class="section-sub">A taste of what we bring to your table — crafted with the finest ingredients.</p>
+  </div>
+  <div class="menu-grid">
+    {% for item in featured_items %}
+    <div class="menu-card">
+      <div class="menu-card-img">
+        {% if item.image %}
+        <img src="{{ item.image.url }}" style="width:100%;height:100%;object-fit:cover" alt="{{ item.name }}"/>
+        {% else %}
+        🍛
+        {% endif %}
+      </div>
+      <div class="menu-card-body">
+        <h4>{{ item.name }}</h4>
+        <p>{{ item.description|truncatechars:90 }}</p>
+        <div class="menu-card-footer">
+          <span class="price">₹{{ item.price }}</span>
+          <div class="veg-dot {% if item.is_vegetarian %}veg{% else %}non-veg{% endif %}">
+            ●
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="text-align:center;margin-top:40px">
+    <a href="{% url 'menu' %}" class="btn-outline">View Full Menu →</a>
+  </div>
+</section>
+{% endif %}
+
+<!-- TESTIMONIALS -->
+{% if testimonials %}
+<section>
+  <div class="section-header">
+    <div class="section-tag">Happy Clients</div>
+    <h2 class="section-title">What They Say</h2>
+    <div class="divider"></div>
+  </div>
+  <div class="testimonials-grid">
+    {% for t in testimonials %}
+    <div class="testimonial-card">
+      <div class="stars">
+        {% for i in "12345" %}{% if forloop.counter <= t.rating %}★{% else %}☆{% endif %}{% endfor %}
+      </div>
+      <blockquote>"{{ t.review }}"</blockquote>
+      <div class="testimonial-author">{{ t.client_name }}</div>
+      <div class="testimonial-event">{{ t.event_type }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- CTA BAND -->
+<div class="cta-band">
+  <h2>Ready to Plan Your Perfect Event?</h2>
+  <p>Let us handle the food while you enjoy the celebration. Reach out today for a custom quote.</p>
+  <a href="{% url 'booking' %}" class="btn-light">Get a Free Quote <i class="fas fa-arrow-right"></i></a>
+</div>
+
+{% endblock %}

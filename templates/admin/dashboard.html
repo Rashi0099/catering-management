@@ -1,0 +1,155 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Dashboard — Catrin Boys{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- STAT CARDS -->
+<div class="stats-grid">
+  <div class="stat-card" style="--accent-color: var(--gold)">
+    <div class="stat-icon" style="background:rgba(212,168,82,0.12); color:var(--gold)">
+      <i class="fas fa-calendar-alt"></i>
+    </div>
+    <div class="stat-value">{{ total_bookings }}</div>
+    <div class="stat-label">Total Bookings</div>
+    <div class="stat-sub">All time</div>
+  </div>
+
+  <div class="stat-card" style="--accent-color: var(--orange)">
+    <div class="stat-icon" style="background:rgba(243,156,80,0.12); color:var(--orange)">
+      <i class="fas fa-clock"></i>
+    </div>
+    <div class="stat-value">{{ pending_bookings }}</div>
+    <div class="stat-label">Pending</div>
+    <div class="stat-sub">Needs attention</div>
+  </div>
+
+  <div class="stat-card" style="--accent-color: var(--green)">
+    <div class="stat-icon" style="background:rgba(46,204,133,0.12); color:var(--green)">
+      <i class="fas fa-check-circle"></i>
+    </div>
+    <div class="stat-value">{{ confirmed_bookings }}</div>
+    <div class="stat-label">Confirmed</div>
+    <div class="stat-sub">Ready to go</div>
+  </div>
+
+  <div class="stat-card" style="--accent-color: var(--blue)">
+    <div class="stat-icon" style="background:rgba(91,141,238,0.12); color:var(--blue)">
+      <i class="fas fa-star"></i>
+    </div>
+    <div class="stat-value">{{ upcoming_events }}</div>
+    <div class="stat-label">This Week</div>
+    <div class="stat-sub">Upcoming events</div>
+  </div>
+</div>
+
+<!-- RECENT BOOKINGS + UPCOMING EVENTS -->
+<div class="grid-3">
+
+  <!-- Recent Bookings Table -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Recent Bookings</div>
+      <a href="{% url 'admin_bookings' %}" class="panel-link">View all →</a>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Event</th>
+          <th>Date</th>
+          <th>Guests</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in recent_bookings %}
+        <tr style="cursor:pointer" onclick="location.href='{% url 'admin_booking_detail' b.pk %}'">
+          <td>
+            <div style="font-weight:500">{{ b.name }}</div>
+            <div style="font-size:0.75rem;color:var(--muted)">{{ b.email }}</div>
+          </td>
+          <td style="text-transform:capitalize">{{ b.get_event_type_display }}</td>
+          <td style="color:var(--muted);font-size:0.82rem">{{ b.event_date|date:"d M Y" }}</td>
+          <td>{{ b.guest_count }} pax</td>
+          <td><span class="badge badge-{{ b.status }}">{{ b.get_status_display }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No bookings yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Upcoming Events -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Upcoming Events</div>
+    </div>
+    {% for event in upcoming %}
+    <div class="event-item">
+      <div class="event-date-box">
+        <div class="day">{{ event.event_date|date:"d" }}</div>
+        <div class="mon">{{ event.event_date|date:"M" }}</div>
+      </div>
+      <div class="event-info">
+        <div class="event-name">{{ event.name }}</div>
+        <div class="event-meta">{{ event.get_event_type_display }} · {{ event.guest_count }} guests</div>
+        <div style="margin-top:4px"><span class="badge badge-{{ event.status }}">{{ event.get_status_display }}</span></div>
+      </div>
+    </div>
+    {% empty %}
+    <div style="text-align:center;color:var(--muted);padding:30px;font-size:0.85rem">
+      <i class="fas fa-calendar" style="font-size:2rem;margin-bottom:10px;display:block"></i>
+      No upcoming events this week
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- QUICK ACTIONS + STATS BOTTOM -->
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Quick Actions</div>
+    </div>
+    <div class="responsive-grid cols-2" style="gap:12px">
+      <a href="{% url 'admin_bookings' %}?status=pending" class="btn btn-ghost" style="justify-content:center;padding:16px">
+        <i class="fas fa-clock" style="color:var(--orange)"></i> View Pending
+      </a>
+      <a href="{% url 'admin_menu_add' %}" class="btn btn-ghost" style="justify-content:center;padding:16px">
+        <i class="fas fa-plus" style="color:var(--green)"></i> Add Menu Item
+      </a>
+      <a href="{% url 'admin_gallery' %}" class="btn btn-ghost" style="justify-content:center;padding:16px">
+        <i class="fas fa-images" style="color:var(--blue)"></i> Gallery
+      </a>
+      <a href="{% url 'admin_team' %}" class="btn btn-ghost" style="justify-content:center;padding:16px">
+        <i class="fas fa-users" style="color:var(--gold)"></i> The Team
+      </a>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Event Types Breakdown</div>
+    </div>
+    <div>
+      {% for ec in event_counts %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+        <div style="font-size:0.85rem;text-transform:capitalize">{{ ec.event_type }}</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;background:var(--gold);width:{% if total_bookings %}{% widthratio ec.count total_bookings 100 %}{% else %}0{% endif %}%"></div>
+          </div>
+          <div style="font-size:0.82rem;color:var(--muted);min-width:20px;text-align:right">{{ ec.count }}</div>
+        </div>
+      </div>
+      {% empty %}
+      <p style="color:var(--muted);font-size:0.85rem">No data yet</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

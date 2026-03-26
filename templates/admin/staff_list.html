@@ -1,0 +1,64 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Staff — Catrin Boys Admin  {% include 'pagination.html' with page_obj=staff %}
+{% endblock %}
+{% block page_title %}Staff Management  {% include 'pagination.html' with page_obj=staff %}
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+  <a href="{% url 'admin_staff_add' %}" class="btn btn-gold">
+    <i class="fas fa-user-plus"></i> Add Staff
+  </a>
+</div>
+
+<div class="panel">
+  <table>
+    <thead>
+      <tr>
+        <th>Staff ID</th>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Daily Rate</th>
+        <th>Bookings</th>
+        <th>Revenue</th>
+        <th>Total Paid</th>
+        <th>Pending Pay</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in staff %}
+      <tr>
+        <td style="font-family:monospace;font-size:0.82rem;color:var(--gold)">{{ s.staff_id }}</td>
+        <td>
+          <div style="font-weight:500">{{ s.full_name }}</div>
+          <div style="font-size:0.73rem;color:var(--muted)">{{ s.email|default:s.phone }}</div>
+        </td>
+        <td>
+          <span class="badge" style="background:rgba(212,168,82,0.1);color:var(--gold)">
+            {{ s.get_role_display }}
+          </span>
+        </td>
+        <td>₹{{ s.daily_rate }}</td>
+        <td>{{ s.booking_count }}</td>
+        <td style="color:var(--gold)">₹{{ s.total_revenue_generated|floatformat:0 }}</td>
+        <td style="color:var(--green)">₹{{ s.total_paid_out|floatformat:0 }}</td>
+        <td style="color:{% if s.pending_payout > 0 %}var(--orange){% else %}var(--muted){% endif %}">
+          ₹{{ s.pending_payout|floatformat:0 }}
+        </td>
+        <td>
+          <a href="{% url 'admin_staff_detail' s.pk %}" class="btn btn-ghost" style="padding:5px 12px;font-size:0.78rem">
+            View <i class="fas fa-arrow-right"></i>
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" style="text-align:center;padding:50px;color:var(--muted)">
+        No staff added yet. <a href="{% url 'admin_staff_add' %}" style="color:var(--gold)">Add first staff member →</a>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+  {% include 'pagination.html' with page_obj=staff %}
+{% endblock %}
