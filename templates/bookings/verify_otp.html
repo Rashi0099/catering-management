@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Verify Phone — Catrin Boys{% endblock %}
+
+{% block extra_css %}
+<style>
+  .otp-hero {
+    padding: 120px 5% 60px;
+    background: linear-gradient(160deg, #fdf9f3, #f5ede0);
+    text-align: center;
+  }
+  .otp-wrap {
+    max-width: 500px; margin: -40px auto 80px;
+    padding: 0 5%;
+    position: relative;
+    z-index: 1;
+  }
+  .otp-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 60px rgba(60,40,20,0.08);
+    text-align: center;
+  }
+  .otp-input {
+    width: 200px; padding: 16px;
+    background: var(--cream); border: 2px solid var(--gold);
+    border-radius: 10px; color: var(--text);
+    font-family: 'Outfit', sans-serif; font-size: 1.5rem;
+    text-align: center; letter-spacing: 4px; font-weight: 700;
+    margin: 20px auto; display: block;
+  }
+  .otp-input:focus {
+    outline: none; box-shadow: 0 0 0 4px rgba(200,151,43,0.15);
+    background: var(--white);
+  }
+  .submit-btn {
+    width: 100%; padding: 15px;
+    background: var(--brown); color: var(--cream);
+    border: none; border-radius: 50px;
+    font-family: 'Outfit', sans-serif; font-size: 1rem;
+    font-weight: 600; cursor: pointer;
+    transition: all 0.25s;
+  }
+  .submit-btn:hover { background: var(--gold); }
+  .error-msg {
+    color: #c62828; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px;
+  }
+  .info-text {
+    color: var(--muted); font-size: 0.95rem; margin-bottom: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="otp-hero">
+  <div class="section-tag">Security Validation</div>
+  <h1 class="section-title">Verify Phone</h1>
+</div>
+
+<div class="otp-wrap">
+  <div class="otp-card">
+    <i class="fas fa-mobile-alt" style="font-size:3rem; color:var(--gold); margin-bottom:20px;"></i>
+    <div class="info-text">
+      We sent a 4-digit One Time Password to <strong>{{ application.phone_1 }}</strong> via SMS.
+    </div>
+    
+    <form method="post">
+      {% csrf_token %}
+      <input type="text" name="otp" class="otp-input" placeholder="0000" maxlength="4" autocomplete="one-time-code" autofocus required>
+      
+      {% if messages %}
+        <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+          <div style="color: {% if message.tags == 'error' %}#c62828{% else %}#1976D2{% endif %}; font-size: 0.95rem; font-weight: bold; background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: center;">
+            ⚠️ {{ message }}
+          </div>
+        {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if error %}
+        <div class="error-msg">⚠️ {{ error }}</div>
+      {% endif %}
+      
+      <button type="submit" class="submit-btn"><i class="fas fa-check-circle"></i> Verify & Submit Application</button>
+    </form>
+    
+    <div style="margin-top:25px; font-size:0.8rem; color:var(--muted);">
+      Didn't receive it? Please check your phone or network connection.<br><br>
+      <small style="color:#aaa;">(Testing Bypass Code: 0000)</small>
+    </div>
+  </div>
+</div>
+{% endblock %}

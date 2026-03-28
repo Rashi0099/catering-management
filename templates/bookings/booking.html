@@ -68,6 +68,22 @@
     color: #c62828; padding: 12px 16px; border-radius: 10px;
     margin-bottom: 20px; font-size: 0.88rem; grid-column: 1/-1;
   }
+  .tabs {
+    display: flex; gap: 10px; margin-bottom: 30px; justify-content: center;
+  }
+  .tab-btn {
+    padding: 12px 24px; border: 2px solid var(--border);
+    background: transparent; color: var(--muted);
+    border-radius: 50px; font-weight: 600; cursor: pointer;
+    font-family: 'Outfit', sans-serif; transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--brown); color: var(--white);
+    border-color: var(--brown);
+  }
+  .booking-section { display: none; }
+  .booking-section.active { display: block; }
+  
   @media (max-width:600px) {
     .form-grid { grid-template-columns: 1fr; }
     .booking-form { padding: 28px 22px; }
@@ -91,85 +107,139 @@
     <p class="error-banner">⚠️ {{ error }}</p>
     {% endif %}
 
-    <form method="post">
-      {% csrf_token %}
-      <div class="form-grid">
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('event')">Book an Event</button>
+      <button class="tab-btn" onclick="switchTab('staff')">Apply for Staff</button>
+    </div>
 
-        <!-- Client Info -->
-        <div class="form-section-title">Your Information</div>
+    <!-- EVENT BOOKING SECTION -->
+    <div id="event-section" class="booking-section active">
+      <form method="post" action="{% url 'booking' %}#event">
+        {% csrf_token %}
+        <div class="form-grid">
+          <!-- Client Info -->
+          <div class="form-section-title">Your Information</div>
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" name="name" required placeholder="e.g. Rahul Menon" value="{{ event_form.name.value|default:'' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="tel" name="phone" required placeholder="+91 9876543210" value="{{ event_form.phone.value|default:'' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Email Address *</label>
+            <input type="email" name="email" required placeholder="rahul@example.com" value="{{ event_form.email.value|default:'' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Company / Organisation</label>
+            <input type="text" name="company" placeholder="Optional" value="{{ event_form.company.value|default:'' }}"/>
+          </div>
 
-        <div class="form-group">
-          <label>Full Name *</label>
-          <input type="text" name="name" required placeholder="e.g. Rahul Menon" value="{{ post_data.name|default:'' }}"/>
-        </div>
-        <div class="form-group">
-          <label>Phone Number *</label>
-          <input type="tel" name="phone" required placeholder="+91 9876543210" value="{{ post_data.phone|default:'' }}"/>
-        </div>
-        <div class="form-group">
-          <label>Email Address *</label>
-          <input type="email" name="email" required placeholder="rahul@example.com" value="{{ post_data.email|default:'' }}"/>
-        </div>
-        <div class="form-group">
-          <label>Company / Organisation</label>
-          <input type="text" name="company" placeholder="Optional" value="{{ post_data.company|default:'' }}"/>
-        </div>
+          <!-- Event Details -->
+          <div class="form-section-title">Event Details</div>
+          <div class="form-group">
+            <label>Event Type *</label>
+            {{ event_form.event_type }}
+          </div>
+          <div class="form-group">
+            <label>Number of Guests *</label>
+            <input type="number" name="guest_count" required min="1" placeholder="e.g. 150" value="{{ event_form.guest_count.value|default:'' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Event Date *</label>
+            <input type="date" name="event_date" required value="{{ event_form.event_date.value|default:'' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Event Time</label>
+            <input type="time" name="event_time" value="{{ event_form.event_time.value|default:'' }}"/>
+          </div>
+          <div class="form-group full">
+            <label>Venue / Location</label>
+            <input type="text" name="venue" placeholder="Event hall name or address..." value="{{ event_form.venue.value|default:'' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Estimated Budget (₹)</label>
+            <input type="number" name="budget" placeholder="e.g. 50000" value="{{ event_form.budget.value|default:'' }}"/>
+          </div>
 
-        <!-- Event Details -->
-        <div class="form-section-title">Event Details</div>
+          <!-- Requirements -->
+          <div class="form-section-title">Special Requirements</div>
+          <div class="form-group full">
+            <label>Dietary Requirements</label>
+            <textarea name="dietary_requirements" placeholder="e.g. Vegetarian only, no nuts...">{{ event_form.dietary_requirements.value|default:'' }}</textarea>
+          </div>
+          <div class="form-group full">
+            <label>Special Requests / Message</label>
+            <textarea name="message" placeholder="Tell us more about your event...">{{ event_form.message.value|default:'' }}</textarea>
+          </div>
+        </div>
+        <button type="submit" name="submit_event" class="submit-btn">
+          <i class="fas fa-paper-plane"></i> Send Booking Request
+        </button>
+      </form>
+    </div>
 
-        <div class="form-group">
-          <label>Event Type *</label>
-          <select name="event_type" required>
-            <option value="">Select event type...</option>
-            <option value="wedding">💒 Wedding</option>
-            <option value="corporate">🏢 Corporate Event</option>
-            <option value="birthday">🎂 Birthday Party</option>
-            <option value="anniversary">💑 Anniversary</option>
-            <option value="graduation">🎓 Graduation</option>
-            <option value="conference">📊 Conference</option>
-            <option value="other">✨ Other</option>
-          </select>
+    <!-- STAFF APPLICATION SECTION -->
+    <div id="staff-section" class="booking-section">
+      <form method="post" action="{% url 'booking' %}#staff">
+        {% csrf_token %}
+        <div class="form-grid">
+          <div class="form-section-title">Personal Details</div>
+          {% for field in staff_form %}
+            <div class="form-group {% if field.name == 'place' or field.name == 'education' %}full{% endif %}">
+              <label>{{ field.label }} {% if field.field.required %}*{% endif %}</label>
+              {{ field }}
+              {% if field.errors %}
+                <ul class="errorlist" style="color:#c62828; font-size: 0.8rem; margin-top: 5px;">
+                  {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endfor %}
         </div>
-        <div class="form-group">
-          <label>Number of Guests *</label>
-          <input type="number" name="guest_count" required min="10" placeholder="e.g. 150" value="{{ post_data.guest_count|default:'' }}"/>
-        </div>
-        <div class="form-group">
-          <label>Event Date *</label>
-          <input type="date" name="event_date" required value="{{ post_data.event_date|default:'' }}"/>
-        </div>
-        <div class="form-group">
-          <label>Event Time</label>
-          <input type="time" name="event_time" value="{{ post_data.event_time|default:'' }}"/>
-        </div>
-        <div class="form-group full">
-          <label>Venue / Location</label>
-          <input type="text" name="venue" placeholder="Event hall name or address..." value="{{ post_data.venue|default:'' }}"/>
-        </div>
-        <div class="form-group">
-          <label>Estimated Budget (₹)</label>
-          <input type="number" name="budget" placeholder="e.g. 50000" value="{{ post_data.budget|default:'' }}"/>
-        </div>
+        <button type="submit" name="submit_staff" class="submit-btn" style="background:var(--gold);">
+          <i class="fas fa-user-plus"></i> Submit Application & Verify Phone
+        </button>
+      </form>
+    </div>
 
-        <!-- Requirements -->
-        <div class="form-section-title">Special Requirements</div>
+    <script>
+      function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.booking-section').forEach(sec => sec.classList.remove('active'));
+        
+        let tabBtns = document.querySelectorAll('.tab-btn');
+        if(tab === 'event') {
+          if(tabBtns.length > 0) tabBtns[0].classList.add('active');
+          document.getElementById('event-section').classList.add('active');
+          history.replaceState(undefined, undefined, "#event");
+        } else {
+          if(tabBtns.length > 1) tabBtns[1].classList.add('active');
+          document.getElementById('staff-section').classList.add('active');
+          history.replaceState(undefined, undefined, "#staff");
+        }
+      }
 
-        <div class="form-group full">
-          <label>Dietary Requirements</label>
-          <textarea name="dietary_requirements" placeholder="e.g. Vegetarian only, no nuts, Jain food required...">{{ post_data.dietary_requirements|default:'' }}</textarea>
-        </div>
-        <div class="form-group full">
-          <label>Special Requests / Message</label>
-          <textarea name="message" placeholder="Tell us more about your event, theme, or any special requests...">{{ post_data.message|default:'' }}</textarea>
-        </div>
+      window.addEventListener('DOMContentLoaded', () => {
+        if (window.location.hash === '#staff') {
+          switchTab('staff');
+        } else {
+          switchTab('event');
+        }
+      });
+      
+      window.addEventListener('hashchange', () => {
+        if (window.location.hash === '#staff') {
+          switchTab('staff');
+        } else {
+          switchTab('event');
+        }
+      });
+      
 
-      </div>
-
-      <button type="submit" class="submit-btn">
-        <i class="fas fa-paper-plane"></i> Send Booking Request
-      </button>
-    </form>
+    </script>
 
   </div>
 </div>

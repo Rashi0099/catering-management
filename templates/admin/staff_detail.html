@@ -1,3 +1,4 @@
+```html
 {% extends 'admin/custom_base.html' %}
 {% block title %}{{ member.full_name }} — Staff{% endblock %}
 {% block page_title %}Staff: {{ member.full_name }}{% endblock %}
@@ -5,6 +6,9 @@
 {% block content %}
 <div style="display:flex;gap:8px;margin-bottom:22px">
   <a href="{% url 'admin_staff' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> All Staff</a>
+  <a href="{% url 'admin_staff_edit' member.pk %}" class="btn btn-gold">
+    <i class="fas fa-user-edit"></i> Edit Staff
+  </a>
   <a href="/django-admin/staff/staff/{{ member.pk }}/change/" class="btn btn-ghost" target="_blank">
     <i class="fas fa-edit"></i> Edit in Django Admin
   </a>
@@ -106,8 +110,65 @@
 
   </div>
 
-  <!-- RIGHT: Add Payout -->
+  <!-- RIGHT -->
   <div>
+
+    <!-- Staff Info -->
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-header"><div class="panel-title">Staff Info</div></div>
+      <div style="font-size:0.82rem">
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Daily Rate</span>
+          <span style="color:var(--gold);font-weight:600">₹{{ member.daily_rate }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Phone 1</span>
+          <span>{{ member.phone|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Phone 2</span>
+          <span>{{ member.phone_2|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Email</span>
+          <span>{{ member.email|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Age / Height</span>
+          <span>{{ member.age|default:"—" }} / {{ member.height|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Blood Group</span>
+          <span>{{ member.blood_group|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Guardian Name</span>
+          <span>{{ member.guardian_name|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Guardian Phone</span>
+          <span>{{ member.guardian_phone|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Place</span>
+          <span>{{ member.place|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Education</span>
+          <span>{{ member.education|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Aadhar No.</span>
+          <span>{{ member.aadhar_card_no|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0">
+          <span style="color:var(--muted)">Joined</span>
+          <span>{{ member.joined_at|date:"d M Y" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Payout -->
     <div class="panel">
       <div class="panel-header"><div class="panel-title">Add Payout</div></div>
       <form method="post">
@@ -161,29 +222,8 @@
       </form>
     </div>
 
-    <!-- Staff Info -->
-    <div class="panel" style="margin-top:14px">
-      <div class="panel-header"><div class="panel-title">Staff Info</div></div>
-      <div style="font-size:0.82rem">
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
-          <span style="color:var(--muted)">Daily Rate</span>
-          <span style="color:var(--gold);font-weight:600">₹{{ member.daily_rate }}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
-          <span style="color:var(--muted)">Commission %</span>
-          <span>{{ member.commission_pct }}%</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
-          <span style="color:var(--muted)">Phone</span>
-          <span>{{ member.phone|default:"—" }}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0">
-          <span style="color:var(--muted)">Joined</span>
-          <span>{{ member.joined_at|date:"d M Y" }}</span>
-        </div>
-      </div>
-    </div>
   </div>
 
 </div>
 {% endblock %}
+```

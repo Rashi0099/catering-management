@@ -1,0 +1,87 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Staff Requests — Admin{% endblock %}
+{% block page_title %}Staff Requests{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">Pending Event Applications</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Applicant</th>
+        <th>Event</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for app in pending_apps %}
+      <tr>
+        <td>
+          <div style="font-weight:500">{{ app.applicant_name }}</div>
+          <div style="font-size:0.75rem;color:var(--muted)">{{ app.staff.staff_id }} | {{ app.applicant_phone }}</div>
+        </td>
+        <td>
+          <a href="{% url 'admin_booking_detail' app.booking.pk %}" style="color:var(--gold);text-decoration:none;font-weight:500">
+            {{ app.booking.name }}
+          </a>
+        </td>
+        <td style="color:var(--muted);font-size:0.82rem">{{ app.booking.event_date|date:"d M Y" }}</td>
+        <td><span class="badge badge-pending">Pending</span></td>
+        <td>
+          <div style="display:flex; gap:6px;">
+            <a href="{% url 'admin_handle_application' app.booking.pk app.pk 'approve_app' %}" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;">Approve</a>
+            <a href="{% url 'admin_handle_application' app.booking.pk app.pk 'reject_app' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;">Reject</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No pending applications</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" style="margin-top:24px;">
+  <div class="panel-header">
+    <div class="panel-title" style="color:var(--orange)">Cancel Requests</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Staff</th>
+        <th>Event</th>
+        <th>Date</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in cancel_reqs %}
+      <tr>
+        <td>
+          <div style="font-weight:500">{{ req.applicant_name }}</div>
+          <div style="font-size:0.75rem;color:var(--muted)">{{ req.staff.staff_id }} | {{ req.applicant_phone }}</div>
+        </td>
+        <td>
+          <a href="{% url 'admin_booking_detail' req.booking.pk %}" style="color:var(--orange);text-decoration:none;font-weight:500">
+            {{ req.booking.name }}
+          </a>
+        </td>
+        <td style="color:var(--muted);font-size:0.82rem">{{ req.booking.event_date|date:"d M Y" }}</td>
+        <td>
+          <div style="display:flex; gap:6px;">
+            <a href="{% url 'admin_handle_application' req.booking.pk req.pk 'approve_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c; border-color:rgba(231,76,60,0.3);">Approve Cancel</a>
+            <a href="{% url 'admin_handle_application' req.booking.pk req.pk 'reject_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem;">Deny</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">No cancel requests</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

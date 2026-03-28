@@ -81,6 +81,50 @@
       </div>
       {% else %}<p style="color:var(--muted);font-size:0.83rem">No staff assigned yet.</p>{% endif %}
     </div>
+
+    <div class="panel" style="margin-top:18px">
+      <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="panel-title">Event Attendance</div>
+        <a href="{% url 'admin_download_attendance' booking.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
+      </div>
+      {% if assigned_staff_with_att %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_attendance"/>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          {% for item in assigned_staff_with_att %}
+          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px; align-items:center; background:var(--surface); padding:10px; border:1px solid var(--border); border-radius:8px;">
+            <div>
+              <input type="hidden" name="attendance_staff_id" value="{{ item.staff.pk }}"/>
+              <div style="font-weight:500; font-size:0.9rem;">{{ item.staff.full_name }}</div>
+              <div style="color:var(--muted); font-size:0.75rem;">{{ item.staff.staff_id }} - {{ item.staff.get_role_display }}</div>
+            </div>
+            <div>
+              <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:4px;">Status</label>
+              <select name="attendance_status_{{ item.staff.pk }}" style="width:100%; padding:6px; font-size:0.85rem; border:1px solid var(--border); border-radius:4px; background:var(--bg); color:var(--text);">
+                <option value="present" {% if not item.attendance or item.attendance.status == 'present' %}selected{% endif %}>Present</option>
+                <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>Absent</option>
+                <option value="half_day" {% if item.attendance and item.attendance.status == 'half_day' %}selected{% endif %}>Half Day</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:4px;">Reaching Time</label>
+              <input type="time" name="reaching_time_{{ item.staff.pk }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" style="width:100%; padding:6px; font-size:0.85rem; border:1px solid var(--border); border-radius:4px; background:var(--bg); color:var(--text); color-scheme: dark;"/>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <input type="text" name="attendance_notes_{{ item.staff.pk }}" value="{{ item.attendance.notes }}" placeholder="Notes (optional)" style="width:100%; padding:6px; font-size:0.85rem; border:1px solid var(--border); border-radius:4px; background:var(--bg); color:var(--text);"/>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; margin-top:14px;">
+          <i class="fas fa-check-circle"></i> Save Attendance
+        </button>
+      </form>
+      {% else %}
+      <p style="color:var(--muted); font-size:0.83rem;">Assign staff to mark attendance.</p>
+      {% endif %}
+    </div>
   </div>
 
   <!-- RIGHT -->
@@ -106,14 +150,42 @@
         </div>
         <div class="form-group">
           <label>Assign Staff</label>
-          <select name="assigned_to" multiple style="height:110px">
-            {% for s in all_staff %}
-            <option value="{{ s.pk }}" {% if s in booking.assigned_to.all %}selected{% endif %}>
-              {{ s.full_name }} ({{ s.get_role_display }})
-            </option>
+          <input type="text" id="staffSearch" placeholder="Search staff by name..." onkeyup="filterStaff()" style="width:100%; padding:8px 12px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);"/>
+          <div id="staffList" style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:12px; background:var(--bg);">
+            {% for role, staff_list in grouped_staff.items %}
+            <div class="staff-role-group" style="margin-bottom:14px;">
+              <div style="font-size:0.8rem; font-weight:600; color:var(--gold); text-transform:uppercase; margin-bottom:8px; border-bottom:1px solid rgba(212,168,82,0.3); padding-bottom:4px; letter-spacing:0.5px;">{{ role }} ({{ staff_list|length }})</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                {% for s in staff_list %}
+                <label class="staff-item" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:2px 0;">
+                  <input type="checkbox" name="assigned_to" value="{{ s.pk }}" {% if s in booking.assigned_to.all %}checked{% endif %} style="accent-color:var(--gold); width:16px; height:16px;">
+                  <span class="staff-name" style="font-weight:500; font-size:0.92rem;">{{ s.full_name }}</span> 
+                </label>
+                {% endfor %}
+              </div>
+            </div>
             {% endfor %}
-          </select>
-          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px">Ctrl/Cmd + click to select multiple</div>
+          </div>
+          <script>
+            function filterStaff() {
+              var input = document.getElementById("staffSearch").value.toLowerCase();
+              var groups = document.querySelectorAll('.staff-role-group');
+              groups.forEach(function(group) {
+                var items = group.querySelectorAll('.staff-item');
+                var groupHasMatch = false;
+                items.forEach(function(item) {
+                  var name = item.querySelector('.staff-name').innerText.toLowerCase();
+                  if (name.includes(input)) {
+                    item.style.display = 'flex';
+                    groupHasMatch = true;
+                  } else {
+                    item.style.display = 'none';
+                  }
+                });
+                group.style.display = groupHasMatch ? 'block' : 'none';
+              });
+            }
+          </script>
         </div>
         <div class="form-group">
           <label>Admin Notes</label>
@@ -123,6 +195,49 @@
           <i class="fas fa-save"></i> Save Changes
         </button>
       </form>
+    </div>
+
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-header"><div class="panel-title">Applications & Cancel Requests</div></div>
+      {% if pending_applications or cancel_requests %}
+        {% if pending_applications %}
+        <div style="margin-bottom:12px;">
+          <h4 style="font-size:0.9rem; margin-bottom:8px; color:var(--gold);">Pending Applications</h4>
+          {% for app in pending_applications %}
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.1); padding:10px; border-radius:6px; margin-bottom:6px; border:1px solid var(--border);">
+            <div>
+              <div style="font-weight:500;">{{ app.applicant_name }} <span style="font-size:0.8rem; color:var(--muted);">({{ app.staff.staff_id }})</span></div>
+              <div style="font-size:0.8rem; color:var(--muted);"><i class="fas fa-phone"></i> {{ app.applicant_phone }}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <a href="{% url 'admin_handle_application' booking.pk app.pk 'approve_app' %}" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;">Approve</a>
+              <a href="{% url 'admin_handle_application' booking.pk app.pk 'reject_app' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;">Reject</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if cancel_requests %}
+        <div>
+          <h4 style="font-size:0.9rem; margin-bottom:8px; color:var(--orange);">Cancel Requests</h4>
+          {% for app in cancel_requests %}
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.1); padding:10px; border-radius:6px; margin-bottom:6px; border:1px solid var(--border);">
+            <div>
+              <div style="font-weight:500;">{{ app.applicant_name }} <span style="font-size:0.8rem; color:var(--muted);">({{ app.staff.staff_id }})</span></div>
+              <div style="font-size:0.8rem; color:var(--orange);">Requests Cancellation</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <a href="{% url 'admin_handle_application' booking.pk app.pk 'approve_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c; border-color:rgba(231,76,60,0.3);">Approve Cancel</a>
+              <a href="{% url 'admin_handle_application' booking.pk app.pk 'reject_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem;">Deny</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% else %}
+        <p style="color:var(--muted);font-size:0.85rem;">No pending applications or cancel requests.</p>
+      {% endif %}
     </div>
 
     <div class="panel">

@@ -295,7 +295,8 @@
     <a href="{% url 'gallery' %}" class="{% block nav_gallery %}{% endblock %}">Gallery</a>
     <a href="{% url 'about' %}" class="{% block nav_about %}{% endblock %}">About</a>
     <a href="{% url 'contact' %}" class="{% block nav_contact %}{% endblock %}">Contact</a>
-    <a href="{% url 'booking' %}" class="nav-cta">Book Now</a>
+    <a href="{% url 'booking' %}#event" class="nav-cta">Event Booking</a>
+    <a href="{% url 'booking' %}#staff" class="nav-cta" style="background:var(--gold);">Staff Application</a>
   </div>
   <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
     <i class="fas fa-bars"></i>
@@ -308,7 +309,8 @@
   <a href="{% url 'gallery' %}">Gallery</a>
   <a href="{% url 'about' %}">About</a>
   <a href="{% url 'contact' %}">Contact</a>
-  <a href="{% url 'booking' %}" style="color: var(--gold);">Book Now</a>
+  <a href="{% url 'booking' %}#event" style="color: var(--gold);">Event Booking</a>
+  <a href="{% url 'booking' %}#staff" style="color: var(--gold);">Staff Application</a>
 </div>
 
 {% block content %}{% endblock %}

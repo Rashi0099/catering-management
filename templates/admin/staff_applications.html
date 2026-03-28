@@ -1,0 +1,71 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Staff Applications{% endblock %}
+{% block nav_staff_apps %}active{% endblock %}
+
+{% block content %}
+<div class="header-section" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <h2>Staff Booking Applications</h2>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div style="background: var(--light-bg); border-left: 4px solid var(--accent); padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="panel" style="padding:0; overflow:hidden;">
+  <div class="table-responsive">
+    <table>
+      <thead style="background: rgba(255,255,255,0.02);">
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Contact</th>
+          <th>Details</th>
+          <th>Date</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for app in applications %}
+        <tr>
+          <td>
+            <div style="font-weight:600; color: var(--text);">{{ app.full_name }}</div>
+          </td>
+          <td>
+            <span style="background: rgba(255,255,255,0.05); color: var(--gold); border: 1px solid var(--border); font-weight:600; font-size:0.8rem; padding:4px 8px; border-radius:4px; text-transform:uppercase;">
+              {{ app.get_service_display }}
+            </span>
+          </td>
+          <td style="font-size:0.9rem; color: var(--muted);">
+            {{ app.phone_1 }}<br>
+            {% if app.phone_2 %}Alt: {{ app.phone_2 }}<br>{% endif %}
+            {{ app.email|default:"No email" }}
+          </td>
+          <td style="font-size:0.9rem; color: var(--muted); line-height:1.5;">
+            <strong style="color: var(--text);">Age:</strong> {{ app.age }} | <strong style="color: var(--text);">Blood:</strong> {{ app.blood_group }} | <strong style="color: var(--text);">Ht:</strong> {{ app.height }}<br>
+            <strong style="color: var(--text);">Education:</strong> {{ app.education }}<br>
+            <strong style="color: var(--text);">Aadhar:</strong> {{ app.aadhar_card_no }} <br>
+            <strong style="color: var(--text);">Place:</strong> {{ app.place }}<br>
+            <strong style="color: var(--text);">Guardian:</strong> {{ app.guardian_name }} ({{ app.guardian_phone }})
+          </td>
+          <td style="font-size:0.9rem; color: var(--muted);">
+            {{ app.created_at|date:"d M Y" }}
+          </td>
+          <td style="text-align:right;">
+            <a href="{% url 'admin_handle_staff_application' app.pk 'approve' %}" class="btn" style="background: rgba(46,204,133,0.12); color: var(--green); border: 1px solid rgba(46,204,133,0.2); padding:6px 12px; font-size:0.85rem; text-decoration:none;" onclick="return confirm('Approve this application and create a staff account?');">Approve</a>
+            <a href="{% url 'admin_handle_staff_application' app.pk 'reject' %}" class="btn btn-danger" style="padding:6px 12px; font-size:0.85rem;" onclick="return confirm('Reject this application?');">Reject</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="padding:30px; text-align:center; color: var(--muted);">No pending staff applications.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

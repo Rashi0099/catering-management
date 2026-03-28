@@ -1,0 +1,117 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Edit Staff — Catrin Boys Admin{% endblock %}
+{% block page_title %}Edit Staff: {{ member.full_name }}{% endblock %}
+
+{% block content %}
+
+<div style="max-width:640px">
+  <a href="{% url 'admin_staff_detail' pk=member.pk %}" class="btn btn-ghost" style="margin-bottom:24px">
+    <i class="fas fa-arrow-left"></i> Back to Staff Profile
+  </a>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Edit Staff Details</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" name="full_name" required value="{{ member.full_name }}"/>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Role *</label>
+          <select name="role" required>
+            <option value="server"  {% if member.role == 'server' %}selected{% endif %}>Server / Waiter</option>
+            <option value="chef"    {% if member.role == 'chef' %}selected{% endif %}>Chef</option>
+            <option value="driver"  {% if member.role == 'driver' %}selected{% endif %}>Driver</option>
+            <option value="manager" {% if member.role == 'manager' %}selected{% endif %}>Manager</option>
+            <option value="cleaner" {% if member.role == 'cleaner' %}selected{% endif %}>Cleaner</option>
+            <option value="admin"   {% if member.role == 'admin' %}selected{% endif %}>Admin</option>
+            <option value="other"   {% if member.role == 'other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Daily Rate (₹) *</label>
+          <input type="number" name="daily_rate" required step="1" value="{{ member.daily_rate|stringformat:"i" }}"/>
+        </div>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Phone Number 1</label>
+          <input type="text" name="phone" value="{{ member.phone }}"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number 2</label>
+          <input type="text" name="phone_2" value="{{ member.phone_2 }}"/>
+        </div>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" value="{{ member.email }}"/>
+        </div>
+        <div class="form-group">
+          <label>Age</label>
+          <input type="number" name="age" value="{{ member.age|default:'' }}"/>
+        </div>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Height</label>
+          <input type="text" name="height" value="{{ member.height }}"/>
+        </div>
+        <div class="form-group">
+          <label>Blood Group</label>
+          <input type="text" name="blood_group" value="{{ member.blood_group }}"/>
+        </div>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Guardian Name</label>
+          <input type="text" name="guardian_name" value="{{ member.guardian_name }}"/>
+        </div>
+        <div class="form-group">
+          <label>Guardian Phone</label>
+          <input type="text" name="guardian_phone" value="{{ member.guardian_phone }}"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Place / City</label>
+        <input type="text" name="place" value="{{ member.place }}"/>
+      </div>
+
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Education</label>
+          <input type="text" name="education" value="{{ member.education }}"/>
+        </div>
+        <div class="form-group">
+          <label>Aadhar Card No.</label>
+          <input type="text" name="aadhar" value="{{ member.aadhar_card_no }}"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label style="display:inline-flex; align-items:center; gap:8px;">
+          <input type="checkbox" name="is_active" {% if member.is_active %}checked{% endif %}/>
+          Is Active (Able to login)
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;margin-top:20px">
+        <i class="fas fa-save"></i> Save Changes
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

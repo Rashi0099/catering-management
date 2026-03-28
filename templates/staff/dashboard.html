@@ -41,10 +41,20 @@
         <div class="ev-day">{{ ev.event_date|date:"d" }}</div>
         <div class="ev-mon">{{ ev.event_date|date:"M" }}</div>
       </div>
-      <div>
+      <div style="flex:1">
         <div class="ev-name">{{ ev.name }}</div>
-        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests</div>
+        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
         <div class="ev-meta">📍 {{ ev.venue|default:"Venue TBD" }}</div>
+      </div>
+      <div style="margin-left:auto; text-align:right;">
+        {% if ev.pk in cancel_req_booking_ids %}
+          <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Requested</span>
+        {% else %}
+        <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return confirm('Are you sure you want to request cancellation for this event?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="padding:4px 8px; border:1px solid var(--red); color:var(--red); background:transparent;"><i class="fas fa-times"></i> Cancel</button>
+        </form>
+        {% endif %}
       </div>
     </div>
     {% empty %}
@@ -68,13 +78,17 @@
       </div>
       <div style="flex:1">
         <div class="ev-name">{{ ev.name }}</div>
-        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests</div>
+        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
         <div class="ev-meta">📍 {{ ev.venue|default:"Venue TBD" }}</div>
       </div>
-      <form method="post" action="{% url 'staff_claim_booking' ev.pk %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--surface);border:1px solid var(--gold);color:var(--gold)"><i class="fas fa-hand-paper"></i> Claim</button>
-      </form>
+      
+      {% if ev.pk in pending_app_booking_ids %}
+        <span class="badge b-pending" style="background:rgba(212,168,82,0.1); color:var(--gold); border:1px solid rgba(212,168,82,0.2);">Pending Approval</span>
+      {% elif ev.pk in cancel_req_booking_ids %}
+        <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Requested</span>
+      {% else %}
+        <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--surface);border:1px solid var(--gold);color:var(--gold)"><i class="fas fa-hand-paper"></i> Apply</a>
+      {% endif %}
     </div>
     {% empty %}
     <div style="text-align:center;color:var(--muted);padding:24px;font-size:0.83rem">

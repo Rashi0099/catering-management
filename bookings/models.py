@@ -131,3 +131,26 @@ class Testimonial(models.Model):
 
     def __str__(self):
         return f"{self.client_name} — {self.rating}*"
+
+
+class EventApplication(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancel_requested', 'Cancel Requested'),
+        ('cancelled', 'Cancelled')
+    ]
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='applications')
+    staff = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='event_applications')
+    applicant_name = models.CharField(max_length=200)
+    applicant_phone = models.CharField(max_length=20)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('booking', 'staff')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.applicant_name} for {self.booking.name} ({self.get_status_display()})"

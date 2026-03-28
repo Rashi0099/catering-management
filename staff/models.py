@@ -47,7 +47,18 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     full_name  = models.CharField(max_length=200)
     email      = models.EmailField(blank=True)
     phone      = models.CharField(max_length=20, blank=True)
+    phone_2    = models.CharField(max_length=20, blank=True)
     photo      = models.ImageField(upload_to='staff/', blank=True, null=True)
+
+    # Detailed Profiling
+    age = models.PositiveIntegerField(null=True, blank=True)
+    height = models.CharField(max_length=20, blank=True)
+    blood_group = models.CharField(max_length=10, blank=True)
+    guardian_name = models.CharField(max_length=150, blank=True)
+    guardian_phone = models.CharField(max_length=20, blank=True)
+    place = models.CharField(max_length=255, blank=True)
+    education = models.CharField(max_length=255, blank=True)
+    aadhar_card_no = models.CharField(max_length=20, blank=True)
 
     # Role & pay
     role       = models.CharField(max_length=20, choices=ROLE_CHOICES, default='server', db_index=True)
@@ -111,6 +122,7 @@ class StaffAttendance(models.Model):
                                     related_name='staff_attendance', null=True, blank=True)
     date       = models.DateField(db_index=True)
     status     = models.CharField(max_length=10, choices=STATUS, default='present', db_index=True)
+    reaching_time = models.TimeField(null=True, blank=True)
     hours      = models.DecimalField(max_digits=4, decimal_places=1, default=8)
     notes      = models.TextField(blank=True)
 
@@ -120,6 +132,7 @@ class StaffAttendance(models.Model):
 
     def __str__(self):
         return f"{self.staff.full_name} — {self.date} ({self.status})"
+
 
 
 class StaffPayout(models.Model):
@@ -152,3 +165,39 @@ class StaffPayout(models.Model):
 
     def __str__(self):
         return f"₹{self.amount} → {self.staff.full_name} ({self.get_payout_type_display()})"
+
+
+class StaffApplication(models.Model):
+    """Stores applications for staff roles from the website"""
+    ROLE_CHOICES = Staff.ROLE_CHOICES
+
+    STATUS_CHOICES = [
+        ('unverified', 'Unverified Phone'),
+        ('pending', 'Pending Admin Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    full_name = models.CharField(max_length=200)
+    service = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    age = models.PositiveIntegerField()
+    height = models.CharField(max_length=20, help_text="e.g. 5'9\"")
+    blood_group = models.CharField(max_length=10)
+    phone_1 = models.CharField(max_length=20)
+    phone_2 = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    place = models.CharField(max_length=255)
+    education = models.CharField(max_length=255)
+    aadhar_card_no = models.CharField(max_length=20)
+    
+    guardian_name = models.CharField(max_length=150)
+    guardian_phone = models.CharField(max_length=20)
+    
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='unverified', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.full_name} - {self.get_service_display()} ({self.get_status_display()})"

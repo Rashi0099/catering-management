@@ -66,6 +66,10 @@ def staff_dashboard(request):
     total_earned  = me.payouts.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
     pending_pay   = me.payouts.filter(status='pending').aggregate(t=Sum('amount'))['t'] or 0
 
+    my_applications = me.event_applications.all()
+    pending_app_booking_ids = list(my_applications.filter(status='pending').values_list('booking_id', flat=True))
+    cancel_req_booking_ids = list(my_applications.filter(status='cancel_requested').values_list('booking_id', flat=True))
+
     return render(request, 'staff/dashboard.html', {
         'me': me,
         'total_bookings': my_bookings.count(),
@@ -79,6 +83,8 @@ def staff_dashboard(request):
         'my_payouts': my_payouts,
         'total_earned': total_earned,
         'pending_pay': pending_pay,
+        'pending_app_booking_ids': pending_app_booking_ids,
+        'cancel_req_booking_ids': cancel_req_booking_ids,
     })
 
 
@@ -183,14 +189,57 @@ def staff_booking_detail(request, pk):
 
 
 @login_required(login_url='/staff/login/')
-def staff_claim_booking(request, pk):
+def staff_apply_booking(request, pk):
+    booking = get_object_or_404(Booking, pk=pk, status='confirmed')
+    # If GET, render a simple apply form
+    if request.method == 'GET':
+        return render(request, 'staff/apply_booking.html', {'booking': booking})
+    
+    # If POST, process the application
     if request.method == 'POST':
-        booking = get_object_or_404(Booking, pk=pk, status='confirmed')
-        if request.user not in booking.assigned_to.all():
-            booking.assigned_to.add(request.user)
-            messages.success(request, f'You have successfully claimed the shift for {booking.name}!')
+        applicant_name = request.POST.get('applicant_name', request.user.full_name)
+        applicant_phone = request.POST.get('applicant_phone', request.user.phone)
+        
+        # Check if they already applied or are assigned
+        from bookings.models import EventApplication
+        if EventApplication.objects.filter(booking=booking, staff=request.user).exists():
+            messages.info(request, "You have already applied for this event.")
+        elif request.user in booking.assigned_to.all():
+            messages.info(request, "You are already assigned to this event.")
         else:
-            messages.info(request, 'You are already assigned to this event.')
+            EventApplication.objects.create(
+                booking=booking,
+                staff=request.user,
+                applicant_name=applicant_name,
+                applicant_phone=applicant_phone,
+                status='pending'
+            )
+            messages.success(request, f'Application submitted for {booking.name}!')
+        return redirect('staff_dashboard')
+
+
+@login_required(login_url='/staff/login/')
+def staff_cancel_request(request, pk):
+    if request.method == 'POST':
+        booking = get_object_or_404(Booking, pk=pk)
+        if request.user in booking.assigned_to.all():
+            from bookings.models import EventApplication
+            application = booking.applications.filter(staff=request.user).first()
+            if application:
+                application.status = 'cancel_requested'
+                application.save()
+            else:
+                # Provide a way to ask for cancel even if they were assigned without applying manually
+                EventApplication.objects.create(
+                    booking=booking,
+                    staff=request.user,
+                    applicant_name=request.user.full_name,
+                    applicant_phone=request.user.phone,
+                    status='cancel_requested'
+                )
+            messages.success(request, "Cancel request sent to admin for approval.")
+        else:
+            messages.error(request, "You are not assigned to this event.")
     return redirect('staff_dashboard')
 
 

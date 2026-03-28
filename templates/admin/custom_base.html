@@ -287,6 +287,15 @@
     </a>
 
     <div class="nav-section-label">Team</div>
+    <a href="{% url 'admin_staff_applications' %}" class="nav-item {% if page == 'staff_applications' %}active{% endif %}">
+      <i class="nav-icon fas fa-user-tie"></i> Staff Applications
+    </a>
+    {% load admin_tags %}
+    {% get_pending_app_count as pending_app_count %}
+    <a href="{% url 'admin_staff_requests' %}" class="nav-item {% if page == 'staff_requests' %}active{% endif %}">
+      <i class="nav-icon fas fa-user-plus"></i> Staff Requests
+      {% if pending_app_count %}<span class="nav-badge">{{ pending_app_count }}</span>{% endif %}
+    </a>
     <a href="{% url 'admin_staff' %}" class="nav-item {% if page == 'staff' %}active{% endif %}">
       <i class="nav-icon fas fa-users"></i> Staff &amp; Pay
     </a>
