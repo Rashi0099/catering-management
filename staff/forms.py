@@ -5,7 +5,7 @@ from .models import Staff, StaffApplication
 class StaffCreationForm(UserCreationForm):
     class Meta:
         model = Staff
-        fields = ('staff_id', 'full_name', 'role', 'daily_rate', 'commission_pct')
+        fields = ('staff_id', 'full_name', 'level', 'daily_rate', 'commission_pct')
 
 class StaffApplicationForm(forms.ModelForm):
     class Meta:
@@ -13,7 +13,6 @@ class StaffApplicationForm(forms.ModelForm):
         exclude = ['status']
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
-            'service': forms.Select(attrs={'class': 'form-control'}),
             'age': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Age'}),
             'height': forms.TextInput(attrs={'class': 'form-control', 'placeholder': "e.g. 5'9\""}),
             'blood_group': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Blood Group'}),

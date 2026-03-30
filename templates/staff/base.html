@@ -158,7 +158,7 @@
 <aside class="sidebar" id="sidebar">
   <div class="s-logo">
     <div class="brand">🍽️ Catrin Boys</div>
-    <span class="role-badge">{{ request.user.get_role_display }}</span>
+    <span class="role-badge">{{ request.user.get_level_display }}</span>
   </div>
   <nav class="s-nav">
     <div class="s-label">My Portal</div>
@@ -168,12 +168,9 @@
     <a href="{% url 'staff_bookings' %}" class="s-item {% block nav_book %}{% endblock %}">
       <i class="fas fa-calendar-alt"></i> My Bookings
     </a>
-    <a href="{% url 'staff_create_booking' %}" class="s-item {% block nav_new %}{% endblock %}">
-      <i class="fas fa-plus-circle"></i> New Booking
-    </a>
     <div class="s-label">Finance</div>
     <a href="{% url 'staff_payouts' %}" class="s-item {% block nav_pay %}{% endblock %}">
-      <i class="fas fa-wallet"></i> My Earnings
+      <i class="fas fa-wallet"></i> My Total Earnings
     </a>
     <div class="s-label">Settings</div>
     <a href="{% url 'staff_change_password' %}" class="s-item {% block nav_sec %}{% endblock %}">
@@ -203,9 +200,6 @@
       <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
     </div>
     <div class="topbar-right">
-      <a href="{% url 'staff_create_booking' %}" class="btn btn-teal btn-sm">
-        <i class="fas fa-plus"></i> New Booking
-      </a>
     </div>
   </div>
   <div class="content">

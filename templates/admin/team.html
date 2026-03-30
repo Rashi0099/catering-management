@@ -14,7 +14,7 @@
   <div class="panel" style="text-align:center;padding:32px 24px">
     <div style="font-size:3rem;margin-bottom:14px">{{ member.emoji }}</div>
     <div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:4px">{{ member.name }}</div>
-    <div style="font-size:0.78rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em">{{ member.role }}</div>
+    <div style="font-size:0.78rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em">{{ member.get_level_display }}</div>
     <div style="margin-top:16px;display:flex;justify-content:center;gap:8px">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--green)" title="Online"></div>
       <span style="font-size:0.73rem;color:var(--muted)">Active</span>

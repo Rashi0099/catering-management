@@ -107,6 +107,7 @@ def booking_detail(request, pk):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'update_booking':
+            old_status = booking.status
             booking.status       = request.POST.get('status', booking.status)
             booking.admin_notes  = request.POST.get('admin_notes', '')
             booking.quoted_price = request.POST.get('quoted_price') or None
@@ -114,6 +115,21 @@ def booking_detail(request, pk):
             # Assign staff
             staff_ids = request.POST.getlist('assigned_to')
             booking.assigned_to.set(staff_ids)
+            
+            # Event completion tracking
+            if old_status != 'completed' and booking.status == 'completed':
+                for staff_id in staff_ids:
+                    s = Staff.objects.get(id=staff_id)
+                    s.total_events_completed += 1
+                    s.save()
+                    if s.level == 'C' and s.total_events_completed >= 20:
+                        from staff.models import PromotionRequest
+                        if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
+                            PromotionRequest.objects.create(
+                                staff=s,
+                                current_level='C',
+                                requested_level='B'
+                            )
             
             # Sync EventApplication statuses based on manual assignment changes
             from bookings.models import EventApplication
@@ -163,12 +179,12 @@ def booking_detail(request, pk):
 
     grouped_staff = {}
     for staff in all_staff:
-        role = staff.get_role_display()
-        if role not in grouped_staff:
-            grouped_staff[role] = []
-        grouped_staff[role].append(staff)
+        level = staff.get_level_display()
+        if level not in grouped_staff:
+            grouped_staff[level] = []
+        grouped_staff[level].append(staff)
 
-    # Sort dictionary by role name
+    # Sort dictionary by level name
     grouped_staff = dict(sorted(grouped_staff.items()))
 
     attendances = booking.staff_attendance.filter(date=booking.event_date)
@@ -252,7 +268,7 @@ def download_attendance(request, pk):
         data.append([
             staff.staff_id,
             staff.full_name,
-            staff.get_role_display(),
+            staff.get_level_display(),
             r_time,
             status,
             f"Rs.{wage}"
@@ -364,8 +380,21 @@ def update_booking_status(request, pk):
         booking = get_object_or_404(Booking, pk=pk)
         new_status = request.POST.get('status')
         if new_status in dict(Booking.STATUS_CHOICES):
+            old_status = booking.status
             booking.status = new_status
             booking.save()
+            if old_status != 'completed' and new_status == 'completed':
+                for s in booking.assigned_to.all():
+                    s.total_events_completed += 1
+                    s.save()
+                    if s.level == 'C' and s.total_events_completed >= 20:
+                        from staff.models import PromotionRequest
+                        if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
+                            PromotionRequest.objects.create(
+                                staff=s,
+                                current_level='C',
+                                requested_level='B'
+                            )
             return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
@@ -409,7 +438,7 @@ def handle_staff_application(request, pk, action):
                 staff_id=new_id,
                 password='password123',
                 full_name=application.full_name,
-                role=application.service,
+                level='C',
                 phone=application.phone_1,
                 phone_2=application.phone_2,
                 email=application.email,
@@ -437,10 +466,49 @@ def handle_staff_application(request, pk, action):
 
 @admin_required
 def staff_list(request):
-    staff = Staff.objects.filter(is_active=True).annotate(
-        booking_count=Count('bookings', distinct=True)
-    ).order_by('full_name')
+    month = request.GET.get('month', '')
+    year = request.GET.get('year', '')
+
+    from django.db.models import Count, Q
     
+    booking_filter = Q()
+    if month: booking_filter &= Q(bookings__event_date__month=month)
+    if year: booking_filter &= Q(bookings__event_date__year=year)
+
+    staff = Staff.objects.filter(is_active=True).annotate(
+        filtered_booking_count=Count('bookings', filter=booking_filter, distinct=True)
+    )
+
+    if month or year:
+        # If the user explicitly filtered by month or year, only show staff who worked in that period natively.
+        staff = staff.filter(filtered_booking_count__gt=0)
+        
+    staff = staff.order_by('full_name')
+
+    q = request.GET.get('q', '').strip()
+    level = request.GET.get('level', '')
+    locality = request.GET.get('locality', '')
+
+    from django.db.models import Q
+    if q:
+        staff = staff.filter(
+            Q(full_name__icontains=q) |
+            Q(staff_id__icontains=q) |
+            Q(phone__icontains=q)
+        )
+    if level:
+        staff = staff.filter(level=level)
+    if locality:
+        staff = staff.filter(main_locality=locality)
+    
+    sort = request.GET.get('sort', '')
+    if sort == 'booking_count_desc':
+        staff = staff.order_by('-filtered_booking_count', 'full_name')
+    elif sort == 'booking_count_asc':
+        staff = staff.order_by('filtered_booking_count', 'full_name')
+    else:
+        staff = staff.order_by('full_name')
+
     paginator = Paginator(staff, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
     
@@ -456,7 +524,7 @@ def staff_list(request):
 def staff_add(request):
     if request.method == 'POST':
         full_name = request.POST['full_name']
-        role = request.POST['role']
+        level = request.POST['level']
         daily_rate = request.POST.get('daily_rate', 0)
         phone = request.POST.get('phone', '')
         phone_2 = request.POST.get('phone_2', '')
@@ -466,6 +534,7 @@ def staff_add(request):
         blood_group = request.POST.get('blood_group', '')
         guardian_name = request.POST.get('guardian_name', '')
         guardian_phone = request.POST.get('guardian_phone', '')
+        main_locality = request.POST.get('main_locality', '')
         place = request.POST.get('place', '')
         education = request.POST.get('education', '')
         aadhar_card_no = request.POST.get('aadhar', '')
@@ -478,7 +547,7 @@ def staff_add(request):
                 staff_id=new_id,
                 password='password123',
                 full_name=full_name,
-                role=role,
+                level=level,
                 daily_rate=daily_rate,
                 phone=phone,
                 phone_2=phone_2,
@@ -488,6 +557,7 @@ def staff_add(request):
                 blood_group=blood_group,
                 guardian_name=guardian_name,
                 guardian_phone=guardian_phone,
+                main_locality=main_locality,
                 place=place,
                 education=education,
                 aadhar_card_no=aadhar_card_no
@@ -509,7 +579,7 @@ def staff_edit(request, pk):
     member = get_object_or_404(Staff, pk=pk)
     if request.method == 'POST':
         member.full_name = request.POST['full_name']
-        member.role = request.POST['role']
+        member.level = request.POST['level']
         member.daily_rate = request.POST.get('daily_rate', 0)
         member.phone = request.POST.get('phone', '')
         member.phone_2 = request.POST.get('phone_2', '')
@@ -519,6 +589,7 @@ def staff_edit(request, pk):
         member.blood_group = request.POST.get('blood_group', '')
         member.guardian_name = request.POST.get('guardian_name', '')
         member.guardian_phone = request.POST.get('guardian_phone', '')
+        member.main_locality = request.POST.get('main_locality', '')
         member.place = request.POST.get('place', '')
         member.education = request.POST.get('education', '')
         member.aadhar_card_no = request.POST.get('aadhar', '')
@@ -640,3 +711,31 @@ def team_page(request):
         'staff': staff, 'page': 'team',
         'pending_count': Booking.objects.filter(status='pending').count(),
     })
+
+
+@admin_required
+def staff_promotions(request):
+    from staff.models import PromotionRequest
+    requests = PromotionRequest.objects.filter(status='pending').order_by('-created_at')
+    return render(request, 'admin/staff_promotions.html', {
+        'requests': requests,
+        'page': 'staff_promotions',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+
+@admin_required
+def handle_promotion(request, pk, action):
+    from staff.models import PromotionRequest
+    promotion = get_object_or_404(PromotionRequest, pk=pk)
+    if action == 'approve':
+        promotion.status = 'approved'
+        promotion.staff.level = promotion.requested_level
+        promotion.staff.save()
+        promotion.save()
+        messages.success(request, f'Promotion approved! {promotion.staff.full_name} is now {promotion.requested_level} Level.')
+    elif action == 'reject':
+        promotion.status = 'rejected'
+        promotion.save()
+        messages.success(request, 'Promotion rejected.')
+    return redirect('admin_staff_promotions')

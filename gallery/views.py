@@ -3,6 +3,7 @@ from .models import GalleryImage, GalleryCategory
 
 
 def gallery(request):
+    """Displays the event photo gallery with optional category filtering."""
     categories = GalleryCategory.objects.all()
     cat_filter = request.GET.get('cat', '')
     images = GalleryImage.objects.all()

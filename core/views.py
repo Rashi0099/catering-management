@@ -6,6 +6,7 @@ from bookings.models import Testimonial
 
 
 def home(request):
+    """Renders the homepage displaying featured menu items and testimonials."""
     featured_items = MenuItem.objects.filter(is_featured=True, is_available=True)[:6]
     testimonials   = Testimonial.objects.filter(is_featured=True)[:3]
     return render(request, 'core/home.html', {
@@ -15,10 +16,12 @@ def home(request):
 
 
 def about(request):
+    """Renders the static About Us page."""
     return render(request, 'core/about.html')
 
 
 def contact(request):
+    """Handles the contact form submission and sends an email to the site owner."""
     contact_success = False
     if request.method == 'POST':
         name    = request.POST.get('name', '')

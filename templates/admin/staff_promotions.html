@@ -1,0 +1,49 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Promotion Requests — Admin{% endblock %}
+{% block page_title %}Staff Promotions{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">Pending Promotion Requests</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Staff Member</th>
+        <th>Completed Events</th>
+        <th>Current</th>
+        <th>Requested</th>
+        <th>Date</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for req in requests %}
+      <tr>
+        <td>
+          <div style="font-weight:500">
+            <a href="{% url 'admin_staff_detail' req.staff.pk %}" style="color:var(--gold);text-decoration:none;">{{ req.staff.full_name }}</a>
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted)">{{ req.staff.staff_id }}</div>
+        </td>
+        <td>
+          <span class="badge" style="background:rgba(46,204,133,0.15); color:var(--green);">{{ req.staff.total_events_completed }}</span>
+        </td>
+        <td>{{ req.current_level }} Level</td>
+        <td style="color:var(--gold);font-weight:600;">{{ req.requested_level }} Level</td>
+        <td style="color:var(--muted);font-size:0.82rem">{{ req.created_at|date:"d M Y" }}</td>
+        <td>
+          <div style="display:flex; gap:6px;">
+            <a href="{% url 'admin_handle_promotion' req.pk 'approve' %}" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;">Approve</a>
+            <a href="{% url 'admin_handle_promotion' req.pk 'reject' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;">Reject</a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No pending promotion requests</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -23,15 +23,12 @@
 
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
-          <label>Role *</label>
-          <select name="role" required>
-            <option value="server"  {% if member.role == 'server' %}selected{% endif %}>Server / Waiter</option>
-            <option value="chef"    {% if member.role == 'chef' %}selected{% endif %}>Chef</option>
-            <option value="driver"  {% if member.role == 'driver' %}selected{% endif %}>Driver</option>
-            <option value="manager" {% if member.role == 'manager' %}selected{% endif %}>Manager</option>
-            <option value="cleaner" {% if member.role == 'cleaner' %}selected{% endif %}>Cleaner</option>
-            <option value="admin"   {% if member.role == 'admin' %}selected{% endif %}>Admin</option>
-            <option value="other"   {% if member.role == 'other' %}selected{% endif %}>Other</option>
+          <label>Level *</label>
+          <select name="level" required>
+            <option value="C" {% if member.level == 'C' %}selected{% endif %}>C Level</option>
+            <option value="B" {% if member.level == 'B' %}selected{% endif %}>B Level</option>
+            <option value="A" {% if member.level == 'A' %}selected{% endif %}>A Level</option>
+            <option value="captain" {% if member.level == 'captain' %}selected{% endif %}>Captain</option>
           </select>
         </div>
         <div class="form-group">
@@ -84,9 +81,23 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Place / City</label>
-        <input type="text" name="place" value="{{ member.place }}"/>
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Main Locality *</label>
+          <select name="main_locality" required>
+            <option value="" disabled {% if not member.main_locality %}selected{% endif %}>Select primary area</option>
+            <option value="Kondotty" {% if member.main_locality == 'Kondotty' %}selected{% endif %}>Kondotty</option>
+            <option value="Areekode" {% if member.main_locality == 'Areekode' %}selected{% endif %}>Areekode</option>
+            <option value="Edavannappara" {% if member.main_locality == 'Edavannappara' %}selected{% endif %}>Edavannappara</option>
+            <option value="Kizhisseri" {% if member.main_locality == 'Kizhisseri' %}selected{% endif %}>Kizhisseri</option>
+            <option value="University" {% if member.main_locality == 'University' %}selected{% endif %}>University</option>
+            <option value="Valluvambram" {% if member.main_locality == 'Valluvambram' %}selected{% endif %}>Valluvambram</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Specific Place / City</label>
+          <input type="text" name="place" value="{{ member.place }}" placeholder="e.g. exact town details"/>
+        </div>
       </div>
 
       <div class="responsive-grid cols-2" style="gap:16px">

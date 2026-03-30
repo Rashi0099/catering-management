@@ -16,14 +16,15 @@ def send_fast2sms_otp(phone, otp):
     Prints the OTP to the console instead of sending a real SMS.
     """
     print("\n" + "=" * 40)
-    print("🔔 MOCK SMS OTP SENT!")
-    print(f"📱 To: {phone}")
-    print(f"🔑 OTP: {otp}")
+   
+    print(f"To: {phone}")
+    print(f"OTP: {otp}")
     print("=" * 40 + "\n")
     return True
 
 
 def booking_form(request):
+    """Handles submission of both client event bookings and new staff applications securely."""
     event_form = BookingForm()
     staff_form = StaffApplicationForm()
     error = None
@@ -83,6 +84,7 @@ def booking_form(request):
     })
 
 def verify_staff_otp(request, pk):
+    """Verifies the OTP sent to a staff applicant's phone number."""
     application = get_object_or_404(StaffApplication, pk=pk)
     
     # If already verified, don't let them do it again
@@ -112,4 +114,5 @@ def verify_staff_otp(request, pk):
 
 
 def booking_success(request):
+    """Displays a success message page after successful form submission."""
     return render(request, 'bookings/success.html')

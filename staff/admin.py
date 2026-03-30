@@ -6,21 +6,21 @@ from .forms import StaffCreationForm
 @admin.register(Staff)
 class StaffAdmin(UserAdmin):
     add_form = StaffCreationForm
-    list_display  = ['staff_id', 'full_name', 'role', 'daily_rate', 'is_active']
-    list_filter   = ['role', 'is_active']
+    list_display  = ['staff_id', 'full_name', 'level', 'total_events_completed', 'daily_rate', 'is_active']
+    list_filter   = ['level', 'is_active']
     search_fields = ['staff_id', 'full_name', 'email', 'phone']
     ordering      = ['full_name']
 
     fieldsets = (
         ('Login', {'fields': ('staff_id', 'password')}),
         ('Personal', {'fields': ('full_name', 'email', 'phone', 'photo')}),
-        ('Role & Pay', {'fields': ('role', 'daily_rate', 'commission_pct')}),
+        ('Level & Pay', {'fields': ('level', 'total_events_completed', 'daily_rate', 'commission_pct')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('staff_id', 'full_name', 'role', 'daily_rate', 'password1', 'password2'),
+            'fields': ('staff_id', 'full_name', 'level', 'daily_rate', 'password1', 'password2'),
         }),
     )
 

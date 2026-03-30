@@ -24,19 +24,17 @@ class StaffManager(BaseUserManager):
     def create_superuser(self, staff_id, password, **extra):
         extra.setdefault('is_staff', True)
         extra.setdefault('is_superuser', True)
-        extra.setdefault('role', 'admin')
+        extra.setdefault('level', 'admin')
         return self.create_user(staff_id, password, **extra)
 
 
 class Staff(AbstractBaseUser, PermissionsMixin):
-    ROLE_CHOICES = [
-        ('admin',    'Admin'),
-        ('manager',  'Manager'),
-        ('chef',     'Chef'),
-        ('server',   'Server / Waiter'),
-        ('driver',   'Driver'),
-        ('cleaner',  'Cleaner'),
-        ('other',    'Other'),
+    LEVEL_CHOICES = [
+        ('A', 'A Level'),
+        ('B', 'B Level'),
+        ('C', 'C Level'),
+        ('captain', 'Captain'),
+        ('admin', 'Admin'),
     ]
 
     # Login credentials
@@ -51,17 +49,28 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     photo      = models.ImageField(upload_to='staff/', blank=True, null=True)
 
     # Detailed Profiling
+    LOCALITY_CHOICES = [
+        ('Kondotty', 'Kondotty'),
+        ('Areekode', 'Areekode'),
+        ('Edavannappara', 'Edavannappara'),
+        ('Kizhisseri', 'Kizhisseri'),
+        ('University', 'University'),
+        ('Valluvambram', 'Valluvambram'),
+    ]
+    main_locality = models.CharField(max_length=50, choices=LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
+
     age = models.PositiveIntegerField(null=True, blank=True)
     height = models.CharField(max_length=20, blank=True)
     blood_group = models.CharField(max_length=10, blank=True)
     guardian_name = models.CharField(max_length=150, blank=True)
     guardian_phone = models.CharField(max_length=20, blank=True)
-    place = models.CharField(max_length=255, blank=True)
+    place = models.CharField(max_length=255, blank=True, help_text="Specific city/town details")
     education = models.CharField(max_length=255, blank=True)
     aadhar_card_no = models.CharField(max_length=20, blank=True)
 
     # Role & pay
-    role       = models.CharField(max_length=20, choices=ROLE_CHOICES, default='server', db_index=True)
+    level      = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='C', db_index=True)
+    total_events_completed = models.PositiveIntegerField(default=0)
     daily_rate = models.DecimalField(max_digits=8, decimal_places=2, default=0,
                                      help_text="Daily wage in ₹")
     commission_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0,
@@ -88,6 +97,21 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     @property
     def first_name(self):
         return self.full_name.split()[0]
+
+    def get_working_duration(self):
+        from django.utils import timezone
+        diff = timezone.now().date() - self.joined_at
+        days = diff.days
+        years = days // 365
+        months = (days % 365) // 30
+        parts = []
+        if years > 0:
+            parts.append(f"{years} yr{'s' if years > 1 else ''}")
+        if months > 0:
+            parts.append(f"{months} mo{'s' if months > 1 else ''}")
+        if not parts:
+            return "< 1 mo"
+        return " ".join(parts)
 
     def total_bookings(self):
         return self.bookings.count()
@@ -169,8 +193,6 @@ class StaffPayout(models.Model):
 
 class StaffApplication(models.Model):
     """Stores applications for staff roles from the website"""
-    ROLE_CHOICES = Staff.ROLE_CHOICES
-
     STATUS_CHOICES = [
         ('unverified', 'Unverified Phone'),
         ('pending', 'Pending Admin Review'),
@@ -179,7 +201,6 @@ class StaffApplication(models.Model):
     ]
 
     full_name = models.CharField(max_length=200)
-    service = models.CharField(max_length=20, choices=ROLE_CHOICES)
     age = models.PositiveIntegerField()
     height = models.CharField(max_length=20, help_text="e.g. 5'9\"")
     blood_group = models.CharField(max_length=10)
@@ -200,4 +221,25 @@ class StaffApplication(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.full_name} - {self.get_service_display()} ({self.get_status_display()})"
+        return f"{self.full_name} ({self.get_status_display()})"
+
+
+class PromotionRequest(models.Model):
+    """Requests for staff promotion to the next level"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='promotion_requests')
+    current_level = models.CharField(max_length=10)
+    requested_level = models.CharField(max_length=10)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.staff.full_name}: {self.current_level} -> {self.requested_level} ({self.get_status_display()})"

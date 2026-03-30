@@ -5,6 +5,51 @@
 
 {% block content %}
 
+<div class="stats-row" style="margin-bottom:20px;">
+  <!-- Level Progress Card -->
+  <div class="panel" style="width:100%; grid-column: 1 / -1; margin-bottom: 24px;">
+    <div class="panel-hdr">
+      <div class="panel-title">My Level Progress</div>
+    </div>
+    <div class="responsive-grid cols-4" style="text-align:center;padding:10px 0;gap:10px">
+      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold)">{{ me.get_level_display }}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Current Level</div>
+      </div>
+      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--teal)">{{ me.total_events_completed }}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Total Events Completed</div>
+      </div>
+      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+        {% if me.level == 'C' %}
+        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--blue)">{{ remaining_events }}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Events To Reaching B Level</div>
+        {% elif me.level == 'B' %}
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--blue);margin-top:8px">Admin Decision</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">To Reach A Level</div>
+        {% else %}
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--green);margin-top:8px">Max Level</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Congratulations!</div>
+        {% endif %}
+      </div>
+      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+        {% if latest_promotion %}
+          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--orange);margin-top:8px">
+            {% if latest_promotion.status == 'pending' %}
+              Sent to Admin
+            {% else %}
+              {{ latest_promotion.get_status_display }}
+            {% endif %}
+          </div>
+        {% else %}
+          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--muted);margin-top:8px">No Requests</div>
+        {% endif %}
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Promotion Status</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="stats-row">
   <div class="stat-card" style="--c:var(--teal)">
     <div class="stat-icon">📋</div>
@@ -16,10 +61,10 @@
     <div class="stat-val">{{ confirmed_count }}</div>
     <div class="stat-lbl">Confirmed</div>
   </div>
-  <div class="stat-card" style="--c:var(--gold)">
-    <div class="stat-icon">💰</div>
-    <div class="stat-val">₹{{ my_revenue|floatformat:0 }}</div>
-    <div class="stat-lbl">Revenue Generated</div>
+  <div class="stat-card" style="--c:var(--blue)">
+    <div class="stat-icon">⏳</div>
+    <div class="stat-val">{{ pending_count }}</div>
+    <div class="stat-lbl">Pending (Event Requests)</div>
   </div>
   <div class="stat-card" style="--c:var(--orange)">
     <div class="stat-icon">💵</div>
@@ -99,67 +144,7 @@
   </div>
 </div>
 
-<div class="grid2">
-  <!-- Recent Bookings -->
-  <div class="panel">
-    <div class="panel-hdr">
-      <div class="panel-title">Recently Created</div>
-      <a href="{% url 'staff_create_booking' %}" class="btn btn-teal btn-sm"><i class="fas fa-plus"></i> New</a>
-    </div>
-    {% for b in recent_bookings %}
-    <div class="ev-item" style="cursor:pointer" onclick="location.href='{% url 'staff_booking_detail' b.pk %}'">
-      <div>
-        <div class="ev-name">{{ b.name }}</div>
-        <div class="ev-meta">{{ b.get_event_type_display }} · {{ b.event_date|date:"d M" }}</div>
-        <div style="margin-top:4px">
-          <span class="badge b-{{ b.status }}">{{ b.get_status_display }}</span>
-          <span class="badge b-{{ b.payment_status }}" style="margin-left:4px">{{ b.get_payment_status_display }}</span>
-        </div>
-      </div>
-    </div>
-    {% empty %}
-    <div style="text-align:center;color:var(--muted);padding:24px;font-size:0.83rem">No bookings yet. <a href="{% url 'staff_create_booking' %}" style="color:var(--teal)">Create one →</a></div>
-    {% endfor %}
-  </div>
-</div>
 
-<!-- Earnings Summary -->
-<div class="panel">
-  <div class="panel-hdr">
-    <div class="panel-title">My Earnings Summary</div>
-    <a href="{% url 'staff_payouts' %}" class="panel-link">View all →</a>
-  </div>
-  <div class="responsive-grid cols-3" style="text-align:center;padding:10px 0;gap:10px">
-    <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
-      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--green)">₹{{ total_earned|floatformat:0 }}</div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Total Received</div>
-    </div>
-    <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
-      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--orange)">₹{{ pending_pay|floatformat:0 }}</div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Pending Payment</div>
-    </div>
-    <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
-      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--teal)">{{ me.daily_rate|floatformat:0 }}</div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Daily Rate (₹)</div>
-    </div>
-  </div>
 
-  {% if my_payouts %}
-  <table style="margin-top:16px">
-    <thead><tr><th>Type</th><th>Amount</th><th>Status</th><th>Date</th><th>Ref</th></tr></thead>
-    <tbody>
-      {% for p in my_payouts %}
-      <tr>
-        <td>{{ p.get_payout_type_display }}</td>
-        <td style="color:var(--teal);font-weight:600">₹{{ p.amount }}</td>
-        <td><span class="badge b-{{ p.status }}">{{ p.get_status_display }}</span></td>
-        <td style="color:var(--muted)">{{ p.paid_on|date:"d M Y"|default:"—" }}</td>
-        <td style="color:var(--muted);font-family:monospace;font-size:0.75rem">{{ p.reference|default:"—" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-</div>
 
 {% endblock %}

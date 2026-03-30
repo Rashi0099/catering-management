@@ -23,15 +23,12 @@
 
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
-          <label>Role *</label>
-          <select name="role" required>
-            <option value="server">Server / Waiter</option>
-            <option value="chef">Chef</option>
-            <option value="driver">Driver</option>
-            <option value="manager">Manager</option>
-            <option value="cleaner">Cleaner</option>
-            <option value="admin">Admin</option>
-            <option value="other">Other</option>
+          <label>Level *</label>
+          <select name="level" required>
+            <option value="C" selected>C Level</option>
+            <option value="B">B Level</option>
+            <option value="A">A Level</option>
+            <option value="captain">Captain</option>
           </select>
         </div>
         <div class="form-group">
@@ -84,9 +81,23 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Place / City</label>
-        <input type="text" name="place" placeholder="e.g. Kochi"/>
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Main Locality *</label>
+          <select name="main_locality" required>
+            <option value="" disabled selected>Select primary area</option>
+            <option value="Kondotty">Kondotty</option>
+            <option value="Areekode">Areekode</option>
+            <option value="Edavannappara">Edavannappara</option>
+            <option value="Kizhisseri">Kizhisseri</option>
+            <option value="University">University</option>
+            <option value="Valluvambram">Valluvambram</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Specific Place / City</label>
+          <input type="text" name="place" placeholder="e.g. exact town details"/>
+        </div>
       </div>
 
       <div class="responsive-grid cols-2" style="gap:16px">

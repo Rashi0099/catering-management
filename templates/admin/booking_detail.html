@@ -75,7 +75,7 @@
         <div style="background:var(--surface);border:1px solid var(--border);padding:8px 14px;border-radius:8px;font-size:0.82rem">
           <span style="color:var(--gold);font-family:monospace">{{ s.staff_id }}</span>
           <span style="margin-left:8px">{{ s.full_name }}</span>
-          <span style="margin-left:6px;color:var(--muted);font-size:0.73rem">({{ s.get_role_display }})</span>
+          <span style="margin-left:6px;color:var(--muted);font-size:0.73rem">({{ s.get_level_display }})</span>
         </div>
         {% endfor %}
       </div>
@@ -97,7 +97,7 @@
             <div>
               <input type="hidden" name="attendance_staff_id" value="{{ item.staff.pk }}"/>
               <div style="font-weight:500; font-size:0.9rem;">{{ item.staff.full_name }}</div>
-              <div style="color:var(--muted); font-size:0.75rem;">{{ item.staff.staff_id }} - {{ item.staff.get_role_display }}</div>
+              <div style="color:var(--muted); font-size:0.75rem;">{{ item.staff.staff_id }} - {{ item.staff.get_level_display }}</div>
             </div>
             <div>
               <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:4px;">Status</label>
