@@ -447,6 +447,7 @@ def handle_staff_application(request, pk, action):
                 blood_group=application.blood_group,
                 guardian_name=application.guardian_name,
                 guardian_phone=application.guardian_phone,
+                main_locality=application.main_locality,
                 place=application.place,
                 education=application.education,
                 aadhar_card_no=application.aadhar_card_no

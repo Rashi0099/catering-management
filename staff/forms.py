@@ -24,6 +24,7 @@ class StaffApplicationForm(forms.ModelForm):
             'place': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Place / City'}),
             'education': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Highest Education'}),
             'aadhar_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aadhar Card No.'}),
+            'main_locality': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
         }
 
     def clean_phone_1(self):

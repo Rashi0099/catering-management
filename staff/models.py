@@ -211,6 +211,8 @@ class StaffApplication(models.Model):
     education = models.CharField(max_length=255)
     aadhar_card_no = models.CharField(max_length=20)
     
+    main_locality = models.CharField(max_length=50, choices=Staff.LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
+    
     guardian_name = models.CharField(max_length=150)
     guardian_phone = models.CharField(max_length=20)
     
