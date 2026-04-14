@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  {% load static %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}Catrin Boys Admin{% endblock %}</title>
+  <title>{% block title %}Mastan's Catering & Services Admin{% endblock %}</title>
+  
+  <!-- PWA Headers -->
+  <link rel="manifest" href="{% url 'manifest.json' %}">
+  <meta name="theme-color" content="#d4a852">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
@@ -22,12 +29,16 @@
       --orange:   #f39c50;
       --sidebar-w: 240px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
     body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
 
     /* ── SIDEBAR ── */
     .sidebar {
-      width: var(--sidebar-w); min-height: 100vh; background: var(--surface);
+      width: var(--sidebar-w); height: 100vh; background: var(--surface);
       border-right: 1px solid var(--border); display: flex; flex-direction: column;
       position: fixed; top: 0; left: 0; z-index: 100;
     }
@@ -43,7 +54,7 @@
     .sidebar-logo .brand-icon { font-size: 1.6rem; }
     .sidebar-logo .subtitle { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
 
-    .sidebar-nav { padding: 16px 12px; flex: 1; }
+    .sidebar-nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
     .nav-section-label {
       font-size: 0.65rem; color: var(--muted); letter-spacing: 0.12em;
       text-transform: uppercase; padding: 12px 12px 6px;
@@ -218,6 +229,7 @@
 
     /* ── RESPONSIVE UTILITIES ── */
     .responsive-grid { display: grid; gap: 16px; }
+    .responsive-grid > *, .grid-2 > *, .grid-3 > * { min-width: 0; }
     .cols-2 { grid-template-columns: 1fr 1fr; }
     .cols-3 { grid-template-columns: repeat(3, 1fr); }
     .cols-4 { grid-template-columns: repeat(4, 1fr); }
@@ -228,7 +240,7 @@
     
     .sidebar-overlay {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px);
+      background: #000; z-index: 90; transition: opacity 0.3s;
     }
 
     @media (max-width: 1100px) {
@@ -236,15 +248,23 @@
     }
     
     @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+      body, html { max-width: 100%; overflow-x: hidden; position: relative; }
+      table { display: block; width: 100%; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+      
+      .sidebar { transform: translateX(-100%); z-index: 1000; }
       .sidebar.open { transform: translateX(0); }
-      .main { margin-left: 0; }
-      .mobile-menu-btn { display: block; }
-      .sidebar-overlay.active { display: block; }
+      .mobile-menu-btn { display: block !important; }
+      
+      .sidebar-overlay { display: block !important; opacity: 0; pointer-events: none; }
+      .sidebar-overlay.active { opacity: 0.5; pointer-events: auto; }
+      
+      .main { margin-left: 0; padding-bottom: 0; max-width: 100%; overflow-x: hidden; }
       
       .stats-grid { grid-template-columns: 1fr; margin-bottom: 20px; }
       .cols-2, .cols-3, .cols-4, .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
-      .topbar { padding: 16px 20px; }
+      .topbar { padding: 16px 20px; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+      .topbar-title { width: 100%; }
+      .topbar-right { width: 100%; justify-content: space-between; align-items: center; }
       .content { padding: 20px; }
       .form-group { margin-bottom: 12px; }
     }
@@ -260,9 +280,9 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="brand">
-      <span class="brand-icon">🍽️</span>
+      <img src="{% static 'images/logo.png' %}" alt="Logo" style="height: 28px; margin-right: 10px; border-radius: 5px;">
       <div>
-        Catrin Boys
+        Mastan's Catering & Services
         <div class="subtitle">Admin Panel</div>
       </div>
     </div>
@@ -276,6 +296,9 @@
     <a href="{% url 'admin_bookings' %}" class="nav-item {% if page == 'bookings' %}active{% endif %}">
       <i class="nav-icon fas fa-calendar-check"></i> Bookings
       {% if pending_count %}<span class="nav-badge">{{ pending_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'admin_reports' %}" class="nav-item {% if page == 'reports' %}active{% endif %}">
+      <i class="nav-icon fas fa-file-invoice-dollar"></i> Financial Report
     </a>
 
     <div class="nav-section-label">Content</div>
@@ -308,11 +331,13 @@
     </a>
     
     <a href="{% url 'admin_staff' %}" class="nav-item {% if page == 'staff' %}active{% endif %}">
-      <i class="nav-icon fas fa-users"></i> Staff &amp; Pay
-    </a>
-    <a href="{% url 'admin_team' %}" class="nav-item {% if page == 'team' %}active{% endif %}">
       <i class="nav-icon fas fa-users"></i> The Team
     </a>
+
+    <a href="{% url 'admin_staff_notice' %}" class="nav-item {% if page == 'staff_notice' %}active{% endif %}">
+      <i class="nav-icon fas fa-bullhorn"></i> Notice Board
+    </a>
+
     <a href="/django-admin/" class="nav-item" target="_blank">
       <i class="nav-icon fas fa-cog"></i> Django Admin
     </a>
@@ -348,9 +373,11 @@
         <span class="today-dot"></span>
         {% now "l, j F Y" %}
       </span>
-      <a href="{% url 'admin_create_booking' %}" class="btn btn-gold">
+      {% if request.resolver_match.url_name == 'admin_dashboard' or request.resolver_match.url_name == 'admin_bookings' %}
+      <a href="{% url 'admin_create_booking' %}" class="btn btn-gold" id="global-new-booking-btn">
         <i class="fas fa-plus"></i> New Booking
       </a>
+      {% endif %}
     </div>
   </div>
 
@@ -367,6 +394,15 @@
 </main>
 
 <script>
+  // Service Worker Registration for PWA caching
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register("{% url 'sw.js' %}")
+        .then(reg => console.log('SW Registered!', reg.scope))
+        .catch(err => console.error('SW Registration Failed!', err));
+    });
+  }
+
   // Auto-hide alerts
   setTimeout(() => {
     document.querySelectorAll('.alert').forEach(el => {

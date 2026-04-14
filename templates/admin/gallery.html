@@ -1,14 +1,30 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Gallery — Catrin Boys{% endblock %}
+{% block title %}Gallery — Mastan's Catering & Services{% endblock %}
 {% block page_title %}Gallery{% endblock %}
 
 {% block content %}
 
 <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
-  <a href="/django-admin/gallery/galleryimage/add/" class="btn btn-gold" target="_blank">
+  <a href="{% url 'admin_gallery_add' %}" class="btn btn-gold">
     <i class="fas fa-upload"></i> Upload Image
   </a>
 </div>
+
+{% if categories %}
+<div style="margin-bottom:24px; padding:16px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px;">
+  <span style="font-size:0.88rem; font-weight:600; color:var(--text); margin-right:12px;">Manage Categories:</span>
+  <div style="display:inline-flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+    {% for cat in categories %}
+      <span class="badge" style="background:var(--body-bg); border:1px solid var(--border); padding:6px 12px; display:inline-flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text);">
+        {{ cat.name }}
+        <a href="{% url 'admin_gallery_category_delete' cat.pk %}" onclick="return confirm('WARNING: Delete the entire \'{{ cat.name }}\' gallery category? All images inside will be deleted as well!')" style="color:var(--red); display:flex; align-items:center;">
+          <i class="fas fa-times-circle"></i>
+        </a>
+      </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <div class="responsive-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
   {% for img in images %}
@@ -23,7 +39,10 @@
         {% if img.is_featured %}
         <span class="badge badge-confirmed">Featured</span>
         {% endif %}
-        <a href="/django-admin/gallery/galleryimage/{{ img.pk }}/delete/" class="btn btn-danger" style="padding:4px 10px;font-size:0.72rem;margin-left:auto" onclick="return confirm('Delete this image?')">
+        <a href="{% url 'admin_gallery_edit' img.pk %}" class="btn btn-secondary" style="padding:4px 10px;font-size:0.72rem;margin-left:auto">
+          <i class="fas fa-edit"></i>
+        </a>
+        <a href="{% url 'admin_gallery_delete' img.pk %}" class="btn btn-danger" style="padding:4px 10px;font-size:0.72rem;" onclick="return confirm('Delete this image?')">
           <i class="fas fa-trash"></i>
         </a>
       </div>

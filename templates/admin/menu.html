@@ -1,8 +1,22 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Menu — Catrin Boys{% endblock %}
+{% block title %}Menu — Mastan's Catering & Services{% endblock %}
 {% block page_title %}Menu Management{% endblock %}
 
 {% block content %}
+
+<style>
+  @media (max-width: 768px) {
+    .panel table { display: block; border: none; white-space: normal; }
+    .panel thead { display: none; }
+    .panel tbody { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    .panel tr { display: flex; flex-direction: column; background: var(--bg); border: 1px solid rgba(212,168,82,0.15); border-radius: 10px; padding: 12px 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .panel td { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0; text-align: right; width: 100%; }
+    .panel td:first-child { padding-top: 0; }
+    .panel td::before { content: attr(data-label); font-weight: 600; color: var(--gold); text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.08em; text-align: left; flex-shrink: 0; }
+    .panel td:last-child { border-bottom: none; flex-direction: row; align-items: center; justify-content: center; padding-top: 16px; padding-bottom: 0px; margin-top: auto; }
+    .panel td:last-child::before { display: none; }
+  }
+</style>
 
 <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
   <a href="{% url 'admin_menu_add' %}" class="btn btn-gold"><i class="fas fa-plus"></i> Add Item</a>
@@ -10,9 +24,14 @@
 
 {% for category in categories %}
 <div class="panel" style="margin-bottom:20px">
-  <div class="panel-header">
-    <div class="panel-title">{{ category.icon }} {{ category.name }}</div>
-    <span style="font-size:0.8rem;color:var(--muted)">{{ category.items.count }} items</span>
+  <div class="panel-header" style="justify-content:space-between; display:flex;">
+    <div>
+      <div class="panel-title" style="display:inline-block; margin-right:10px;">{{ category.icon }} {{ category.name }}</div>
+      <span style="font-size:0.8rem;color:var(--muted)">{{ category.items.count }} items</span>
+    </div>
+    <a href="{% url 'admin_menu_category_delete' category.pk %}" onclick="return confirm('WARNING: This will permanently delete the entire \'{{ category.name }}\' category and all its menu items!')" style="color:var(--red); font-size:0.85rem; font-weight:500;">
+      <i class="fas fa-trash"></i> Delete Category
+    </a>
   </div>
   <table>
     <thead>
@@ -28,22 +47,25 @@
     <tbody>
       {% for item in category.items.all %}
       <tr>
-        <td style="font-weight:500">{{ item.name }}</td>
-        <td style="color:var(--muted);font-size:0.82rem">{{ item.description|truncatechars:60 }}</td>
-        <td style="color:var(--gold);font-weight:500">₹{{ item.price }}</td>
-        <td>
+        <td data-label="Dish Name" style="font-weight:500">{{ item.name }}</td>
+        <td data-label="Description" style="color:var(--muted);font-size:0.82rem">{{ item.description|default:"—" }}</td>
+        <td data-label="Price" style="color:var(--gold);font-weight:500">₹{{ item.price }}</td>
+        <td data-label="Tags">
           {% if item.is_vegetarian %}<span class="badge" style="background:rgba(46,204,133,0.12);color:var(--green)">🌿 Veg</span>{% endif %}
           {% if item.is_vegan %}<span class="badge" style="background:rgba(46,204,133,0.12);color:var(--green)">🌱 Vegan</span>{% endif %}
           {% if item.is_gluten_free %}<span class="badge" style="background:rgba(91,141,238,0.12);color:var(--blue)">GF</span>{% endif %}
         </td>
-        <td>
+        <td data-label="Available">
           {% if item.is_available %}
           <span style="color:var(--green);font-size:0.82rem">✓ Yes</span>
           {% else %}
           <span style="color:var(--red);font-size:0.82rem">✗ No</span>
           {% endif %}
         </td>
-        <td>
+        <td style="white-space:nowrap;text-align:right;">
+          <a href="{% url 'admin_menu_edit' item.pk %}" class="btn btn-ghost" style="padding:5px 10px;font-size:0.75rem;margin-right:4px;">
+            <i class="fas fa-edit"></i>
+          </a>
           <a href="{% url 'admin_menu_delete' item.pk %}"
              onclick="return confirm('Remove {{ item.name }} from menu?')"
              class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem">

@@ -1,10 +1,72 @@
-gi{% extends 'admin/custom_base.html' %}
-{% block title %}Dashboard — Catrin Boys{% endblock %}
+{% extends 'admin/custom_base.html' %}
+{% block title %}Dashboard — Mastan's Catering & Services{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
 
 <!-- STAT CARDS -->
+<style>
+  @media (max-width: 768px) {
+    /* Premium ListTile Mobile UX for Dashboard Bookings */
+    .grid-3 { display: flex; flex-direction: column; gap: 20px; }
+    .grid-3 > .panel table { display: block; border: none; white-space: normal; width: 100%; min-width: unset !important; }
+    .grid-3 > .panel thead { display: none; }
+    .grid-3 > .panel tbody { display: flex; flex-direction: column; gap: 8px; }
+    
+    .grid-3 > .panel tbody tr {
+      display: grid !important;
+      position: relative;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.05) !important;
+      border-radius: 12px;
+      padding: 14px 16px !important;
+      margin-bottom: 2px;
+      grid-template-columns: 1fr auto auto;
+      grid-template-rows: auto auto;
+      row-gap: 4px;
+      column-gap: 12px;
+      align-items: center;
+      grid-template-areas:
+        "client status action"
+        "event  date   action";
+    }
+    
+    .grid-3 > .panel td { padding: 0 !important; border: none !important; text-align: left !important; display: block; width: auto !important; }
+    
+    /* Client */
+    .grid-3 > .panel td:nth-child(1) { grid-area: client; align-self: end; }
+    .grid-3 > .panel td:nth-child(1) > div:first-child { font-size: 1.05rem; font-weight: 600; color: var(--text); }
+    .grid-3 > .panel td:nth-child(1) > div:last-child { display: none; } /* Hide email in dense mode */
+    
+    /* Event */
+    .grid-3 > .panel td:nth-child(2) { grid-area: event; font-size: 0.8rem; color: var(--gold); font-weight: 500; }
+    
+    /* Date */
+    .grid-3 > .panel td:nth-child(3) { grid-area: date; font-size: 0.75rem; color: var(--muted); }
+    
+    /* Status */
+    .grid-3 > .panel td:nth-child(4) { grid-area: status; justify-self: end; }
+    .grid-3 > .panel td:nth-child(4) .badge { padding: 4px 8px; font-size: 0.65rem; border-radius: 6px; }
+
+    /* Action chevron */
+    .grid-3 > .panel tbody tr::after {
+      grid-area: action;
+      align-self: center;
+      content: "\f054"; /* cursor chevron */
+      font-family: "Font Awesome 5 Free";
+      font-weight: 900;
+      color: rgba(255,255,255,0.2);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+    
+    /* Clean up empty state block natively */
+    .grid-3 > .panel tbody tr td[colspan="4"] {
+      grid-column: 1 / -1; grid-row: 1 / -1; display: block; text-align: center !important; padding: 30px !important; color: var(--muted);
+    }
+    .grid-3 > .panel tbody tr td[colspan="4"]:first-child::after { display: none !important; }
+  }
+</style>
 <div class="stats-grid">
   <div class="stat-card" style="--accent-color: var(--gold)">
     <div class="stat-icon" style="background:rgba(212,168,82,0.12); color:var(--gold)">
@@ -60,7 +122,6 @@ gi{% extends 'admin/custom_base.html' %}
           <th>Client</th>
           <th>Event</th>
           <th>Date</th>
-          <th>Guests</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -73,11 +134,10 @@ gi{% extends 'admin/custom_base.html' %}
           </td>
           <td style="text-transform:capitalize">{{ b.get_event_type_display }}</td>
           <td style="color:var(--muted);font-size:0.82rem">{{ b.event_date|date:"d M Y" }}</td>
-          <td>{{ b.guest_count }} pax</td>
           <td><span class="badge badge-{{ b.status }}">{{ b.get_status_display }}</span></td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">No bookings yet</td></tr>
+        <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">No bookings yet</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -34,9 +34,12 @@ class Booking(models.Model):
 
     # Event
     event_type  = models.CharField(max_length=50, choices=EVENT_TYPES)
+    session     = models.CharField(max_length=10, choices=[('day', 'Day'), ('night', 'Night')], default='day')
     event_date  = models.DateField(db_index=True)
     event_time  = models.TimeField(null=True, blank=True)
     venue       = models.CharField(max_length=300, blank=True)
+    location_name = models.CharField(max_length=255, blank=True)
+    location_link = models.URLField(blank=True)
     guest_count = models.IntegerField()
     budget      = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
@@ -54,6 +57,22 @@ class Booking(models.Model):
     payment_status  = models.CharField(max_length=15, choices=PAYMENT_STATUS, default='unpaid', db_index=True)
     amount_received = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     amount_pending  = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Quotas & Visibility
+    quota_captain = models.PositiveIntegerField(default=0, help_text="Number of Captains needed")
+    quota_a       = models.PositiveIntegerField(default=0, help_text="Number of A-Level staff needed")
+    quota_b       = models.PositiveIntegerField(default=0, help_text="Number of B-Level staff needed")
+    quota_c       = models.PositiveIntegerField(default=0, help_text="Number of C-Level staff needed")
+    is_published  = models.BooleanField(default=False, help_text="If True, staff can see and apply for this event")
+    publish_locality = models.CharField(max_length=50, choices=[
+        ('all', 'All Localities'),
+        ('Kondotty', 'Kondotty'),
+        ('Areekode', 'Areekode'),
+        ('Edavannappara', 'Edavannappara'),
+        ('Kizhisseri', 'Kizhisseri'),
+        ('University', 'University'),
+        ('Valluvambram', 'Valluvambram'),
+    ], default='all', help_text="Publish only to staff from this locality")
 
     # Staff
     created_by  = models.ForeignKey(
@@ -78,6 +97,20 @@ class Booking(models.Model):
         if self.quoted_price:
             return self.quoted_price - self.amount_received
         return 0
+
+    @property
+    def is_cancellable(self):
+        from django.utils import timezone
+        import datetime
+        event_time = self.event_time or datetime.time(0, 0)
+        dt = datetime.datetime.combine(self.event_date, event_time)
+        
+        if timezone.is_aware(timezone.now()):
+            event_dt = timezone.make_aware(dt, timezone.get_current_timezone())
+        else:
+            event_dt = dt
+            
+        return event_dt > (timezone.now() + datetime.timedelta(hours=24))
 
 
 class BookingPayment(models.Model):
@@ -137,7 +170,7 @@ class EventApplication(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
+        ('rejected', 'Not Approved'),
         ('cancel_requested', 'Cancel Requested'),
         ('cancelled', 'Cancelled')
     ]
@@ -145,6 +178,7 @@ class EventApplication(models.Model):
     staff = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='event_applications')
     applicant_name = models.CharField(max_length=200)
     applicant_phone = models.CharField(max_length=20)
+    note = models.TextField(blank=True, help_text="Note from staff to admin")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -154,3 +188,30 @@ class EventApplication(models.Model):
 
     def __str__(self):
         return f"{self.applicant_name} for {self.booking.name} ({self.get_status_display()})"
+
+
+class ManualReport(models.Model):
+    """
+    Dedicated table for standalone manual financial reporting.
+    This is entirely disconnected from system logic, allowing the Admin
+    to manually log details matching their legacy spreadsheet workflows.
+    """
+    event_date = models.DateField()
+    site_name = models.CharField(max_length=255)
+    event_name = models.CharField(max_length=255)
+    boys_count = models.IntegerField(default=0)
+    bill_incharge = models.CharField(max_length=255)
+    bill_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    amount_received = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    payment_received_on = models.DateField(null=True, blank=True)
+    pending_amount = models.CharField(max_length=255, blank=True, null=True, help_text="Can be NIL or numeric")
+    profit = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    is_settled = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-event_date', '-created_at']
+
+    def __str__(self):
+        return f"Report: {self.event_name} on {self.event_date}"

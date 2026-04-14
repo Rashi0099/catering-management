@@ -1,0 +1,29 @@
+{% extends "admin/custom_base.html" %}
+{% block page_title %}Notice Board{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width: 600px;">
+    <div class="panel-header">
+        <div class="panel-title">Manage Staff Notice</div>
+    </div>
+    
+    <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 20px;">
+        <i class="fas fa-info-circle"></i> This notice will be immediately visible on the home screen of the Staff Portal when it is marked as active.
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Notice Message</label>
+            <textarea name="message" rows="5" required placeholder="Type the announcement here...">{{ notice.message|default_if_none:'' }}</textarea>
+        </div>
+        
+        <div class="form-group" style="display:flex; align-items:center; gap: 10px; margin-top: 15px; margin-bottom: 25px;">
+            <input type="checkbox" name="is_active" id="is_active" style="width:auto; height: 18px; width: 18px;" {% if not notice or notice.is_active %}checked{% endif %}>
+            <label for="is_active" style="margin-bottom:0; cursor:pointer; color: var(--text);">Publish on staff dashboard immediately</label>
+        </div>
+        
+        <button type="submit" class="btn btn-gold" style="width: 100%; justify-content: center;"><i class="fas fa-save"></i> Save Notice</button>
+    </form>
+</div>
+{% endblock %}

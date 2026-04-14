@@ -1,0 +1,67 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Edit Financial Report — Mastan's Catering{% endblock %}
+{% block page_title %}Edit Financial Report{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width: 800px; margin:0 auto;">
+  <div class="panel-header">
+    <div class="panel-title">Edit Financial Report: {{ report.event_name }}</div>
+    <a href="{% url 'admin_reports' %}" class="panel-link"><i class="fas fa-arrow-left"></i> Back to Financial Reports</a>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <div class="cols-2 responsive-grid">
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" name="event_date" value="{{ report.event_date|date:'Y-m-d' }}" required>
+      </div>
+      <div class="form-group">
+        <label>Site Name</label>
+        <input type="text" name="site_name" value="{{ report.site_name }}" required>
+      </div>
+      <div class="form-group">
+        <label>Event Name</label>
+        <input type="text" name="event_name" value="{{ report.event_name }}" required>
+      </div>
+      <div class="form-group">
+        <label>No. of Boys</label>
+        <input type="number" name="boys_count" value="{{ report.boys_count }}">
+      </div>
+      <div class="form-group">
+        <label>Bill Incharge</label>
+        <input type="text" name="bill_incharge" value="{{ report.bill_incharge }}">
+      </div>
+      <div class="form-group">
+        <label>Bill Amount (Boys)</label>
+        <input type="number" step="0.01" name="bill_amount" value="{{ report.bill_amount }}">
+      </div>
+      <div class="form-group">
+        <label>Amount Received (Event)</label>
+        <input type="number" step="0.01" name="amount_received" value="{{ report.amount_received }}">
+      </div>
+      <div class="form-group">
+        <label>Payment Received On</label>
+        <!-- 'Y-m-d' is important so the HTML date input pre-fills correctly -->
+        <input type="date" name="payment_received_on" value="{% if report.payment_received_on %}{{ report.payment_received_on|date:'Y-m-d' }}{% endif %}">
+      </div>
+      <div class="form-group">
+        <label>Pending Amount</label>
+        <input type="text" name="pending_amount" value="{{ report.pending_amount|default_if_none:'' }}" placeholder="e.g. NIL or numeric">
+      </div>
+      <div class="form-group">
+        <label>Profit</label>
+        <input type="number" step="0.01" name="profit" value="{{ report.profit }}">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:20px;">
+      <label style="display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" name="is_settled" style="width:16px; height:16px;" {% if report.is_settled %}checked{% endif %}>
+        Settled / Checked
+      </label>
+    </div>
+    <div style="margin-top:24px; text-align:right;">
+      <button type="submit" class="btn btn-gold"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

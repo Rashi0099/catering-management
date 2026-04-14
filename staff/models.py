@@ -6,10 +6,18 @@ from django.utils import timezone
 
 
 def generate_staff_id():
-    """Generates unique staff ID like CB-2024-0042"""
-    year = timezone.now().year
-    suffix = ''.join(random.choices(string.digits, k=4))
-    return f"CB-{year}-{suffix}"
+    """Generates unique staff ID like MS-0001 sequentially"""
+    from staff.models import Staff
+    last_staff = Staff.objects.filter(staff_id__startswith='MS-').order_by('staff_id').last()
+    if last_staff:
+        try:
+            num = int(last_staff.staff_id.split('-')[1])
+            new_num = num + 1
+        except Exception:
+            new_num = 1
+    else:
+        new_num = 1
+    return f"MS-{new_num:04d}"
 
 
 class StaffManager(BaseUserManager):
@@ -149,6 +157,7 @@ class StaffAttendance(models.Model):
     reaching_time = models.TimeField(null=True, blank=True)
     hours      = models.DecimalField(max_digits=4, decimal_places=1, default=8)
     notes      = models.TextField(blank=True)
+    payment_given = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('staff', 'date', 'booking')
@@ -197,7 +206,7 @@ class StaffApplication(models.Model):
         ('unverified', 'Unverified Phone'),
         ('pending', 'Pending Admin Review'),
         ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
+        ('rejected', 'Not Approved'),
     ]
 
     full_name = models.CharField(max_length=200)
@@ -231,7 +240,7 @@ class PromotionRequest(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
+        ('rejected', 'Not Approved'),
     ]
 
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='promotion_requests')
@@ -245,3 +254,18 @@ class PromotionRequest(models.Model):
 
     def __str__(self):
         return f"{self.staff.full_name}: {self.current_level} -> {self.requested_level} ({self.get_status_display()})"
+
+
+class StaffNotice(models.Model):
+    """Notice board messages from admin to all staff"""
+    message = models.TextField()
+    is_active = models.BooleanField(default=True, help_text="Show this notice on the staff portal front page")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"[{status}] Notice {self.id}"
+

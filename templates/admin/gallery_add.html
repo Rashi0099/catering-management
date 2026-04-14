@@ -1,0 +1,58 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Add Gallery Image — Mastan's Catering & Services{% endblock %}
+{% block page_title %}Upload to Gallery{% endblock %}
+
+{% block content %}
+
+<div style="max-width:640px">
+  <a href="{% url 'admin_gallery' %}" class="btn btn-ghost" style="margin-bottom:24px">
+    <i class="fas fa-arrow-left"></i> Back to Gallery
+  </a>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Upload New Image</div>
+    </div>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Category *</label>
+        <select name="category" style="margin-bottom:8px" onchange="this.nextElementSibling.style.display = this.value === '' ? 'block' : 'none'">
+          <option value="">+ Create New Category</option>
+          {% for cat in categories %}
+          <option value="{{ cat.pk }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="new_category" placeholder="Enter new category name">
+        <small class="help-text">Select an existing category, or leave it blank and type a new category name.</small>
+      </div>
+      
+      <div class="form-group">
+        <label>Title *</label>
+        <input type="text" name="title" required placeholder="e.g. Beautiful Wedding Setup"/>
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" rows="3" placeholder="Optional description..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Image File *</label>
+        <input type="file" name="image" accept="image/*" required style="padding:10px; border:1px solid var(--border); border-radius:8px; width:100%; background:var(--card-bg)">
+      </div>
+
+      <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_featured" style="width:auto;padding:0"/> Featured on Homepage
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
+        <i class="fas fa-upload"></i> Upload Image
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

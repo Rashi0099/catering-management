@@ -3,6 +3,39 @@
 {% block page_title %}Staff Promotions{% endblock %}
 
 {% block content %}
+<style>
+  @media (max-width: 768px) {
+    /* Premium ListTile Mobile UX for Promotions */
+    .panel table { display: block; border: none; white-space: normal; width: 100%; min-width: unset !important; }
+    .panel thead { display: none; }
+    .panel tbody { display: flex; flex-direction: column; gap: 8px; }
+    
+    .panel tbody tr {
+      display: grid !important; position: relative; background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.05) !important; border-radius: 12px; padding: 14px 16px !important; margin-bottom: 2px;
+      grid-template-columns: 1fr auto;
+      row-gap: 8px; column-gap: 12px; align-items: start;
+      grid-template-areas:
+        "staff   events "
+        "current request"
+        "date    date   "
+        "action  action ";
+    }
+    .panel td { padding: 0 !important; border: none !important; text-align: left !important; display: block; width: auto !important; }
+    
+    .panel td:nth-child(1) { grid-area: staff; }
+    .panel td:nth-child(2) { grid-area: events; justify-self: end; }
+    .panel td:nth-child(3) { grid-area: current; font-size: 0.8rem; color: var(--muted); }
+    .panel td:nth-child(4) { grid-area: request; font-size: 0.8rem; justify-self: end; }
+    .panel td:nth-child(5) { grid-area: date; font-size:0.75rem; color: var(--muted); border-top: 1px dashed rgba(255,255,255,0.05); padding-top:6px !important; margin-top:2px; }
+    .panel td:nth-child(6) { grid-area: action; margin-top: 4px; padding-top: 10px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; display: flex; gap: 8px; }
+    
+    .panel td[colspan="6"] { grid-column: 1 / -1; display: block; text-align: center !important; padding: 30px !important; background: transparent; border: none !important; }
+    
+    .btn { text-align: center; justify-content: center; flex: 1; margin: 0; box-sizing: border-box; }
+  }
+</style>
+
 <div class="panel">
   <div class="panel-header">
     <div class="panel-title">Pending Promotion Requests</div>

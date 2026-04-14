@@ -14,13 +14,19 @@
     </div>
     
     <div style="margin-bottom:24px; padding:16px; background:var(--surface); border-radius:8px; border:1px solid var(--border);">
-      <h3 style="margin-bottom:12px; font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold);">{{ booking.name }}</h3>
+      <h3 style="margin-bottom:12px; font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold);">{{ booking.get_event_type_display }}</h3>
       <div style="display:flex; flex-direction:column; gap:8px; font-size:0.95rem;">
         <div><i class="fas fa-calendar" style="width:20px; color:var(--muted);"></i> {{ booking.event_date|date:"D, d M Y" }}</div>
         <div><i class="fas fa-clock" style="width:20px; color:var(--muted);"></i> {{ booking.event_time|default:"Time TBD"|time:"h:i A" }}</div>
-        <div><i class="fas fa-glass-cheers" style="width:20px; color:var(--muted);"></i> {{ booking.get_event_type_display }}</div>
-        <div><i class="fas fa-users" style="width:20px; color:var(--muted);"></i> {{ booking.guest_count }} guests</div>
-        <div><i class="fas fa-map-marker-alt" style="width:20px; color:var(--muted);"></i> {{ booking.venue|default:"Venue TBD" }}</div>
+        <div><i class="fas fa-sun" style="width:20px; color:var(--muted);"></i> {{ booking.get_session_display }}</div>
+        <div>
+          <i class="fas fa-map-marker-alt" style="width:20px; color:var(--muted);"></i>
+          {% if booking.location_link %}
+            <a href="{{ booking.location_link }}" target="_blank" style="color:inherit; text-decoration:underline;">{{ booking.location_name|default:"Open Map Route" }}</a>
+          {% else %}
+            {{ booking.location_name|default:booking.venue|default:"Venue TBD" }}
+          {% endif %}
+        </div>
       </div>
     </div>
 
@@ -35,10 +41,25 @@
                style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);"/>
       </div>
       
-      <div class="form-group" style="margin-bottom:20px;">
+      <div class="form-group" style="margin-bottom:16px;">
         <label style="display:block; margin-bottom:6px; font-weight:500;">Active Phone Number *</label>
         <input type="text" name="applicant_phone" value="{{ user.phone }}" required placeholder="e.g. 9876543210"
                style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);"/>
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px;">
+        <label style="display:block; margin-bottom:6px; font-weight:500;">Note for Admin (Optional)</label>
+        <textarea name="note" rows="3" placeholder="Add a note here..."
+                  style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px;">
+        <label style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" name="agree_terms" required style="width:20px; height:20px; accent-color:var(--gold);">
+          <span style="font-size:0.9rem; font-weight:normal; text-transform:none; letter-spacing:normal;">
+            I agree to the <a href="{% url 'staff_terms' %}" target="_blank" style="color:var(--gold);text-decoration:underline;">Terms & Conditions</a>
+          </span>
+        </label>
       </div>
 
       <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; padding:12px; font-size:1.05rem;">

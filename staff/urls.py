@@ -13,4 +13,6 @@ urlpatterns = [
     path('bookings/<int:pk>/cancel_request/', views.staff_cancel_request, name='staff_cancel_request'),
     path('bookings/<int:pk>/pdf/', views.staff_download_attendance, name='staff_download_attendance'),
     path('payouts/', views.staff_payouts, name='staff_payouts'),
+    path('profile/', views.staff_profile, name='staff_profile'),
+    path('terms/', views.staff_terms, name='staff_terms'),
 ]

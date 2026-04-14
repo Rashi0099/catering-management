@@ -10,19 +10,6 @@ from .forms import BookingForm
 from staff.models import StaffApplication
 from staff.forms import StaffApplicationForm
 
-def send_fast2sms_otp(phone, otp):
-    """
-    Mock OTP implementation for testing.
-    Prints the OTP to the console instead of sending a real SMS.
-    """
-    print("\n" + "=" * 40)
-   
-    print(f"To: {phone}")
-    print(f"OTP: {otp}")
-    print("=" * 40 + "\n")
-    return True
-
-
 def booking_form(request):
     """Handles submission of both client event bookings and new staff applications securely."""
     event_form = BookingForm()
@@ -56,20 +43,9 @@ def booking_form(request):
             if staff_form.is_valid():
                 try:
                     application = staff_form.save(commit=False)
-                    application.status = 'unverified'
+                    application.status = 'pending'  # pending admin approval directly
                     application.save()
-                    
-                    # Generate OTP
-                    otp = str(random.randint(1000, 9999))
-                    request.session[f'staff_otp_{application.pk}'] = otp
-                    
-                    # Send Real SMS
-                    sms_sent = send_fast2sms_otp(application.phone_1, otp)
-                    if not sms_sent:
-                        application.delete()
-                        error = 'Failed to send OTP to your phone number. Please check your number and try again.'
-                    else:
-                        return redirect('verify_staff_otp', pk=application.pk)
+                    return redirect('booking_success')
                 except Exception as e:
                     error = 'Something went wrong processing your staff application. Please try again.'
             else:
@@ -82,36 +58,6 @@ def booking_form(request):
         'staff_form': staff_form,
         'error': error,
     })
-
-def verify_staff_otp(request, pk):
-    """Verifies the OTP sent to a staff applicant's phone number."""
-    application = get_object_or_404(StaffApplication, pk=pk)
-    
-    # If already verified, don't let them do it again
-    if application.status != 'unverified':
-        return redirect('booking_success')
-        
-    error = None
-    if request.method == 'POST':
-        otp_entered = request.POST.get('otp')
-        valid_otp = request.session.get(f'staff_otp_{application.pk}')
-        
-        if valid_otp and valid_otp == otp_entered:
-            # Success
-            application.status = 'pending' # Pending admin approval
-            application.save()
-            if f'staff_otp_{application.pk}' in request.session:
-                del request.session[f'staff_otp_{application.pk}']
-                
-            return redirect('booking_success')
-        else:
-            error = "Invalid or expired OTP. Please try again."
-            
-    return render(request, 'bookings/verify_otp.html', {
-        'application': application,
-        'error': error
-    })
-
 
 def booking_success(request):
     """Displays a success message page after successful form submission."""

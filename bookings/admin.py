@@ -13,8 +13,46 @@ class BookingAdmin(admin.ModelAdmin):
         ('Client Info', {'fields': ('name', 'email', 'phone', 'company')}),
         ('Event Details', {'fields': ('event_type', 'event_date', 'event_time', 'venue', 'guest_count', 'budget')}),
         ('Requirements', {'fields': ('dietary_requirements', 'special_requests', 'message')}),
-        ('Admin', {'fields': ('status', 'admin_notes', 'quoted_price', 'assigned_to', 'created_at', 'updated_at')}),
+        ('Admin', {'fields': ('status', 'admin_notes', 'quoted_price', 'assigned_to', 'is_published', 'publish_locality', 'created_at', 'updated_at')}),
     )
+
+    def save_model(self, request, obj, form, change):
+        is_new = obj.pk is None
+        was_published = False
+        if not is_new:
+            from .models import Booking
+            try:
+                was_published = Booking.objects.get(pk=obj.pk).is_published
+            except Booking.DoesNotExist:
+                pass
+                
+        super().save_model(request, obj, form, change)
+        
+        # Trigger Web Push Notification if newly published
+        if obj.is_published and not was_published:
+            try:
+                from webpush import send_user_notification
+                from django.contrib.auth import get_user_model
+                
+                payload = {
+                    "head": "New Shift Available!",
+                    "body": f"{obj.get_event_type_display()} on {obj.event_date} at {obj.location_name or 'TBA'}.",
+                    "icon": "/static/images/logo.png",
+                    "url": "/staff/bookings/"
+                }
+                
+                Staff = get_user_model()
+                targets = Staff.objects.filter(is_active=True) # All active staff
+                if obj.publish_locality and obj.publish_locality != 'all':
+                    targets = targets.filter(main_locality=obj.publish_locality)
+                    
+                for staff in targets:
+                    try:
+                        send_user_notification(user=staff, payload=payload, ttl=1000)
+                    except Exception:
+                        pass
+            except Exception as e:
+                print("Web Push Error:", e)
 
 
 @admin.register(Testimonial)

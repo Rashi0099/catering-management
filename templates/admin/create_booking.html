@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Create Booking — Catrin Boys Admin{% endblock %}
+{% block title %}Create Booking — Mastan's Catering & Services Admin{% endblock %}
 {% block page_title %}New Manual Booking{% endblock %}
 
 {% block content %}
@@ -19,11 +19,11 @@
       <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:20px">
         <div class="form-group">
           <label>Full Name *</label>
-          <input type="text" name="name" required placeholder="Client Name"/>
+          <input type="text" name="name" placeholder="Client Name"/>
         </div>
         <div class="form-group">
           <label>Phone Number *</label>
-          <input type="text" name="phone" required placeholder="e.g. 9876543210"/>
+          <input type="text" name="phone" placeholder="e.g. 9876543210"/>
         </div>
         <div class="form-group">
           <label>Email Address</label>
@@ -38,23 +38,28 @@
       <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">
         <div class="panel-title" style="margin-bottom:16px;font-size:0.9rem">Event Specifications</div>
         
-        <div class="responsive-grid cols-2" style=" 1fr;gap:16px;margin-bottom:16px">
+        <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:16px">
           <div class="form-group">
             <label>Event Type *</label>
-            <select name="event_type" required>
+            <select name="event_type" style="margin-bottom:12px;">
               <option value="wedding">Wedding / Reception</option>
               <option value="corporate">Corporate Event</option>
               <option value="party">Private Party / Birthday</option>
               <option value="other">Other</option>
             </select>
+            <label>Event Session *</label>
+            <select name="session">
+              <option value="day">Day</option>
+              <option value="night">Night</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Event Date *</label>
-            <input type="date" name="event_date" required/>
+            <input type="date" name="event_date"/>
           </div>
           <div class="form-group">
             <label>Guest Count *</label>
-            <input type="number" name="guest_count" required value="50"/>
+            <input type="number" name="guest_count" value="50"/>
           </div>
         </div>
 
@@ -70,8 +75,18 @@
         </div>
 
         <div class="form-group">
-          <label>Venue / Location</label>
+          <label>Venue Approximations</label>
           <input type="text" name="venue" placeholder="Full address or Venue Name"/>
+        </div>
+        <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label>Map Location Name (Visible to Staff)</label>
+            <input type="text" name="location_name" placeholder="e.g. Flora Auditorium"/>
+          </div>
+          <div class="form-group">
+            <label>Map Link URL (Visible to Staff)</label>
+            <input type="url" name="location_link" placeholder="https://maps.app.goo.gl/..."/>
+          </div>
         </div>
         <div class="form-group">
           <label>Dietary Requirements &amp; Special Requests</label>

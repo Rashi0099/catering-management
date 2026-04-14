@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Staff Login — Catrin Boys</title>
+  <title>Staff Login — Mastan's Catering & Services</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     :root { --teal:#38c9b0; --bg:#0f1117; --surface:#171c26; --border:#2a3347; --text:#e2e8f0; --muted:#6b7fa3; --red:#f87171; }
@@ -36,9 +36,10 @@
 <body>
 <div class="box">
   <div class="logo">
-    <span class="icon">🍽️</span>
+{% load static %}
+    <img src="{% static 'images/logo.png' %}" alt="Logo" style="height: 60px; margin-bottom: 10px; border-radius: 5px;">
     <h1>Staff Portal</h1>
-    <p>Catrin Boys — Team Login</p>
+    <p>Mastan's Catering & Services — Team Login</p>
   </div>
 
   {% for msg in messages %}

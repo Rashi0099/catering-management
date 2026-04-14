@@ -1,9 +1,22 @@
 {% extends 'staff/base.html' %}
-{% block title %}My Dashboard — Catrin Boys{% endblock %}
+{% block title %}My Dashboard — Mastan's Catering & Services{% endblock %}
 {% block nav_dash %}active{% endblock %}
 {% block page_title %}Welcome, {{ me.first_name }} 👋{% endblock %}
 
 {% block content %}
+
+{% if active_notice %}
+<div class="panel" style="background: rgba(212, 168, 82, 0.1); border: 1px solid var(--gold); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+  <div style="display: flex; align-items: flex-start; gap: 12px;">
+    <div style="font-size: 1.5rem; color: var(--gold); margin-top: 2px;"><i class="fas fa-bullhorn"></i></div>
+    <div style="flex: 1;">
+      <h3 style="margin: 0 0 5px 0; font-size: 1.1rem; color: var(--gold); font-family: 'Playfair Display', serif;">Notice Board</h3>
+      <p style="margin: 0; color: var(--fg); font-size: 0.95rem; line-height: 1.5;">{{ active_notice.message|safe|linebreaksbr }}</p>
+      <div style="font-size: 0.75rem; color: var(--muted); margin-top: 8px;">Posted on {{ active_notice.created_at|date:"d M Y, h:i A" }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="stats-row" style="margin-bottom:20px;">
   <!-- Level Progress Card -->
@@ -50,7 +63,7 @@
   </div>
 </div>
 
-<div class="stats-row">
+<div class="stats-row stats-row-3">
   <div class="stat-card" style="--c:var(--teal)">
     <div class="stat-icon">📋</div>
     <div class="stat-val">{{ total_bookings }}</div>
@@ -66,16 +79,38 @@
     <div class="stat-val">{{ pending_count }}</div>
     <div class="stat-lbl">Pending (Event Requests)</div>
   </div>
-  <div class="stat-card" style="--c:var(--orange)">
-    <div class="stat-icon">💵</div>
-    <div class="stat-val">₹{{ total_earned|floatformat:0 }}</div>
-    <div class="stat-lbl">My Total Earnings</div>
-  </div>
+</div>
+
+<style>
+  .stats-row-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  .mobile-tabs { display: none; }
+  @media (max-width: 768px) {
+    .stats-row-3 { grid-template-columns: 1fr !important; }
+    .mobile-tabs { 
+      display: flex; gap: 8px; margin-bottom: 16px; background: rgba(255,255,255,0.03); 
+      padding: 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .m-tab-btn {
+      flex: 1; padding: 10px; border: none; background: transparent; color: var(--muted);
+      border-radius: 8px; font-weight: 600; font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
+      transition: all 0.2s;
+    }
+    .m-tab-btn.active {
+      background: var(--surface); color: var(--teal); box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    #panel-available { display: block; }
+    #panel-upcoming { display: none; }
+  }
+</style>
+
+<div class="mobile-tabs" id="mobileTabsContainer">
+  <button class="m-tab-btn active" id="btn-available" onclick="switchDashboardTab('available')">Available Shifts</button>
+  <button class="m-tab-btn" id="btn-upcoming" onclick="switchDashboardTab('upcoming')">Upcoming Events</button>
 </div>
 
 <div class="grid2">
   <!-- Upcoming Events -->
-  <div class="panel">
+  <div class="panel" id="panel-upcoming">
     <div class="panel-hdr">
       <div class="panel-title">Upcoming Events</div>
       <a href="{% url 'staff_bookings' %}" class="panel-link">All →</a>
@@ -87,14 +122,22 @@
         <div class="ev-mon">{{ ev.event_date|date:"M" }}</div>
       </div>
       <div style="flex:1">
-        <div class="ev-name">{{ ev.name }}</div>
-        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
-        <div class="ev-meta">📍 {{ ev.venue|default:"Venue TBD" }}</div>
+        <div class="ev-name">{{ ev.get_event_type_display }}</div>
+        <div class="ev-meta">{{ ev.get_session_display }} · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
+        <div class="ev-meta">
+          {% if ev.location_link %}
+            <a href="{{ ev.location_link }}" target="_blank" style="color:inherit; text-decoration:underline;">📍 {{ ev.location_name|default:"Open Map Route" }}</a>
+          {% else %}
+            📍 {{ ev.location_name|default:ev.venue|default:"Venue TBD" }}
+          {% endif %}
+        </div>
       </div>
       <div style="margin-left:auto; text-align:right;">
-        {% if ev.pk in cancel_req_booking_ids %}
+        {% if ev.status == 'cancelled' %}
+          <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancelled</span>
+        {% elif ev.pk in cancel_req_booking_ids %}
           <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Requested</span>
-        {% else %}
+        {% elif ev.is_cancellable %}
         <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return confirm('Are you sure you want to request cancellation for this event?');">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm" style="padding:4px 8px; border:1px solid var(--red); color:var(--red); background:transparent;"><i class="fas fa-times"></i> Cancel</button>
@@ -111,7 +154,7 @@
   </div>
 
   <!-- Available Events to Claim -->
-  <div class="panel">
+  <div class="panel" id="panel-available" style="order: -1;">
     <div class="panel-hdr">
       <div class="panel-title">Available Shifts <span class="badge b-confirmed" style="font-size:0.6rem;margin-left:4px">{{ available_bookings|length }} Open</span></div>
     </div>
@@ -122,15 +165,27 @@
         <div class="ev-mon">{{ ev.event_date|date:"M" }}</div>
       </div>
       <div style="flex:1">
-        <div class="ev-name">{{ ev.name }}</div>
-        <div class="ev-meta">{{ ev.get_event_type_display }} · {{ ev.guest_count }} guests · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
-        <div class="ev-meta">📍 {{ ev.venue|default:"Venue TBD" }}</div>
+        <div class="ev-name">{{ ev.get_event_type_display }}</div>
+        <div class="ev-meta">{{ ev.get_session_display }} · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
+        <div class="ev-meta">
+          {% if ev.location_link %}
+            <a href="{{ ev.location_link }}" target="_blank" style="color:inherit; text-decoration:underline;">📍 {{ ev.location_name|default:"Open Map Route" }}</a>
+          {% else %}
+            📍 {{ ev.location_name|default:ev.venue|default:"Venue TBD" }}
+          {% endif %}
+        </div>
       </div>
       
       {% if ev.pk in pending_app_booking_ids %}
         <span class="badge b-pending" style="background:rgba(212,168,82,0.1); color:var(--gold); border:1px solid rgba(212,168,82,0.2);">Pending Approval</span>
       {% elif ev.pk in cancel_req_booking_ids %}
         <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Requested</span>
+      {% elif ev.pk in rejected_app_booking_ids %}
+        <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Not Approved</span>
+      {% elif ev.pk in cancelled_app_booking_ids %}
+        <div style="font-size:0.75rem; color:var(--red); font-weight:500; text-align:right;">You already cancelled booking,<br>pls contact admin</div>
+      {% elif ev.is_level_full %}
+        <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);"><i class="fas fa-lock"></i> Quota Full</span>
       {% else %}
         <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--surface);border:1px solid var(--gold);color:var(--gold)"><i class="fas fa-hand-paper"></i> Apply</a>
       {% endif %}
@@ -144,7 +199,43 @@
   </div>
 </div>
 
+<script>
+  function switchDashboardTab(tab) {
+    if (window.innerWidth > 768) return;
+    
+    const panelU = document.getElementById('panel-upcoming');
+    const panelA = document.getElementById('panel-available');
+    const btnU = document.getElementById('btn-upcoming');
+    const btnA = document.getElementById('btn-available');
+    
+    if(tab === 'available') {
+      panelA.style.display = 'block';
+      panelU.style.display = 'none';
+      btnA.classList.add('active');
+      btnU.classList.remove('active');
+    } else {
+      panelA.style.display = 'none';
+      panelU.style.display = 'block';
+      btnU.classList.add('active');
+      btnA.classList.remove('active');
+    }
+  }
 
-
+  // Ensure layouts restore flawlessly when crossing viewport boundaries
+  window.addEventListener('resize', () => {
+    const panelU = document.getElementById('panel-upcoming');
+    const panelA = document.getElementById('panel-available');
+    
+    if(window.innerWidth > 768) {
+      panelU.style.display = 'block';
+      panelA.style.display = 'block';
+    } else {
+      // Revert to active tab
+      const isAvailableActive = document.getElementById('btn-available').classList.contains('active');
+      panelA.style.display = isAvailableActive ? 'block' : 'none';
+      panelU.style.display = !isAvailableActive ? 'block' : 'none';
+    }
+  });
+</script>
 
 {% endblock %}

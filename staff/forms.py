@@ -13,13 +13,13 @@ class StaffApplicationForm(forms.ModelForm):
         exclude = ['status']
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
-            'age': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Age'}),
+            'age': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Age', 'min': '18'}),
             'height': forms.TextInput(attrs={'class': 'form-control', 'placeholder': "e.g. 5'9\""}),
             'blood_group': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Blood Group'}),
-            'phone_1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number 1'}),
-            'phone_2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number 2 (Optional)'}),
+            'phone_1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number 1', 'pattern': '[0-9]{10}', 'title': 'Please enter a valid 10-digit phone number'}),
+            'phone_2': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number 2 (Optional)', 'pattern': '[0-9]{10}', 'title': 'Please enter a valid 10-digit phone number'}),
             'guardian_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Guardian Name'}),
-            'guardian_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Guardian Phone No.'}),
+            'guardian_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Guardian Phone No.', 'pattern': '[0-9]{10}', 'title': 'Please enter a valid 10-digit phone number'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (Optional)'}),
             'place': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Place / City'}),
             'education': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Highest Education'}),

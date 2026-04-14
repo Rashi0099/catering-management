@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Add Staff — Catrin Boys Admin{% endblock %}
+{% block title %}Add Staff — Mastan's Catering & Services Admin{% endblock %}
 {% block page_title %}Add Staff Member{% endblock %}
 
 {% block content %}
@@ -33,18 +33,18 @@
         </div>
         <div class="form-group">
           <label>Daily Rate (₹) *</label>
-          <input type="number" name="daily_rate" required step="1" value="0"/>
+          <input type="number" name="daily_rate" required step="1" min="0" value="0"/>
         </div>
       </div>
 
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
           <label>Phone Number 1</label>
-          <input type="text" name="phone" placeholder="e.g. 9876543210"/>
+          <input type="text" name="phone" pattern="[0-9]{10}" title="Please enter a valid 10-digit phone number" placeholder="e.g. 9876543210"/>
         </div>
         <div class="form-group">
           <label>Phone Number 2</label>
-          <input type="text" name="phone_2" placeholder="e.g. 9876543211"/>
+          <input type="text" name="phone_2" pattern="[0-9]{10}" title="Please enter a valid 10-digit phone number" placeholder="e.g. 9876543211"/>
         </div>
       </div>
 
@@ -55,7 +55,7 @@
         </div>
         <div class="form-group">
           <label>Age</label>
-          <input type="number" name="age" placeholder="e.g. 24"/>
+          <input type="number" name="age" min="18" placeholder="e.g. 24"/>
         </div>
       </div>
 
@@ -77,7 +77,7 @@
         </div>
         <div class="form-group">
           <label>Guardian Phone</label>
-          <input type="text" name="guardian_phone" placeholder="e.g. 9876543212"/>
+          <input type="text" name="guardian_phone" pattern="[0-9]{10}" title="Please enter a valid 10-digit phone number" placeholder="e.g. 9876543212"/>
         </div>
       </div>
 

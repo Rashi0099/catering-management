@@ -1,0 +1,21 @@
+{
+  "name": "Mastan's Catering",
+  "short_name": "Mastan",
+  "start_url": "/admin-panel/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#d4a852",
+  "description": "Catering Management Application",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

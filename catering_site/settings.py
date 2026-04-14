@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'menu',
     'bookings',
     'gallery',
+    'webpush',
 ]
 
 MIDDLEWARE = [
@@ -87,7 +88,10 @@ DATABASES = {
 STATIC_URL    = '/static/'
 STATIC_ROOT   = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+else:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -129,10 +133,20 @@ AUTH_PASSWORD_VALIDATORS = [
             'min_length': 8,
         }
     },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    # },
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    # },
 ]
+
+# ── Web Push Notifications ───────────────────────────────────────────────────
+WEBPUSH_SETTINGS = {
+    "VAPID_PUBLIC_KEY": "BHB_or9gj3QLx048TFQgDJQmy0wDVA5n4emLWUQsN-_JeEBBAxu72Vvk-HwipRS4w_j8fjjFDDq4F_JFkraHAio",
+    "VAPID_PRIVATE_KEY": os.path.join(BASE_DIR, 'private_key.pem'),
+    "VAPID_ADMIN_EMAIL": "admin@catrinboys.com",
+    "APP_NAME": "Mastan",
+    "APP_ICON_URL": "/static/images/logo.png"
+}
+

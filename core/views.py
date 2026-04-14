@@ -31,8 +31,8 @@ def contact(request):
             send_mail(
                 subject=f'Contact Form: {name}',
                 message=f"Name: {name}\nPhone: {phone}\n\nMessage:\n{message}",
-                from_email=settings.EMAIL_HOST_USER or 'noreply@catrinboys.com',
-                recipient_list=[settings.EMAIL_HOST_USER or 'noreply@catrinboys.com'],
+                from_email=settings.EMAIL_HOST_USER or 'noreply@mastanscatering.com',
+                recipient_list=[settings.EMAIL_HOST_USER or 'noreply@mastanscatering.com'],
                 fail_silently=True,
             )
         except Exception:

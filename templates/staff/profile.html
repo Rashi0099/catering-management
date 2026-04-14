@@ -1,0 +1,177 @@
+{% extends 'staff/base.html' %}
+{% load webpush_notifications %}
+{% block title %}My Profile — Mastan's Catering & Services{% endblock %}
+{% block nav_prof %}active{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width: 800px; margin: 0 auto;">
+  <div class="panel-hdr">
+    <div class="panel-title">Personal Information</div>
+  </div>
+  
+  <div style="display:flex; gap:20px; align-items:center; margin-bottom:30px; padding-bottom:20px; border-bottom:1px solid var(--border);">
+    <div style="width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg, var(--teal), #1a8070); display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:700; color:#fff;">
+      {{ me.full_name|first|upper }}
+    </div>
+    <div>
+      <h2 style="font-family:'Playfair Display',serif; color:var(--gold); margin-bottom:4px;">{{ me.full_name }}</h2>
+      <div style="color:var(--muted); font-family:monospace; font-size:0.9rem;">ID: {{ me.staff_id }}</div>
+      <div style="margin-top:6px;"><span class="badge b-confirmed">{{ me.get_level_display }} Level</span></div>
+    </div>
+  </div>
+
+  <div class="responsive-grid cols-2" style="gap:24px;">
+    <div>
+      <label>Phone Number</label>
+      <div style="font-size:1.05rem;">{{ me.phone }}</div>
+    </div>
+    {% if me.email %}
+    <div>
+      <label>Email Address</label>
+      <div style="font-size:1.05rem;">{{ me.email }}</div>
+    </div>
+    {% endif %}
+    <div>
+      <label>Locality Pincode/Address</label>
+      <div style="font-size:1.05rem;">{{ me.locality|default:"—" }}</div>
+    </div>
+    <div>
+      <label>Location</label>
+      <div style="font-size:1.05rem;">{{ me.location|default:"—" }}</div>
+    </div>
+    {% if me.blood_group %}
+    <div>
+      <label>Blood Group</label>
+      <div style="font-size:1.05rem; color:var(--red); font-weight:600;">{{ me.blood_group }}</div>
+    </div>
+    {% endif %}
+    {% if me.emergency_contact %}
+    <div>
+      <label>Emergency Contact</label>
+      <div style="font-size:1.05rem;">{{ me.emergency_contact }}</div>
+    </div>
+    {% endif %}
+    <div>
+      <label>Daily Rate Base</label>
+      <div style="font-size:1.05rem; color:var(--teal)">₹{{ me.daily_rate|floatformat:0 }}</div>
+    </div>
+    <div>
+      <label>Date Joined</label>
+      <div style="font-size:1.05rem;">{{ me.joined_at|date:"d M Y" }}</div>
+    </div>
+  </div>
+
+  <div style="margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px;">
+    <h3 style="font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Account Security & Documents</h3>
+    <a href="{% url 'staff_change_password' %}" class="btn btn-ghost" style="justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+      <span style="display: flex; align-items: center; gap: 12px; color: var(--text);"><i class="fas fa-lock" style="color: var(--teal); font-size: 1.1rem; width: 20px; text-align: center;"></i> <span style="font-weight: 500;">Change Account Password</span></span>
+      <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--muted);"></i>
+    </a>
+    <a href="{% url 'staff_terms' %}" class="btn btn-ghost" style="justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+      <span style="display: flex; align-items: center; gap: 12px; color: var(--text);"><i class="fas fa-file-contract" style="color: var(--gold); font-size: 1.1rem; width: 20px; text-align: center;"></i> <span style="font-weight: 500;">View Terms & Conditions</span></span>
+      <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--muted);"></i>
+    </a>
+  </div>
+
+  <div style="margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px;">
+    <h3 style="font-size: 0.9rem; color: var(--teal); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Notifications</h3>
+    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 10px;">Enable push notifications to receive real-time alerts for new shifts and updates.</p>
+    <div>
+      {% csrf_token %}
+      {% webpush_button with_class="btn btn-teal" %}
+    </div>
+  </div>
+</div>
+
+<script>
+  // Robust Custom Web Push Subscription Logic
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('webpush-subscribe-button');
+    if (!btn) return;
+    
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation(); // Block default django-webpush.js
+      btn.textContent = "Setting up...";
+      
+      try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          alert('Push notifications are not supported in your browser (use HTTPS or localhost).');
+          btn.textContent = "Not Supported";
+          return;
+        }
+
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          alert('Permission denied. Please enable notifications in site settings.');
+          btn.textContent = "Permission Denied";
+          return;
+        }
+
+        // 1. Register service worker
+        const swUrl = document.querySelector('meta[name="service-worker-js"]')?.content || '/webpush/service-worker.js';
+        const reg = await navigator.serviceWorker.register(swUrl);
+        await navigator.serviceWorker.ready;
+
+        // 2. Unsubscribe old keys if necessary
+        const oldSub = await reg.pushManager.getSubscription();
+        if (oldSub) {
+          await oldSub.unsubscribe();
+        }
+
+        // 3. Get VAPID key
+        const vapidMeta = document.querySelector('meta[name="django-webpush-vapid-key"]');
+        if (!vapidMeta) {
+          alert('Missing VAPID key meta tag in HTML!');
+          return;
+        }
+
+        // Base64Url to Uint8Array parser
+        const padding = '='.repeat((4 - vapidMeta.content.length % 4) % 4);
+        const base64 = (vapidMeta.content + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const appServerKey = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) { appServerKey[i] = rawData.charCodeAt(i); }
+
+        // 4. Subscribe
+        const newSub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appServerKey
+        });
+
+        // 5. Send to Server
+        const csrfInput = document.querySelector('[name="csrfmiddlewaretoken"]'); // Might or might not exist
+        const data = {
+          status_type: 'subscribe',
+          subscription: newSub.toJSON(),
+          browser: navigator.userAgent.toLowerCase().includes('firefox') ? 'firefox' : 'chrome',
+          user_agent: navigator.userAgent,
+          group: null
+        };
+
+        const response = await fetch('/webpush/save_information/', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}, // csrf_exempt
+          body: JSON.stringify(data),
+          credentials: 'include'
+        });
+
+        if (response.status === 201) {
+          btn.textContent = "Notifications Enabled ✅";
+          btn.disabled = true;
+          alert("Successfully Enabled!");
+        } else {
+          alert("Error saving subscription to server. Code: " + response.status);
+          btn.textContent = "Failed configuration";
+        }
+
+      } catch (err) {
+        console.error("Push Error", err);
+        alert("Error: " + err.message);
+        btn.textContent = "Error Occurred";
+      }
+    });
+  });
+</script>
+{% endblock %}

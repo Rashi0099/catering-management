@@ -1,0 +1,58 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Edit Menu Item — Mastan's Catering & Services{% endblock %}
+{% block page_title %}Edit Menu Item{% endblock %}
+
+{% block content %}
+<div style="max-width:640px">
+  <a href="{% url 'admin_menu' %}" class="btn btn-ghost" style="margin-bottom:24px">
+    <i class="fas fa-arrow-left"></i> Back to Menu
+  </a>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Edit {{ item.name }}</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Category *</label>
+        <select name="category" required style="margin-bottom:8px" onchange="this.nextElementSibling.style.display = this.value === '' ? 'block' : 'none'">
+          <option value="">+ Create New Category</option>
+          {% for cat in categories %}
+          <option value="{{ cat.pk }}" {% if item.category_id == cat.pk %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="new_category" placeholder="Enter new category name" style="display:none;">
+      </div>
+      <div class="responsive-grid cols-2" style="gap:16px">
+        <div class="form-group">
+          <label>Dish Name *</label>
+          <input type="text" name="name" value="{{ item.name }}" required />
+        </div>
+        <div class="form-group">
+          <label>Price (₹) *</label>
+          <input type="number" name="price" value="{{ item.price }}" required step="0.01" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea name="description" required rows="3">{{ item.description }}</textarea>
+      </div>
+      <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_vegetarian" {% if item.is_vegetarian %}checked{% endif %} style="width:auto;padding:0"/> Vegetarian
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_vegan" {% if item.is_vegan %}checked{% endif %} style="width:auto;padding:0"/> Vegan
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_featured" {% if item.is_featured %}checked{% endif %} style="width:auto;padding:0"/> Featured on Homepage
+        </label>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
+        <i class="fas fa-save"></i> Save Changes
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

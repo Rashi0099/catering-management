@@ -1,0 +1,148 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Edit Booking #{{ booking.pk }} — Admin{% endblock %}
+{% block page_title %}Editing Booking #{{ booking.pk }}{% endblock %}
+
+{% block content %}
+
+<div style="max-width:800px">
+  <a href="{% url 'admin_bookings' %}" class="btn btn-ghost" style="margin-bottom:24px">
+    <i class="fas fa-arrow-left"></i> Back to Bookings
+  </a>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Client &amp; Event Details</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:20px">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" value="{{ booking.name }}" placeholder="Client Name"/>
+        </div>
+        <div class="form-group">
+          <label>Phone Number *</label>
+          <input type="text" name="phone" value="{{ booking.phone }}" placeholder="e.g. 9876543210"/>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" value="{{ booking.email|default:'' }}" placeholder="client@example.com"/>
+        </div>
+        <div class="form-group">
+          <label>Company/Org (Optional)</label>
+          <input type="text" name="company" value="{{ booking.company }}" placeholder="Corporate Name"/>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">
+        <div class="panel-title" style="margin-bottom:16px;font-size:0.9rem">Event Specifications</div>
+        
+        <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label>Event Type *</label>
+            <select name="event_type" style="margin-bottom:12px;">
+              <option value="wedding" {% if booking.event_type == 'wedding' %}selected{% endif %}>Wedding / Reception</option>
+              <option value="corporate" {% if booking.event_type == 'corporate' %}selected{% endif %}>Corporate Event</option>
+              <option value="party" {% if booking.event_type == 'party' %}selected{% endif %}>Private Party / Birthday</option>
+              <option value="other" {% if booking.event_type == 'other' %}selected{% endif %}>Other</option>
+            </select>
+            <label>Event Session *</label>
+            <select name="session">
+              <option value="day" {% if booking.session == 'day' %}selected{% endif %}>Day</option>
+              <option value="night" {% if booking.session == 'night' %}selected{% endif %}>Night</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Event Date *</label>
+            <input type="date" name="event_date" value="{{ booking.event_date|date:'Y-m-d' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Guest Count *</label>
+            <input type="number" name="guest_count" value="{{ booking.guest_count }}"/>
+          </div>
+        </div>
+
+        <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label>Event Time</label>
+            <input type="time" name="event_time" value="{{ booking.event_time|time:'H:i' }}"/>
+          </div>
+          <div class="form-group">
+            <label>Expected Budget (₹)</label>
+            <input type="number" name="budget" step="100" value="{{ booking.budget|default:'' }}" placeholder="e.g. 150000"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Venue Approximations</label>
+          <input type="text" name="venue" value="{{ booking.venue }}" placeholder="Full address or Venue Name"/>
+        </div>
+        <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label>Map Location Name (Visible to Staff)</label>
+            <input type="text" name="location_name" value="{{ booking.location_name }}" placeholder="e.g. Flora Auditorium"/>
+          </div>
+          <div class="form-group">
+            <label>Map Link URL (Visible to Staff)</label>
+            <input type="url" name="location_link" value="{{ booking.location_link }}" placeholder="https://maps.app.goo.gl/..."/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dietary Requirements &amp; Special Requests</label>
+          <textarea name="dietary_requirements" rows="2" placeholder="e.g. 20 veg meals, 5 vegan...">{{ booking.dietary_requirements }}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Additional Notes</label>
+          <textarea name="message" rows="2" placeholder="Internal admin notes or specific client requests...">{{ booking.message }}</textarea>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">
+        <div class="panel-title" style="margin-bottom:16px;font-size:0.9rem">Staff Quotas</div>
+        <div class="responsive-grid cols-4" style="gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label style="color:var(--gold)">Captains Needed</label>
+            <input type="number" name="quota_captain" value="{{ booking.quota_captain }}"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--teal)">A-Level Needed</label>
+            <input type="number" name="quota_a" value="{{ booking.quota_a }}"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--blue)">B-Level Needed</label>
+            <input type="number" name="quota_b" value="{{ booking.quota_b }}"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--green)">C-Level Needed</label>
+            <input type="number" name="quota_c" value="{{ booking.quota_c }}"/>
+          </div>
+        </div>
+        <div id="quotaTotalDisplay" style="font-size:0.85rem; color:var(--muted); margin-top:8px; text-align:right;">Total Staff Requested: <span id="quotaTotalCount" style="font-weight:600; color:var(--gold);">0</span></div>
+      </div>
+      
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input[name^="quota_"]');
+            const totalDisplay = document.getElementById('quotaTotalCount');
+            function updateTotal() {
+                let sum = 0;
+                inputs.forEach(input => {
+                    const val = parseInt(input.value);
+                    if (!isNaN(val)) sum += val;
+                });
+                totalDisplay.innerText = sum;
+            }
+            inputs.forEach(input => input.addEventListener('input', updateTotal));
+            updateTotal();
+        });
+      </script>
+
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;margin-top:10px;padding:12px">
+        <i class="fas fa-save"></i> Save Booking Changes
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

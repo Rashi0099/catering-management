@@ -4,7 +4,7 @@ def send_q_otp(phone, otp):
     url = "https://www.fast2sms.com/dev/bulkV2"
     querystring = {
         "authorization": "XAxFQNGBCwvysn0PcOW93a8T547IjomhfepMHqDbtVzJUR2u1kQMAELIq5BjZ6Urs9PSalzb7mX1V20y",
-        "message": "Your Catrin Boys Staff Application OTP is {#var#}. Do not share this with anyone.",
+        "message": "Your Mastan's Catering & Services Staff Application OTP is {#var#}. Do not share this with anyone.",
         "variables_values": str(otp),
         "route": "q",
         "numbers": str(phone)

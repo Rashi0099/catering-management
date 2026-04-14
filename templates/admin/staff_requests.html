@@ -3,11 +3,96 @@
 {% block page_title %}Staff Requests{% endblock %}
 
 {% block content %}
+<style>
+  @media (max-width: 768px) {
+    /* Premium ListTile Mobile UX for Requests */
+    .panel table { display: block; border: none; white-space: normal; width: 100%; min-width: unset !important; }
+    .panel thead { display: none; }
+    .panel tbody { display: flex; flex-direction: column; gap: 8px; }
+    
+    .panel tbody tr {
+      display: grid !important; position: relative; background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.05) !important; border-radius: 12px; padding: 14px 16px !important; margin-bottom: 2px;
+      grid-template-columns: 1fr auto;
+      row-gap: 8px; column-gap: 12px; align-items: start;
+    }
+    .panel td { padding: 0 !important; border: none !important; text-align: left !important; display: block; width: auto !important; }
+
+    /* Pending Apps Specific */
+    #booking-req-table tbody tr { grid-template-rows: auto auto auto; grid-template-areas: "applicant applicant" "event date" "action action"; }
+    #booking-req-table td:nth-child(1) { grid-area: applicant; }
+    #booking-req-table td:nth-child(2) { grid-area: event; font-size: 0.85rem; }
+    #booking-req-table td:nth-child(3) { grid-area: date; font-size: 0.8rem; justify-self: end; }
+    #booking-req-table td:nth-child(4) { display: none; } /* Hide Status */
+    #booking-req-table td:nth-child(5) { grid-area: action; margin-top: 4px; padding-top: 10px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
+    #booking-req-table td[colspan="5"] { grid-column: 1 / -1; display: block; text-align: center !important; padding: 30px !important; }
+
+    /* Cancel Apps Specific */
+    #cancel-req-table tbody tr { grid-template-rows: auto auto auto; grid-template-areas: "applicant applicant" "event date" "action action"; }
+    #cancel-req-table td:nth-child(1) { grid-area: applicant; }
+    #cancel-req-table td:nth-child(2) { grid-area: event; font-size: 0.85rem; }
+    #cancel-req-table td:nth-child(3) { grid-area: date; font-size: 0.8rem; justify-self: end; }
+    #cancel-req-table td:nth-child(4) { grid-area: action; margin-top: 4px; padding-top: 10px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; }
+    #cancel-req-table td[colspan="4"] { grid-column: 1 / -1; display: block; text-align: center !important; padding: 30px !important; }
+    
+    /* Ensure Action buttons span mobile cleanly */
+    .btn { text-align: center; justify-content: center; flex: 1; }
+  }
+</style>
+
+<div class="search-bar" style="margin-bottom:20px;">
+  <form method="get" style="display:flex; gap:10px; width:100%; max-width:600px; align-items:center;">
+    <select name="booking_id" class="filter-select" style="flex:1; height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); padding:0 14px; font-size:0.9rem;" onchange="this.form.submit()">
+      <option value="">All Events (Mixed)</option>
+      {% for b in active_bookings %}
+      <option value="{{ b.pk }}" {% if selected_booking == b.pk|stringformat:"s" %}selected{% endif %}>
+        {{ b.name }} ({{ b.event_date|date:"d M Y" }})
+      </option>
+      {% endfor %}
+    </select>
+    {% if selected_booking %}
+    <a href="?" class="btn btn-ghost" style="height:42px; padding:0 14px;">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if live_quota_data %}
+<div style="margin-bottom:20px;">
+  <div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;font-weight:600">Event Approval Progress</div>
+  <div class="responsive-grid cols-4" style="gap:10px;">
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">Captains</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--gold)">
+              {{ live_quota_data.captain.c }} / {% if live_quota_data.captain.q > 0 %}{{ live_quota_data.captain.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          </div>
+      </div>
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">A-Level</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--teal)">
+            {{ live_quota_data.a.c }} / {% if live_quota_data.a.q > 0 %}{{ live_quota_data.a.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          </div>
+      </div>
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">B-Level</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--blue)">
+            {{ live_quota_data.b.c }} / {% if live_quota_data.b.q > 0 %}{{ live_quota_data.b.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          </div>
+      </div>
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">C-Level</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--green)">
+            {{ live_quota_data.c.c }} / {% if live_quota_data.c.q > 0 %}{{ live_quota_data.c.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          </div>
+      </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="panel">
   <div class="panel-header">
     <div class="panel-title">Pending Event Applications</div>
   </div>
-  <table>
+  <table id="booking-req-table">
     <thead>
       <tr>
         <th>Applicant</th>
@@ -19,10 +104,24 @@
     </thead>
     <tbody>
       {% for app in pending_apps %}
-      <tr>
+      <tr {% if app.has_double_shift %}style="background: rgba(241, 196, 15, 0.05); border-color: rgba(241, 196, 15, 0.3) !important;"{% endif %}>
         <td>
-          <div style="font-weight:500">{{ app.applicant_name }}</div>
-          <div style="font-size:0.75rem;color:var(--muted)">{{ app.staff.staff_id }} | {{ app.applicant_phone }}</div>
+          <div style="font-weight:500">
+            {{ app.applicant_name }}
+            {% if app.has_double_shift %}
+            <span class="badge" style="background:#f1c40f; color:#000; padding:2px 6px; font-size:0.65rem; margin-left:4px; vertical-align:middle; font-weight:600"><i class="fas fa-exclamation-triangle"></i> Double Shift: {{ app.double_shift_event }}</span>
+            {% endif %}
+            <span style="float:right; font-size:0.7rem; color:var(--muted); font-weight:normal" title="Applied On"><i class="fas fa-clock"></i> {{ app.created_at|date:"d M, h:i A" }}</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted)">
+            {{ app.staff.staff_id }} | <i class="fas fa-phone"></i> {{ app.applicant_phone }}<br>
+            <span style="color:var(--gold);">{{ app.staff.get_level_display }}</span> &middot; {{ app.staff.main_locality|default:"No Locality" }}
+          </div>
+          {% if app.note %}
+          <div style="margin-top:6px; font-size:0.75rem; background:var(--surface); padding:4px 8px; border-radius:4px; border:1px solid var(--border); color:var(--text);">
+            <i class="fas fa-sticky-note" style="color:var(--muted)"></i> {{ app.note }}
+          </div>
+          {% endif %}
         </td>
         <td>
           <a href="{% url 'admin_booking_detail' app.booking.pk %}" style="color:var(--gold);text-decoration:none;font-weight:500">
@@ -49,7 +148,7 @@
   <div class="panel-header">
     <div class="panel-title" style="color:var(--orange)">Cancel Requests</div>
   </div>
-  <table>
+  <table id="cancel-req-table">
     <thead>
       <tr>
         <th>Staff</th>
@@ -62,8 +161,19 @@
       {% for req in cancel_reqs %}
       <tr>
         <td>
-          <div style="font-weight:500">{{ req.applicant_name }}</div>
-          <div style="font-size:0.75rem;color:var(--muted)">{{ req.staff.staff_id }} | {{ req.applicant_phone }}</div>
+          <div style="font-weight:500">
+            {{ req.applicant_name }}
+            <span style="float:right; font-size:0.7rem; color:var(--muted); font-weight:normal" title="Requested On"><i class="fas fa-clock"></i> {{ req.created_at|date:"d M, h:i A" }}</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted)">
+            {{ req.staff.staff_id }} | <i class="fas fa-phone"></i> {{ req.applicant_phone }}<br>
+            <span style="color:var(--gold);">{{ req.staff.get_level_display }}</span> &middot; {{ req.staff.main_locality|default:"No Locality" }}
+          </div>
+          {% if req.note %}
+          <div style="margin-top:6px; font-size:0.75rem; background:var(--surface); padding:4px 8px; border-radius:4px; border:1px solid var(--border); color:var(--text);">
+            <i class="fas fa-sticky-note" style="color:var(--muted)"></i> {{ req.note }}
+          </div>
+          {% endif %}
         </td>
         <td>
           <a href="{% url 'admin_booking_detail' req.booking.pk %}" style="color:var(--orange);text-decoration:none;font-weight:500">

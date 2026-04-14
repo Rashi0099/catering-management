@@ -1,0 +1,182 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Financial Reports — Mastan's Catering{% endblock %}
+{% block page_title %}Financial Reports {% if month_name or year_filter %}- [ {% if month_name %}{{ month_name|upper }}{% endif %} {{ year_filter }} ]{% endif %}{% endblock %}
+
+{% block content %}
+<div class="search-bar" style="justify-content:space-between; margin-bottom:20px;">
+  <form id="report-filter-form" method="get" style="display:flex; gap:10px; align-items:center;">
+    <select name="month" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);">
+      <option value="">Month (All)</option>
+      <option value="1" {% if month_filter == '1' %}selected{% endif %}>Jan</option>
+      <option value="2" {% if month_filter == '2' %}selected{% endif %}>Feb</option>
+      <option value="3" {% if month_filter == '3' %}selected{% endif %}>Mar</option>
+      <option value="4" {% if month_filter == '4' %}selected{% endif %}>Apr</option>
+      <option value="5" {% if month_filter == '5' %}selected{% endif %}>May</option>
+      <option value="6" {% if month_filter == '6' %}selected{% endif %}>Jun</option>
+      <option value="7" {% if month_filter == '7' %}selected{% endif %}>Jul</option>
+      <option value="8" {% if month_filter == '8' %}selected{% endif %}>Aug</option>
+      <option value="9" {% if month_filter == '9' %}selected{% endif %}>Sep</option>
+      <option value="10" {% if month_filter == '10' %}selected{% endif %}>Oct</option>
+      <option value="11" {% if month_filter == '11' %}selected{% endif %}>Nov</option>
+      <option value="12" {% if month_filter == '12' %}selected{% endif %}>Dec</option>
+    </select>
+    <select name="year" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);" onchange="this.form.submit()">
+      <option value="">Year (All)</option>
+      <option value="2024" {% if year_filter == '2024' %}selected{% endif %}>2024</option>
+      <option value="2025" {% if year_filter == '2025' %}selected{% endif %}>2025</option>
+      <option value="2026" {% if year_filter == '2026' %}selected{% endif %}>2026</option>
+      <option value="2027" {% if year_filter == '2027' %}selected{% endif %}>2027</option>
+    </select>
+  </form>
+  <a href="{% url 'admin_report_add' %}" class="btn btn-gold" style="height:42px; display:inline-flex; align-items:center;">
+    <i class="fas fa-plus"></i> Add Report
+  </a>
+</div>
+
+<style>
+  @media (max-width: 768px) {
+      /* Force native table behavior instead of block to enable smooth momentum scrolling */
+      #reports-table-container table {
+          display: table !important;
+      }
+      .table-scroll-wrapper {
+          margin-left: -22px; margin-right: -22px;
+          padding-left: 22px; padding-right: 22px;
+      }
+  }
+</style>
+
+<div class="panel" id="reports-table-container">
+  <div class="table-scroll-wrapper" style="overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:12px;">
+    <table style="min-width: 1200px;">
+    <thead>
+      <tr style="background: rgba(46,204,133,0.15); /* light green matching excel headers */ ">
+        <th style="color:var(--text);">SL. NO</th>
+        <th style="color:var(--text);">DATE</th>
+        <th style="color:var(--text);">SITE NAME</th>
+        <th style="color:var(--text);">EVENT NAME</th>
+        <th style="color:var(--text);">NO. OF BOYS</th>
+        <th style="color:var(--text);">BILL INCHARGE</th>
+        <th style="color:var(--text);">BILL AMOUNT (BOYS)</th>
+        <th style="color:var(--text);">AMOUNT RECEIVED (EVENT)</th>
+        <th style="color:var(--text);">PAYMENT RECEIVED ON</th>
+        <th style="color:var(--text);">PENDING AMOUNT</th>
+        <th style="color:var(--text);">PROFIT</th>
+        <th style="color:var(--text); text-align:center;"><i class="fas fa-check-square"></i> / <i class="fas fa-times"></i></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr>
+        <td data-label="SL. NO">{{ forloop.counter }}</td>
+        <td data-label="DATE">{{ r.event_date|date:"d-m-Y" }}</td>
+        <td data-label="SITE">{{ r.site_name }}</td>
+        <td data-label="EVENT">{{ r.event_name }}</td>
+        <td data-label="BOYS">{{ r.boys_count }}</td>
+        <td data-label="INCHARGE">{{ r.bill_incharge }}</td>
+        <td data-label="BILL AMOUNT" style="color:var(--gold);">{{ r.bill_amount }}</td>
+        <td data-label="RECEIVED" style="color:var(--green);">{{ r.amount_received }}</td>
+        <td data-label="PAID ON">{{ r.payment_received_on|date:"d M Y"|default:"—" }}</td>
+        <td data-label="PENDING" style="color:var(--orange);">{{ r.pending_amount|default:"0.00" }}</td>
+        <td data-label="PROFIT" style="font-weight:600;color:var(--text);">{{ r.profit }}</td>
+        <td data-label="SETTLED">
+          {% if r.is_settled %}
+            <i class="fas fa-check-square" style="color:var(--green); font-size:1.1rem;"></i>
+          {% else %}
+            <i class="fas fa-times" style="color:var(--red); font-size:1.1rem;"></i>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{% url 'admin_report_edit' r.pk %}" class="btn btn-ghost"><i class="fas fa-pencil-alt"></i> Edit</a>
+          <a href="{% url 'admin_report_delete' r.pk %}" class="btn btn-danger" onclick="return confirm('Delete this report?');"><i class="fas fa-trash"></i> Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="13" style="text-align:center;padding:50px;color:var(--muted)">
+          <i class="fas fa-file-invoice" style="font-size:2.5rem;margin-bottom:12px;display:block"></i>
+          No manual reports recorded.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if reports %}
+    <tfoot>
+      <tr style="background: rgba(255,255,255,0.05); font-weight: bold;">
+        <td colspan="4" style="text-align:right;">TOTALS:</td>
+        <td>{{ totals.t_boys|default:"0" }}</td>
+        <td></td>
+        <td>{{ totals.t_bill|default:"0.00" }}</td>
+        <td>{{ totals.t_received|default:"0.00" }}</td>
+        <td colspan="2"></td>
+        <td style="color:var(--green);">{{ totals.t_profit|default:"0.00" }}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('report-filter-form');
+    
+    if (filterForm) {
+      filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        fetchFilteredData();
+      });
+
+      // Auto-submit on select change
+      document.querySelectorAll('.filter-select').forEach(select => {
+        select.addEventListener('change', () => {
+           fetchFilteredData();
+        });
+      });
+      
+      const fetchFilteredData = () => {
+        // Change button to indicate loading
+        const btn = filterForm.querySelector('button[type="submit"]');
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        const url = new URL(window.location.href);
+        const formData = new FormData(filterForm);
+        for (let [key, value] of formData.entries()) {
+          url.searchParams.set(key, value);
+        }
+        
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Replace Table
+            const newTable = doc.getElementById('reports-table-container');
+            if (newTable) {
+               document.getElementById('reports-table-container').innerHTML = newTable.innerHTML;
+            }
+            
+            // Replace Title
+            const newTitleElem = doc.querySelector('.topbar-title');
+            if (newTitleElem) {
+               document.querySelector('.topbar-title').innerHTML = newTitleElem.innerHTML;
+            }
+            
+            btn.innerHTML = origText;
+            window.history.pushState({}, '', url);
+          })
+          .catch(err => {
+             console.error('AJAX Error:', err);
+             btn.innerHTML = origText;
+          });
+      };
+    }
+  });
+</script>
+{% endblock %}

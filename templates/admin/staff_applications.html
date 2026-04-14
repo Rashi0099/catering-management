@@ -3,6 +3,39 @@
 {% block nav_staff_apps %}active{% endblock %}
 
 {% block content %}
+<style>
+  @media (max-width: 768px) {
+    /* Premium ListTile Mobile UX for Staff Applications */
+    .table-responsive table { display: block; border: none; white-space: normal; width: 100%; min-width: unset !important; }
+    .table-responsive thead { display: none; }
+    .table-responsive tbody { display: flex; flex-direction: column; gap: 8px; }
+    
+    .table-responsive tbody tr {
+      display: grid !important; position: relative; background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.05) !important; border-radius: 12px; padding: 14px 16px !important; margin-bottom: 2px;
+      grid-template-columns: 1fr auto;
+      row-gap: 8px; column-gap: 12px; align-items: start;
+      grid-template-areas:
+        "name    role"
+        "contact date"
+        "details details"
+        "action  action";
+    }
+    .table-responsive td { padding: 0 !important; border: none !important; text-align: left !important; display: block; width: auto !important; }
+    
+    .table-responsive td:nth-child(1) { grid-area: name; }
+    .table-responsive td:nth-child(2) { grid-area: role; justify-self: end; }
+    .table-responsive td:nth-child(3) { grid-area: contact; font-size: 0.8rem; }
+    .table-responsive td:nth-child(4) { grid-area: details; font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 10px !important; border-radius: 8px; margin-top: 4px; }
+    .table-responsive td:nth-child(5) { grid-area: date; font-size: 0.8rem; justify-self: end; }
+    .table-responsive td:nth-child(6) { grid-area: action; margin-top: 6px; padding-top: 12px !important; border-top: 1px solid rgba(255,255,255,0.05) !important; display: flex; gap: 8px; }
+    
+    .table-responsive td[colspan="6"] { grid-column: 1 / -1; display: block; text-align: center !important; padding: 30px !important; background: transparent; border: none !important; }
+    
+    .btn { text-align: center; justify-content: center; flex: 1; margin: 0; box-sizing: border-box; }
+  }
+</style>
+
 <div class="header-section" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
   <h2>Staff Booking Applications</h2>
 </div>
@@ -48,11 +81,12 @@
             <strong style="color: var(--text);">Age:</strong> {{ app.age }} | <strong style="color: var(--text);">Blood:</strong> {{ app.blood_group }} | <strong style="color: var(--text);">Ht:</strong> {{ app.height }}<br>
             <strong style="color: var(--text);">Education:</strong> {{ app.education }}<br>
             <strong style="color: var(--text);">Aadhar:</strong> {{ app.aadhar_card_no }} <br>
-            <strong style="color: var(--text);">Place:</strong> {{ app.place }}<br>
+            <strong style="color: var(--text);">Place:</strong> {{ app.place }} | <strong style="color: var(--text);">Locality:</strong> <span style="color:var(--gold)">{{ app.main_locality }}</span><br>
             <strong style="color: var(--text);">Guardian:</strong> {{ app.guardian_name }} ({{ app.guardian_phone }})
           </td>
           <td style="font-size:0.9rem; color: var(--muted);">
-            {{ app.created_at|date:"d M Y" }}
+            {{ app.created_at|date:"d M Y" }}<br>
+            <span style="font-size:0.75rem; color:var(--text);">{{ app.created_at|date:"h:i A" }}</span>
           </td>
           <td style="text-align:right;">
             <a href="{% url 'admin_handle_staff_application' app.pk 'approve' %}" class="btn" style="background: rgba(46,204,133,0.12); color: var(--green); border: 1px solid rgba(46,204,133,0.2); padding:6px 12px; font-size:0.85rem; text-decoration:none;" onclick="return confirm('Approve this application and create a staff account?');">Approve</a>

@@ -3,10 +3,40 @@
 {% block page_title %}Booking #{{ booking.pk }}{% endblock %}
 
 {% block content %}
-<div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;align-items:center">
-  <a href="{% url 'admin_bookings' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> All Bookings</a>
-  <span class="badge badge-{{ booking.status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_status_display }}</span>
-  <span class="badge badge-{{ booking.payment_status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_payment_status_display }}</span>
+<div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <a href="{% url 'admin_bookings' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> All Bookings</a>
+    <span class="badge badge-{{ booking.status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_status_display }}</span>
+    <span class="badge badge-{{ booking.payment_status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_payment_status_display }}</span>
+    {% if booking.is_published %}
+      <span class="badge" style="background:rgba(46,204,133,0.15);color:var(--green);padding:8px 14px;font-size:0.82rem"><i class="fas fa-broadcast-tower"></i> Published to Staff</span>
+    {% else %}
+      <span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);padding:8px 14px;font-size:0.82rem"><i class="fas fa-eye-slash"></i> Hidden from Staff</span>
+    {% endif %}
+  </div>
+  
+  <div style="display:flex;gap:10px;">
+    <form method="post" action="{% url 'admin_publish_booking' booking.pk %}" style="margin:0">
+      {% csrf_token %}
+      {% if booking.is_published %}
+        <button type="submit" name="action" value="unpublish" class="btn btn-ghost" style="color:#e74c3c"><i class="fas fa-eye-slash"></i> Unpublish</button>
+      {% else %}
+        <div style="display:flex; gap:6px;">
+            <select name="publish_locality" style="padding:6px 12px; border:1px solid rgba(46,204,133,0.3); border-radius:6px; background:var(--surface); color:var(--text); font-size:0.85rem;">
+                <option value="all">🌎 All Localities</option>
+                <option value="Kondotty">📍 Kondotty Only</option>
+                <option value="Areekode">📍 Areekode Only</option>
+                <option value="Edavannappara">📍 Edavannappara Only</option>
+                <option value="Kizhisseri">📍 Kizhisseri Only</option>
+                <option value="University">📍 University Only</option>
+                <option value="Valluvambram">📍 Valluvambram Only</option>
+            </select>
+            <button type="submit" name="action" value="publish" class="btn btn-gold" style="background:rgba(46,204,133,0.1);color:var(--green);border-color:rgba(46,204,133,0.3);padding:6px 14px;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
+        </div>
+      {% endif %}
+    </form>
+    <a href="{% url 'admin_edit_booking' booking.pk %}" class="btn btn-ghost"><i class="fas fa-edit"></i> Edit Details</a>
+  </div>
 </div>
 
 <div class="responsive-grid cols-2" style="gap:20px">
@@ -18,12 +48,25 @@
       <div class="responsive-grid cols-3" style="gap:14px">
         <div><label>Name</label><div style="font-weight:500">{{ booking.name }}</div></div>
         <div><label>Phone</label><div>{{ booking.phone }}</div></div>
-        <div><label>Email</label><div style="font-size:0.82rem"><a href="mailto:{{ booking.email }}" style="color:var(--gold)">{{ booking.email }}</a></div></div>
+        <div><label>Email</label><div style="font-size:0.82rem; word-break: break-all;"><a href="mailto:{{ booking.email }}" style="color:var(--gold)">{{ booking.email }}</a></div></div>
         <div><label>Event Type</label><div>{{ booking.get_event_type_display }}</div></div>
+        <div><label>Session</label><div>{{ booking.get_session_display }}</div></div>
         <div><label>Date</label><div>{{ booking.event_date|date:"d M Y" }}</div></div>
         <div><label>Guests</label><div>{{ booking.guest_count }} pax</div></div>
         {% if booking.venue %}<div style="grid-column:1/-1"><label>Venue</label><div>{{ booking.venue }}</div></div>{% endif %}
+        {% if booking.location_name %}<div style="grid-column:1/-1"><label>Map Location Name</label><div>{{ booking.location_name }}</div></div>{% endif %}
+        {% if booking.location_link %}<div style="grid-column:1/-1"><label>Map Link URL</label><div style="word-break: break-all;"><a href="{{ booking.location_link }}" target="_blank" style="color:var(--gold)">{{ booking.location_link }}</a></div></div>{% endif %}
         {% if booking.budget %}<div><label>Client Budget</label><div style="color:var(--gold)">₹{{ booking.budget }}</div></div>{% endif %}
+      </div>
+      
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;font-weight:600">Expected Staff Quotas</div>
+        <div class="responsive-grid cols-4" style="gap:10px">
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">Captains</div><div style="font-size:1.1rem;font-weight:600;color:var(--gold)">{{ booking.quota_captain }}</div></div>
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">A-Level</div><div style="font-size:1.1rem;font-weight:600;color:var(--teal)">{{ booking.quota_a }}</div></div>
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">B-Level</div><div style="font-size:1.1rem;font-weight:600;color:var(--blue)">{{ booking.quota_b }}</div></div>
+          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">C-Level</div><div style="font-size:1.1rem;font-weight:600;color:var(--green)">{{ booking.quota_c }}</div></div>
+        </div>
       </div>
       {% if booking.message %}
       <div style="margin-top:14px;padding:12px;background:var(--surface);border-radius:8px;font-size:0.85rem;border-left:3px solid var(--gold)">
@@ -33,39 +76,7 @@
       {% endif %}
     </div>
 
-    <div class="panel" style="margin-bottom:18px">
-      <div class="panel-header"><div class="panel-title">Payment Tracking</div></div>
-      <div class="responsive-grid cols-3" style="gap:12px;margin-bottom:18px">
-        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
-          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold)">{% if booking.quoted_price %}₹{{ booking.quoted_price }}{% else %}—{% endif %}</div>
-          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Quoted</div>
-        </div>
-        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
-          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--green)">₹{{ booking.amount_received }}</div>
-          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Received</div>
-        </div>
-        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
-          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--orange)">₹{{ booking.balance_due }}</div>
-          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Balance Due</div>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>Amount</th><th>Method</th><th>Date</th><th>Reference</th><th>By</th></tr></thead>
-        <tbody>
-          {% for p in payments %}
-          <tr>
-            <td style="color:var(--green);font-weight:600">₹{{ p.amount }}</td>
-            <td>{{ p.get_method_display }}</td>
-            <td style="color:var(--muted)">{{ p.received_on|date:"d M Y" }}</td>
-            <td style="font-family:monospace;font-size:0.75rem;color:var(--muted)">{{ p.reference|default:"—" }}</td>
-            <td style="font-size:0.78rem">{{ p.received_by.full_name|default:"—" }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">No payments yet</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+
 
     <div class="panel">
       <div class="panel-header"><div class="panel-title">Assigned Staff</div></div>
@@ -91,28 +102,54 @@
       <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="mark_attendance"/>
-        <div style="display:flex; flex-direction:column; gap:12px;">
+        <style>
+          .attendance-admin-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; transition:transform 0.2s, box-shadow 0.2s, border-color 0.2s; position:relative; overflow:hidden; }
+          .attendance-admin-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); border-color: rgba(212,168,82,0.4); }
+          .attendance-admin-card .accent-bar { position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg, var(--gold), transparent); }
+          .attendance-admin-input { width:100%; padding:8px 12px; font-size:0.85rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); box-sizing:border-box; transition:border-color 0.2s; }
+          .attendance-admin-input:focus { border-color: var(--gold); outline:none; }
+          input[type="time"].attendance-admin-input { color-scheme:dark; }
+        </style>
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap:16px;">
           {% for item in assigned_staff_with_att %}
-          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px; align-items:center; background:var(--surface); padding:10px; border:1px solid var(--border); border-radius:8px;">
-            <div>
-              <input type="hidden" name="attendance_staff_id" value="{{ item.staff.pk }}"/>
-              <div style="font-weight:500; font-size:0.9rem;">{{ item.staff.full_name }}</div>
-              <div style="color:var(--muted); font-size:0.75rem;">{{ item.staff.staff_id }} - {{ item.staff.get_level_display }}</div>
+          <div class="attendance-admin-card">
+            <div class="accent-bar"></div>
+            <input type="hidden" name="attendance_staff_id" value="{{ item.staff.pk }}"/>
+            
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+              <div>
+                <div style="font-weight:600; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+                  <i class="fas fa-user-tie" style="color:var(--gold); font-size:1.2rem;"></i>
+                  {{ item.staff.full_name }}
+                </div>
+                <div style="font-size:0.75rem; color:var(--muted); margin-top:4px; margin-left:28px;">
+                  <span style="font-family:monospace; color:var(--gold);">{{ item.staff.staff_id }}</span> • <i class="fas fa-phone-alt"></i> {{ item.phone }} • {{ item.staff.get_level_display }}
+                </div>
+              </div>
+              
+              <div style="flex-shrink:0;">
+                <select name="attendance_status_{{ item.staff.pk }}" class="attendance-admin-input" style="padding:6px 12px; font-weight:500; cursor:pointer;">
+                  <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
+                  <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+                  <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
+                  <option value="half_day" {% if item.attendance and item.attendance.status == 'half_day' %}selected{% endif %}>🌗 Half Day</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:4px;">Status</label>
-              <select name="attendance_status_{{ item.staff.pk }}" style="width:100%; padding:6px; font-size:0.85rem; border:1px solid var(--border); border-radius:4px; background:var(--bg); color:var(--text);">
-                <option value="present" {% if not item.attendance or item.attendance.status == 'present' %}selected{% endif %}>Present</option>
-                <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>Absent</option>
-                <option value="half_day" {% if item.attendance and item.attendance.status == 'half_day' %}selected{% endif %}>Half Day</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:4px;">Reaching Time</label>
-              <input type="time" name="reaching_time_{{ item.staff.pk }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" style="width:100%; padding:6px; font-size:0.85rem; border:1px solid var(--border); border-radius:4px; background:var(--bg); color:var(--text); color-scheme: dark;"/>
-            </div>
-            <div style="grid-column: 1 / -1;">
-              <input type="text" name="attendance_notes_{{ item.staff.pk }}" value="{{ item.attendance.notes }}" placeholder="Notes (optional)" style="width:100%; padding:6px; font-size:0.85rem; border:1px solid var(--border); border-radius:4px; background:var(--bg); color:var(--text);"/>
+
+            <div style="display:grid; grid-template-columns: minmax(85px, 1fr) minmax(100px, 2fr) auto; gap:10px; align-items:flex-end;">
+              <div>
+                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;"><i class="far fa-clock"></i> Time</label>
+                <input type="time" name="reaching_time_{{ item.staff.pk }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="attendance-admin-input" style="padding:8px 4px; font-size:0.8rem;"/>
+              </div>
+              <div>
+                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;"><i class="far fa-comment-alt"></i> Notes</label>
+                <input type="text" name="attendance_notes_{{ item.staff.pk }}" value="{{ item.attendance.notes }}" placeholder="Notes" class="attendance-admin-input" style="font-size:0.8rem;"/>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:center; padding-bottom:6px;">
+                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;">Paid</label>
+                <input type="checkbox" name="payment_given_{{ item.staff.pk }}" style="width:18px; height:18px; accent-color:var(--gold); cursor:pointer;" {% if item.attendance.payment_given %}checked{% endif %} />
+              </div>
             </div>
           </div>
           {% endfor %}
@@ -150,39 +187,80 @@
         </div>
         <div class="form-group">
           <label>Assign Staff</label>
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <select id="staffLevelFilter" onchange="filterStaff()" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
+              <option value="">All Levels</option>
+              <option value="A">A Level</option>
+              <option value="B">B Level</option>
+              <option value="C">C Level</option>
+              <option value="captain">Captain</option>
+            </select>
+            <select id="staffLocalityFilter" onchange="filterStaff()" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
+              <option value="">All Localities</option>
+              <option value="Kondotty">Kondotty</option>
+              <option value="Areekode">Areekode</option>
+              <option value="Edavannappara">Edavannappara</option>
+              <option value="Kizhisseri">Kizhisseri</option>
+              <option value="University">University</option>
+              <option value="Valluvambram">Valluvambram</option>
+            </select>
+          </div>
           <input type="text" id="staffSearch" placeholder="Search staff by name..." onkeyup="filterStaff()" style="width:100%; padding:8px 12px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);"/>
           <div id="staffList" style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:12px; background:var(--bg);">
             {% for role, staff_list in grouped_staff.items %}
-            <div class="staff-role-group" style="margin-bottom:14px;">
-              <div style="font-size:0.8rem; font-weight:600; color:var(--gold); text-transform:uppercase; margin-bottom:8px; border-bottom:1px solid rgba(212,168,82,0.3); padding-bottom:4px; letter-spacing:0.5px;">{{ role }} ({{ staff_list|length }})</div>
+            <div class="staff-role-group" style="margin-bottom:14px;" data-role="{{ role }}">
+              <div style="font-size:0.8rem; font-weight:600; color:var(--gold); text-transform:uppercase; margin-bottom:8px; border-bottom:1px solid rgba(212,168,82,0.3); padding-bottom:4px; letter-spacing:0.5px;">{{ role }} (<span class="role-count">{{ staff_list|length }}</span>)</div>
               <div style="display:flex; flex-direction:column; gap:8px;">
                 {% for s in staff_list %}
-                <label class="staff-item" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:2px 0;">
-                  <input type="checkbox" name="assigned_to" value="{{ s.pk }}" {% if s in booking.assigned_to.all %}checked{% endif %} style="accent-color:var(--gold); width:16px; height:16px;">
-                  <span class="staff-name" style="font-weight:500; font-size:0.92rem;">{{ s.full_name }}</span> 
+                <label class="staff-item" data-level="{{ s.level }}" data-locality="{{ s.main_locality|default:'' }}" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px 8px; border-radius:4px; transition: background 0.2s;">
+                  <input type="checkbox" name="assigned_to" value="{{ s.pk }}" {% if s in booking.assigned_to.all %}checked{% endif %} style="accent-color:var(--gold); width:16px; height:16px; flex-shrink: 0;">
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span class="staff-name" style="font-weight:500; font-size:0.92rem;">{{ s.full_name }}</span>
+                      <span style="font-size:0.7rem; color:var(--muted); background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">{{ s.main_locality|default:"No Locality" }}</span>
+                    </div>
+                  </div>
                 </label>
                 {% endfor %}
               </div>
             </div>
             {% endfor %}
           </div>
+          <style>
+            .staff-item:hover { background: rgba(212,168,82,0.08); }
+          </style>
           <script>
             function filterStaff() {
-              var input = document.getElementById("staffSearch").value.toLowerCase();
+              var searchInput = document.getElementById("staffSearch").value.toLowerCase();
+              var levelFilter = document.getElementById("staffLevelFilter").value;
+              var localityFilter = document.getElementById("staffLocalityFilter").value;
+              
               var groups = document.querySelectorAll('.staff-role-group');
               groups.forEach(function(group) {
                 var items = group.querySelectorAll('.staff-item');
-                var groupHasMatch = false;
+                var groupCount = 0;
+                
                 items.forEach(function(item) {
                   var name = item.querySelector('.staff-name').innerText.toLowerCase();
-                  if (name.includes(input)) {
+                  var itemLevel = item.getAttribute('data-level');
+                  var itemLocality = item.getAttribute('data-locality');
+                  
+                  var matchSearch = name.includes(searchInput);
+                  var matchLevel = (levelFilter === "") || (itemLevel === levelFilter);
+                  var matchLocality = (localityFilter === "") || (itemLocality === localityFilter);
+                  
+                  if (matchSearch && matchLevel && matchLocality) {
                     item.style.display = 'flex';
-                    groupHasMatch = true;
+                    groupCount++;
                   } else {
                     item.style.display = 'none';
                   }
                 });
-                group.style.display = groupHasMatch ? 'block' : 'none';
+                
+                var countSpan = group.querySelector('.role-count');
+                if (countSpan) countSpan.innerText = groupCount;
+                
+                group.style.display = (groupCount > 0) ? 'block' : 'none';
               });
             }
           </script>
@@ -193,82 +271,6 @@
         </div>
         <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
           <i class="fas fa-save"></i> Save Changes
-        </button>
-      </form>
-    </div>
-
-    <div class="panel" style="margin-bottom:14px">
-      <div class="panel-header"><div class="panel-title">Applications & Cancel Requests</div></div>
-      {% if pending_applications or cancel_requests %}
-        {% if pending_applications %}
-        <div style="margin-bottom:12px;">
-          <h4 style="font-size:0.9rem; margin-bottom:8px; color:var(--gold);">Pending Applications</h4>
-          {% for app in pending_applications %}
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.1); padding:10px; border-radius:6px; margin-bottom:6px; border:1px solid var(--border);">
-            <div>
-              <div style="font-weight:500;">{{ app.applicant_name }} <span style="font-size:0.8rem; color:var(--muted);">({{ app.staff.staff_id }})</span></div>
-              <div style="font-size:0.8rem; color:var(--muted);"><i class="fas fa-phone"></i> {{ app.applicant_phone }}</div>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <a href="{% url 'admin_handle_application' booking.pk app.pk 'approve_app' %}" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;">Approve</a>
-              <a href="{% url 'admin_handle_application' booking.pk app.pk 'reject_app' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;">Reject</a>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if cancel_requests %}
-        <div>
-          <h4 style="font-size:0.9rem; margin-bottom:8px; color:var(--orange);">Cancel Requests</h4>
-          {% for app in cancel_requests %}
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.1); padding:10px; border-radius:6px; margin-bottom:6px; border:1px solid var(--border);">
-            <div>
-              <div style="font-weight:500;">{{ app.applicant_name }} <span style="font-size:0.8rem; color:var(--muted);">({{ app.staff.staff_id }})</span></div>
-              <div style="font-size:0.8rem; color:var(--orange);">Requests Cancellation</div>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <a href="{% url 'admin_handle_application' booking.pk app.pk 'approve_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c; border-color:rgba(231,76,60,0.3);">Approve Cancel</a>
-              <a href="{% url 'admin_handle_application' booking.pk app.pk 'reject_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem;">Deny</a>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
-      {% else %}
-        <p style="color:var(--muted);font-size:0.85rem;">No pending applications or cancel requests.</p>
-      {% endif %}
-    </div>
-
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">Record Payment</div></div>
-      <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="add_payment"/>
-        <div class="form-group">
-          <label>Amount (₹) *</label>
-          <input type="number" name="amount" step="0.01" required placeholder="Amount received"/>
-        </div>
-        <div class="form-group">
-          <label>Method *</label>
-          <select name="method" required>
-            <option value="cash">💵 Cash</option>
-            <option value="upi">📱 UPI / GPay</option>
-            <option value="bank">🏦 Bank Transfer</option>
-            <option value="card">💳 Card</option>
-            <option value="cheque">📄 Cheque</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Date *</label>
-          <input type="date" name="received_on" required value="{{ today }}"/>
-        </div>
-        <div class="form-group">
-          <label>Reference / TXN ID</label>
-          <input type="text" name="reference" placeholder="UPI ref / cheque no."/>
-        </div>
-        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
-          <i class="fas fa-plus"></i> Add Payment
         </button>
       </form>
     </div>

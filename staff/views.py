@@ -7,7 +7,7 @@ from django.utils import timezone
 from datetime import datetime
 from django.db.models import Sum, Count, Q
 
-from .models import Staff, StaffPayout, StaffAttendance
+from .models import Staff, StaffPayout, StaffAttendance, StaffNotice
 from bookings.models import Booking, BookingPayment
 
 
@@ -80,6 +80,7 @@ def staff_download_attendance(request, pk):
     attendances = booking.staff_attendance.filter(date=booking.event_date).select_related('staff')
     assigned_staff = booking.assigned_to.all()
     attendance_map = {att.staff_id: att for att in attendances}
+    applications_map = {app.staff_id: app for app in booking.applications.all()}
     
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
@@ -108,7 +109,7 @@ def staff_download_attendance(request, pk):
     elements.append(Paragraph(client_info, subtitle_style))
     elements.append(Spacer(1, 10))
     
-    data = [['Staff ID', 'Name', 'Role', 'Reaching Time', 'Status', 'Wage (Rs)']]
+    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Reaching Time', 'Status', 'Wage (Rs)']]
     total_wage = 0
     
     for staff in assigned_staff:
@@ -120,18 +121,21 @@ def staff_download_attendance(request, pk):
         if raw_status in ['present', 'half_day']:
             total_wage += wage
             
+        app = applications_map.get(staff.pk)
+        phone = app.applicant_phone if app and app.applicant_phone else staff.phone
         data.append([
             staff.staff_id,
             staff.full_name,
+            phone,
             staff.get_level_display(),
             r_time,
             status,
             f"Rs.{wage}"
         ])
         
-    data.append(['', '', '', '', 'Total Estimated Wages:', f"Rs.{total_wage}"])
+    data.append(['', '', '', '', '', 'Total Estimated Wages:', f"Rs.{total_wage}"])
     
-    table = Table(data, colWidths=[70, 140, 100, 80, 70, 80])
+    table = Table(data, colWidths=[80, 100, 75, 70, 80, 65, 70])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f4f4')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
@@ -182,8 +186,38 @@ def staff_dashboard(request):
     my_bookings   = me.bookings.all()
     my_created    = me.bookings_created.all()
     pending       = my_bookings.filter(status='pending')
-    upcoming      = my_bookings.filter(event_date__gte=today, status='confirmed').order_by('event_date')[:5]
-    available_bookings = Booking.objects.filter(status='confirmed', event_date__gte=today).exclude(assigned_to=me).order_by('event_date')[:5]
+    upcoming      = my_bookings.filter(event_date__gte=today, status__in=['confirmed', 'in_progress', 'cancelled']).order_by('event_date')[:5]
+    
+    # Calculate Published Bookings Quota dynamic availability
+    available_bookings_qs = Booking.objects.filter(
+        status__in=['pending', 'confirmed'], 
+        event_date__gte=today,
+        is_published=True
+    ).exclude(assigned_to=me).order_by('event_date')
+    
+    available_bookings = []
+    for b in available_bookings_qs:
+        # Locality filter
+        if b.publish_locality != 'all' and me.main_locality != b.publish_locality:
+            continue
+            
+        if len(available_bookings) >= 5:
+            break
+            
+        approved_count = b.applications.filter(status='approved', staff__level=me.level).count()
+        
+        is_full = False
+        if me.level == 'captain' and b.quota_captain > 0 and approved_count >= b.quota_captain:
+            is_full = True
+        elif me.level == 'A' and b.quota_a > 0 and approved_count >= b.quota_a:
+            is_full = True
+        elif me.level == 'B' and b.quota_b > 0 and approved_count >= b.quota_b:
+            is_full = True
+        elif me.level == 'C' and b.quota_c > 0 and approved_count >= b.quota_c:
+            is_full = True
+            
+        b.is_level_full = is_full
+        available_bookings.append(b)
     recent        = my_created.order_by('-created_at')[:5]
     my_revenue    = my_bookings.filter(status__in=['confirmed','completed']).aggregate(t=Sum('quoted_price'))['t'] or 0
     my_payouts    = me.payouts.order_by('-created_at')[:5]
@@ -193,12 +227,25 @@ def staff_dashboard(request):
     my_applications = me.event_applications.all()
     pending_app_booking_ids = list(my_applications.filter(status='pending').values_list('booking_id', flat=True))
     cancel_req_booking_ids = list(my_applications.filter(status='cancel_requested').values_list('booking_id', flat=True))
+    rejected_app_booking_ids = list(my_applications.filter(status='rejected').values_list('booking_id', flat=True))
+    cancelled_app_booking_ids = list(my_applications.filter(status='cancelled').values_list('booking_id', flat=True))
 
-    remaining_events = max(0, 20 - me.total_events_completed) if me.level == 'C' else None
+    day_works = my_bookings.filter(status='completed', session='day').count()
+    night_works = my_bookings.filter(status='completed', session='night').count()
+
+    remaining_events = None
+    if me.level == 'C':
+        rem_day = max(0, 10 - day_works)
+        rem_night = max(0, 10 - night_works)
+        remaining_events = f"{rem_day} Day, {rem_night} Night"
+
     latest_promotion = me.promotion_requests.order_by('-created_at').first()
+    active_notice = StaffNotice.objects.filter(is_active=True).first()
 
     return render(request, 'staff/dashboard.html', {
         'me': me,
+        'day_works': day_works,
+        'night_works': night_works,
         'total_bookings': my_bookings.count(),
         'confirmed_count': my_bookings.filter(status='confirmed').count(),
         'completed_count': my_bookings.filter(status='completed').count(),
@@ -212,8 +259,11 @@ def staff_dashboard(request):
         'pending_pay': pending_pay,
         'pending_app_booking_ids': pending_app_booking_ids,
         'cancel_req_booking_ids': cancel_req_booking_ids,
+        'rejected_app_booking_ids': rejected_app_booking_ids,
+        'cancelled_app_booking_ids': cancelled_app_booking_ids,
         'remaining_events': remaining_events,
         'latest_promotion': latest_promotion,
+        'active_notice': active_notice,
     })
 
 
@@ -265,6 +315,7 @@ def staff_create_booking(request):
                 event_time  = request.POST.get('event_time') or None,
                 venue       = request.POST.get('venue', ''),
                 guest_count = int(request.POST.get('guest_count', 1)),
+                session     = request.POST.get('session', 'day'),
                 budget      = request.POST.get('budget') or None,
                 dietary_requirements = request.POST.get('dietary_requirements', ''),
                 special_requests     = request.POST.get('special_requests', ''),
@@ -354,10 +405,14 @@ def staff_booking_detail(request, pk):
     assigned_staff_list = []
     attendances = StaffAttendance.objects.filter(booking=booking, date=booking.event_date)
     att_map = {a.staff_id: a for a in attendances}
+    applications_map = {app.staff_id: app for app in booking.applications.filter(status__in=['approved', 'pending'])}
     
     for s in booking.assigned_to.all():
+        app = applications_map.get(s.id)
+        phone = app.applicant_phone if app and app.applicant_phone else s.phone
         assigned_staff_list.append({
             'staff': s,
+            'phone': phone,
             'attendance': att_map.get(s.id)
         })
 
@@ -373,20 +428,70 @@ def staff_booking_detail(request, pk):
 @login_required(login_url='/staff/login/')
 def staff_apply_booking(request, pk):
     """Handles staff applications to work on available, confirmed upcoming bookings."""
-    booking = get_object_or_404(Booking, pk=pk, status='confirmed')
+    booking = get_object_or_404(Booking, pk=pk, status__in=['pending', 'confirmed'], is_published=True)
+    
+    if booking.publish_locality != 'all' and request.user.main_locality != booking.publish_locality:
+        messages.error(request, "This event is currently only open for staff from " + booking.publish_locality + ".")
+        return redirect('staff_dashboard')
+    
+    approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
+    is_full = False
+    
+    if request.user.level == 'captain':
+        if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
+            is_full = True
+    elif request.user.level == 'A':
+        if booking.quota_a > 0 and approved_count >= booking.quota_a:
+            is_full = True
+    elif request.user.level == 'B':
+        if booking.quota_b > 0 and approved_count >= booking.quota_b:
+            is_full = True
+    elif request.user.level == 'C':
+        if booking.quota_c > 0 and approved_count >= booking.quota_c:
+            is_full = True
+
+    if is_full:
+        messages.error(request, f"Sorry, the {request.user.get_level_display()} quota is fully booked for this event.")
+        return redirect('staff_dashboard')
+
     # If GET, render a simple apply form
     if request.method == 'GET':
         return render(request, 'staff/apply_booking.html', {'booking': booking})
     
     # If POST, process the application
     if request.method == 'POST':
+        from bookings.models import EventApplication
+        
+        # --- SHIFT CONSTRAINT VALIDATION ---
+        # A staff member cannot have 2 pending/approved applications OR direct assignments 
+        # on the exact same date for the exact same session (Day/Day or Night/Night).
+        conflicting_apps = EventApplication.objects.filter(
+            staff=request.user,
+            booking__event_date=booking.event_date,
+            booking__session=booking.session,
+            status__in=['pending', 'approved']
+        ).exclude(booking=booking).exists()
+        
+        conflicting_assigned = request.user.bookings.filter(
+            event_date=booking.event_date,
+            session=booking.session
+        ).exclude(pk=booking.pk).exists()
+        
+        if conflicting_apps or conflicting_assigned:
+            messages.error(request, f"You already have a {booking.get_session_display()} shift on {booking.event_date.strftime('%d M')}.")
+            return redirect('staff_dashboard')
+        # -----------------------------------
+        
         applicant_name = request.POST.get('applicant_name', request.user.full_name)
         applicant_phone = request.POST.get('applicant_phone', request.user.phone)
         
         # Check if they already applied or are assigned
-        from bookings.models import EventApplication
-        if EventApplication.objects.filter(booking=booking, staff=request.user).exists():
-            messages.info(request, "You have already applied for this event.")
+        app = EventApplication.objects.filter(booking=booking, staff=request.user).first()
+        if app:
+            if app.status == 'cancelled':
+                messages.error(request, "You already cancelled this booking. Please contact Admin.")
+            else:
+                messages.info(request, "You have already applied for this event.")
         elif request.user in booking.assigned_to.all():
             messages.info(request, "You are already assigned to this event.")
         else:
@@ -395,6 +500,7 @@ def staff_apply_booking(request, pk):
                 staff=request.user,
                 applicant_name=applicant_name,
                 applicant_phone=applicant_phone,
+                note=request.POST.get('note', ''),
                 status='pending'
             )
             messages.success(request, f'Application submitted for {booking.name}!')
@@ -406,6 +512,10 @@ def staff_cancel_request(request, pk):
     """Files a cancellation request when a staff member wants to back out of an assigned event."""
     if request.method == 'POST':
         booking = get_object_or_404(Booking, pk=pk)
+        if not booking.is_cancellable:
+            messages.error(request, "Cancellation is only allowed if the event is more than 24 hours away.")
+            return redirect('staff_dashboard')
+            
         if request.user in booking.assigned_to.all():
             from bookings.models import EventApplication
             application = booking.applications.filter(staff=request.user).first()
@@ -445,3 +555,14 @@ def staff_payouts(request):
         'total_earned': total_earned,
         'pending_amt': pending_amt,
     })
+
+@login_required(login_url='/staff/login/')
+def staff_profile(request):
+    """Displays the staff member's profile information."""
+    return render(request, 'staff/profile.html', {'me': request.user})
+
+@login_required(login_url='/staff/login/')
+def staff_terms(request):
+    """Displays the terms and conditions for staff members."""
+    return render(request, 'staff/terms.html')
+

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login — Catrin Boys</title>
+  <title>Login — Mastan's Catering & Services</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -102,8 +102,9 @@
 <body>
 <div class="login-box">
   <div class="logo">
-    <span class="icon">🍽️</span>
-    <h1>Catrin Boys</h1>
+{% load static %}
+    <img src="{% static 'images/logo.png' %}" alt="Logo" style="height: 60px; margin-bottom: 10px; border-radius: 5px;">
+    <h1>Mastan's Catering & Services</h1>
     <p>Admin Panel</p>
   </div>
 

@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Add Menu Item — Catrin Boys{% endblock %}
+{% block title %}Add Menu Item — Mastan's Catering & Services{% endblock %}
 {% block page_title %}Add Menu Item{% endblock %}
 
 {% block content %}
@@ -17,12 +17,13 @@
       {% csrf_token %}
       <div class="form-group">
         <label>Category *</label>
-        <select name="category" required>
-          <option value="">Select category...</option>
+        <select name="category" required style="margin-bottom:8px" onchange="this.nextElementSibling.style.display = this.value === '' ? 'block' : 'none'">
+          <option value="">+ Create New Category</option>
           {% for cat in categories %}
           <option value="{{ cat.pk }}">{{ cat.icon }} {{ cat.name }}</option>
           {% endfor %}
         </select>
+        <input type="text" name="new_category" placeholder="Enter new category name">
       </div>
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">

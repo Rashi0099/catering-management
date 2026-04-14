@@ -79,12 +79,26 @@ def bookings_list(request):
     status_filter = request.GET.get('status', '')
     payment_filter = request.GET.get('payment', '')
     search = request.GET.get('search', '')
+    month_filter = request.GET.get('month', '')
+    year_filter = request.GET.get('year', '')
+    type_filter = request.GET.get('type', '')
+    session_filter = request.GET.get('session', '')
+    
     bookings = Booking.objects.select_related('created_by').all()
 
     if status_filter:
         bookings = bookings.filter(status=status_filter)
     if payment_filter:
         bookings = bookings.filter(payment_status=payment_filter)
+    if month_filter:
+        bookings = bookings.filter(event_date__month=month_filter)
+    if year_filter:
+        bookings = bookings.filter(event_date__year=year_filter)
+    if type_filter:
+        bookings = bookings.filter(event_type=type_filter)
+    if session_filter:
+        bookings = bookings.filter(session=session_filter)
+        
     if search:
         bookings = bookings.filter(Q(name__icontains=search) | Q(phone__icontains=search))
 
@@ -93,7 +107,10 @@ def bookings_list(request):
     page_obj = paginator.get_page(request.GET.get('page'))
 
     context = {'bookings': page_obj, 'status_filter': status_filter,
-               'payment_filter': payment_filter, 'search': search, 'page': 'bookings',
+               'payment_filter': payment_filter, 'search': search, 
+               'month_filter': month_filter, 'year_filter': year_filter,
+               'type_filter': type_filter, 'session_filter': session_filter,
+               'page': 'bookings',
                'pending_count': Booking.objects.filter(status='pending').count()}
     return render(request, 'admin/bookings.html', context)
 
@@ -122,14 +139,17 @@ def booking_detail(request, pk):
                     s = Staff.objects.get(id=staff_id)
                     s.total_events_completed += 1
                     s.save()
-                    if s.level == 'C' and s.total_events_completed >= 20:
-                        from staff.models import PromotionRequest
-                        if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
-                            PromotionRequest.objects.create(
-                                staff=s,
-                                current_level='C',
-                                requested_level='B'
-                            )
+                    if s.level == 'C':
+                        day_count = s.bookings.filter(status='completed', session='day').count()
+                        night_count = s.bookings.filter(status='completed', session='night').count()
+                        if day_count >= 10 and night_count >= 10:
+                            from staff.models import PromotionRequest
+                            if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
+                                PromotionRequest.objects.create(
+                                    staff=s,
+                                    current_level='C',
+                                    requested_level='B'
+                                )
             
             # Sync EventApplication statuses based on manual assignment changes
             from bookings.models import EventApplication
@@ -158,17 +178,19 @@ def booking_detail(request, pk):
                 status = request.POST.get(f'attendance_status_{sid}', 'present')
                 r_time = request.POST.get(f'reaching_time_{sid}') or None
                 notes  = request.POST.get(f'attendance_notes_{sid}', '')
+                payment_given = request.POST.get(f'payment_given_{sid}') == 'on'
                 
                 att, created = StaffAttendance.objects.get_or_create(
                     booking=booking,
                     staff_id=sid,
                     date=booking.event_date,
-                    defaults={'status': status, 'reaching_time': r_time, 'notes': notes}
+                    defaults={'status': status, 'reaching_time': r_time, 'notes': notes, 'payment_given': payment_given}
                 )
                 if not created:
                     att.status = status
                     att.reaching_time = r_time
                     att.notes = notes
+                    att.payment_given = payment_given
                     att.save()
             messages.success(request, 'Attendance and reaching times saved successfully!')
 
@@ -189,11 +211,15 @@ def booking_detail(request, pk):
 
     attendances = booking.staff_attendance.filter(date=booking.event_date)
     attendance_map = {att.staff_id: att for att in attendances}
+    applications_map = {app.staff_id: app for app in booking.applications.filter(status__in=['approved', 'pending'])}
     
     assigned_staff_with_att = []
     for s in booking.assigned_to.all():
+        app = applications_map.get(s.id)
+        phone = app.applicant_phone if app and app.applicant_phone else s.phone
         assigned_staff_with_att.append({
             'staff': s,
+            'phone': phone,
             'attendance': attendance_map.get(s.pk)
         })
 
@@ -225,6 +251,7 @@ def download_attendance(request, pk):
     attendances = booking.staff_attendance.filter(date=booking.event_date).select_related('staff')
     assigned_staff = booking.assigned_to.all()
     attendance_map = {att.staff_id: att for att in attendances}
+    applications_map = {app.staff_id: app for app in booking.applications.all()}
     
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
@@ -253,7 +280,7 @@ def download_attendance(request, pk):
     elements.append(Paragraph(client_info, subtitle_style))
     elements.append(Spacer(1, 10))
     
-    data = [['Staff ID', 'Name', 'Role', 'Reaching Time', 'Status', 'Wage (Rs)']]
+    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Reaching Time', 'Payment', 'Wage (Rs)']]
     total_wage = 0
     
     for staff in assigned_staff:
@@ -265,18 +292,24 @@ def download_attendance(request, pk):
         if raw_status in ['present', 'half_day']:
             total_wage += wage
             
+        app = applications_map.get(staff.pk)
+        phone = app.applicant_phone if app and app.applicant_phone else staff.phone
+        
+        payment_text = "Yes" if att and att.payment_given else "No"
+        
         data.append([
             staff.staff_id,
             staff.full_name,
+            phone,
             staff.get_level_display(),
             r_time,
-            status,
+            payment_text,
             f"Rs.{wage}"
         ])
         
-    data.append(['', '', '', '', 'Total Estimated Wages:', f"Rs.{total_wage}"])
+    data.append(['', '', '', '', '', 'Total Estimated Wages:', f"Rs.{total_wage}"])
     
-    table = Table(data, colWidths=[70, 140, 100, 80, 70, 80])
+    table = Table(data, colWidths=[80, 100, 75, 70, 80, 65, 70])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f4f4')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
@@ -352,8 +385,11 @@ def admin_create_booking(request):
                 company     = request.POST.get('company', ''),
                 event_type  = request.POST['event_type'],
                 event_date  = request.POST['event_date'],
+                session     = request.POST.get('session', 'day'),
                 event_time  = request.POST.get('event_time') or None,
                 venue       = request.POST.get('venue', ''),
+                location_name = request.POST.get('location_name', ''),
+                location_link = request.POST.get('location_link', ''),
                 guest_count = int(request.POST.get('guest_count', 1)),
                 budget      = request.POST.get('budget') or None,
                 dietary_requirements = request.POST.get('dietary_requirements', ''),
@@ -375,6 +411,70 @@ def admin_create_booking(request):
 
 
 @admin_required
+def admin_edit_booking(request, pk):
+    booking = get_object_or_404(Booking, pk=pk)
+    if request.method == 'POST':
+        try:
+            booking.name = request.POST.get('name', booking.name)
+            booking.email = request.POST.get('email', '')
+            booking.phone = request.POST.get('phone', booking.phone)
+            booking.company = request.POST.get('company', '')
+            booking.event_type = request.POST.get('event_type', booking.event_type)
+            booking.event_date = request.POST.get('event_date', booking.event_date)
+            booking.session = request.POST.get('session', 'day')
+            booking.event_time = request.POST.get('event_time') or None
+            booking.venue = request.POST.get('venue', '')
+            booking.location_name = request.POST.get('location_name', '')
+            booking.location_link = request.POST.get('location_link', '')
+            booking.guest_count = int(request.POST.get('guest_count', 1))
+            booking.budget = request.POST.get('budget') or None
+            booking.dietary_requirements = request.POST.get('dietary_requirements', '')
+            booking.message = request.POST.get('message', '')
+            
+            # Quotas & Locality
+            booking.quota_captain = int(request.POST.get('quota_captain') or 0)
+            booking.quota_a = int(request.POST.get('quota_a') or 0)
+            booking.quota_b = int(request.POST.get('quota_b') or 0)
+            booking.quota_c = int(request.POST.get('quota_c') or 0)
+            booking.publish_locality = request.POST.get('publish_locality', 'all')
+            
+            booking.save()
+            messages.success(request, f'Booking #{booking.pk} details and quotas have been updated!')
+            return redirect('admin_booking_detail', pk=booking.pk)
+        except Exception as e:
+            messages.error(request, f'Error updating booking: {str(e)}')
+            
+    return render(request, 'admin/edit_booking.html', {
+        'booking': booking,
+        'page': 'bookings',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+
+@admin_required
+def admin_publish_booking(request, pk):
+    if request.method == 'POST':
+        booking = get_object_or_404(Booking, pk=pk)
+        action = request.POST.get('action', 'publish')
+        
+        if action == 'publish':
+            booking.is_published = True
+            booking.publish_locality = request.POST.get('publish_locality', 'all')
+            booking.save(update_fields=['is_published', 'publish_locality'])
+            if booking.publish_locality != 'all':
+                messages.success(request, f'Booking #{booking.pk} has been published EXCLUSIVELY to {booking.publish_locality} staff!')
+            else:
+                messages.success(request, f'Booking #{booking.pk} has been published to ALL Staff!')
+        elif action == 'unpublish':
+            booking.is_published = False
+            booking.save(update_fields=['is_published'])
+            messages.success(request, f'Booking #{booking.pk} is now hidden from the Staff Dashboard.')
+            
+        return redirect('admin_booking_detail', pk=booking.pk)
+    return redirect('admin_bookings')
+
+
+@admin_required
 def update_booking_status(request, pk):
     if request.method == 'POST':
         booking = get_object_or_404(Booking, pk=pk)
@@ -387,14 +487,17 @@ def update_booking_status(request, pk):
                 for s in booking.assigned_to.all():
                     s.total_events_completed += 1
                     s.save()
-                    if s.level == 'C' and s.total_events_completed >= 20:
-                        from staff.models import PromotionRequest
-                        if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
-                            PromotionRequest.objects.create(
-                                staff=s,
-                                current_level='C',
-                                requested_level='B'
-                            )
+                    if s.level == 'C':
+                        day_count = s.bookings.filter(status='completed', session='day').count()
+                        night_count = s.bookings.filter(status='completed', session='night').count()
+                        if day_count >= 10 and night_count >= 10:
+                            from staff.models import PromotionRequest
+                            if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
+                                PromotionRequest.objects.create(
+                                    staff=s,
+                                    current_level='C',
+                                    requested_level='B'
+                                )
             return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
@@ -403,12 +506,64 @@ def update_booking_status(request, pk):
 
 @admin_required
 def staff_requests(request):
+    from django.utils import timezone
+    booking_id = request.GET.get('booking_id')
+    
     pending_apps = EventApplication.objects.filter(status='pending').select_related('staff', 'booking').order_by('-created_at')
     cancel_reqs = EventApplication.objects.filter(status='cancel_requested').select_related('staff', 'booking').order_by('-created_at')
     
+    if booking_id:
+        pending_apps = pending_apps.filter(booking_id=booking_id)
+        cancel_reqs = cancel_reqs.filter(booking_id=booking_id)
+        
+        selected_booking_obj = Booking.objects.get(pk=booking_id)
+        live_quota_data = {
+            'captain': {'q': selected_booking_obj.quota_captain, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='captain').count()},
+            'a': {'q': selected_booking_obj.quota_a, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='A').count()},
+            'b': {'q': selected_booking_obj.quota_b, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='B').count()},
+            'c': {'q': selected_booking_obj.quota_c, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='C').count()},
+        }
+    else:
+        live_quota_data = None
+        
+    # Evaluate double shifts
+    pending_apps_annotated = []
+    for app in pending_apps:
+        # Check if they have an earlier application on the same date
+        other_app_earlier = EventApplication.objects.filter(
+            staff=app.staff,
+            booking__event_date=app.booking.event_date,
+            status__in=['pending', 'approved'],
+            created_at__lt=app.created_at
+        ).exclude(pk=app.pk).first()
+        
+        # Edge case: Check if they are manually assigned to another booking without an application
+        other_booking_manual = None
+        for b in app.staff.bookings.filter(event_date=app.booking.event_date).exclude(pk=app.booking.pk):
+            if not EventApplication.objects.filter(staff=app.staff, booking=b).exists():
+                other_booking_manual = b
+                break
+        
+        app.has_double_shift = False
+        app.double_shift_event = None
+        
+        if other_booking_manual:
+            app.has_double_shift = True
+            app.double_shift_event = f"{other_booking_manual.name} ({other_booking_manual.get_session_display()})"
+        elif other_app_earlier:
+            app.has_double_shift = True
+            app.double_shift_event = f"{other_app_earlier.booking.name} ({other_app_earlier.booking.get_session_display()})"
+        
+        pending_apps_annotated.append(app)
+        
+    active_bookings = Booking.objects.filter(status__in=['pending', 'confirmed'], event_date__gte=timezone.now().date()).order_by('event_date')
+    
     context = {
-        'pending_apps': pending_apps,
+        'pending_apps': pending_apps_annotated,
         'cancel_reqs': cancel_reqs,
+        'active_bookings': active_bookings,
+        'selected_booking': booking_id,
+        'live_quota_data': live_quota_data,
         'page': 'staff_requests',
         'pending_count': Booking.objects.filter(status='pending').count(),
     }
@@ -513,10 +668,41 @@ def staff_list(request):
     paginator = Paginator(staff, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
     
+    # Fix N+1 queries for revenue and payouts on the staff listing
+    staff_ids = [s.pk for s in page_obj.object_list]
+    from django.db.models import Sum
+    from staff.models import StaffPayout
+    
+    revenue_stats = Staff.objects.filter(
+        pk__in=staff_ids, 
+        bookings__status__in=['confirmed', 'completed']
+    ).values('pk').annotate(total_rev=Sum('bookings__quoted_price'))
+    revenue_map = {item['pk']: item['total_rev'] for item in revenue_stats}
+    
+
+    payout_stats = StaffPayout.objects.filter(staff_id__in=staff_ids).values('staff_id', 'status').annotate(total=Sum('amount'))
+    paid_map = {}
+    pending_map = {}
+    for item in payout_stats:
+        if item['status'] == 'paid':
+            paid_map[item['staff_id']] = item['total']
+        elif item['status'] == 'pending':
+            pending_map[item['staff_id']] = item['total']
+
+    for s in page_obj.object_list:
+        s.annotated_revenue = revenue_map.get(s.pk, 0) or 0
+        s.annotated_paid_out = paid_map.get(s.pk, 0) or 0
+        s.annotated_pending_payout = pending_map.get(s.pk, 0) or 0
+
+    total_staff_count = Staff.objects.filter(is_active=True).count()
+    total_events_served = Booking.objects.filter(status='completed').count()
+
     context = {
         'staff': page_obj,
         'page': 'staff',
         'pending_count': Booking.objects.filter(status='pending').count(),
+        'total_events_served': total_events_served,
+        'total_staff_count': total_staff_count,
     }
     return render(request, 'admin/staff_list.html', context)
 
@@ -672,12 +858,20 @@ def menu_list(request):
 @admin_required
 def menu_add(request):
     if request.method == 'POST':
+        category_id = request.POST.get('category')
+        new_category = request.POST.get('new_category', '').strip()
+        
+        if new_category:
+            cat, _ = MenuCategory.objects.get_or_create(name=new_category)
+            category_id = cat.id
+
         MenuItem.objects.create(
-            category_id   = request.POST['category'],
+            category_id   = category_id,
             name          = request.POST['name'],
             description   = request.POST['description'],
             price         = request.POST['price'],
             is_vegetarian = request.POST.get('is_vegetarian') == 'on',
+            is_vegan      = request.POST.get('is_vegan') == 'on',
             is_featured   = request.POST.get('is_featured') == 'on',
         )
         messages.success(request, 'Menu item added!')
@@ -685,6 +879,36 @@ def menu_add(request):
     categories = MenuCategory.objects.all()
     return render(request, 'admin/menu_add.html', {
         'categories': categories, 'page': 'menu',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+
+@admin_required
+def menu_edit(request, pk):
+    item = get_object_or_404(MenuItem, pk=pk)
+    if request.method == 'POST':
+        category_id = request.POST.get('category')
+        new_category = request.POST.get('new_category', '').strip()
+        
+        if new_category:
+            cat, _ = MenuCategory.objects.get_or_create(name=new_category)
+            category_id = cat.id
+
+        item.category_id = category_id
+        item.name = request.POST['name']
+        item.description = request.POST['description']
+        item.price = request.POST['price']
+        item.is_vegetarian = request.POST.get('is_vegetarian') == 'on'
+        item.is_vegan = request.POST.get('is_vegan') == 'on'
+        item.is_featured = request.POST.get('is_featured') == 'on'
+        item.is_available = request.POST.get('is_available') == 'on'
+        item.save()
+        messages.success(request, f'"{item.name}" updated successfully!')
+        return redirect('admin_menu')
+        
+    categories = MenuCategory.objects.all()
+    return render(request, 'admin/menu_edit.html', {
+        'item': item, 'categories': categories, 'page': 'menu',
         'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
@@ -698,11 +922,103 @@ def menu_delete(request, pk):
 
 
 @admin_required
+def menu_category_delete(request, pk):
+    cat = get_object_or_404(MenuCategory, pk=pk)
+    cat_name = cat.name
+    cat.delete()
+    messages.success(request, f'Category "{cat_name}" and its inner items were removed.')
+    return redirect('admin_menu')
+
+
+@admin_required
 def gallery_list(request):
+    from gallery.models import GalleryCategory
     images = GalleryImage.objects.order_by('-uploaded_at')
-    context = {'images': images, 'page': 'gallery',
+    categories = GalleryCategory.objects.all()
+    context = {'images': images, 'categories': categories, 'page': 'gallery',
                'pending_count': Booking.objects.filter(status='pending').count()}
     return render(request, 'admin/gallery.html', context)
+
+
+@admin_required
+def gallery_add(request):
+    from gallery.models import GalleryCategory
+    if request.method == 'POST':
+        category_id = request.POST.get('category')
+        new_category = request.POST.get('new_category', '').strip()
+        
+        if new_category:
+            cat, _ = GalleryCategory.objects.get_or_create(name=new_category)
+            category_id = cat.id
+            
+        img = GalleryImage(
+            category_id = category_id,
+            title       = request.POST['title'],
+            description = request.POST.get('description', ''),
+            is_featured = request.POST.get('is_featured') == 'on',
+        )
+        if 'image' in request.FILES:
+            img.image = request.FILES['image']
+            img.save()
+            messages.success(request, 'Gallery image added!')
+        else:
+            messages.error(request, 'No image file uploaded.')
+        return redirect('admin_gallery')
+        
+    categories = GalleryCategory.objects.all()
+    return render(request, 'admin/gallery_add.html', {
+        'categories': categories, 'page': 'gallery',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+
+@admin_required
+def gallery_edit(request, pk):
+    from gallery.models import GalleryCategory
+    img = get_object_or_404(GalleryImage, pk=pk)
+    if request.method == 'POST':
+        category_id = request.POST.get('category')
+        new_category = request.POST.get('new_category', '').strip()
+        
+        if new_category:
+            cat, _ = GalleryCategory.objects.get_or_create(name=new_category)
+            category_id = cat.id
+            
+        img.category_id = category_id
+        img.title = request.POST['title']
+        img.description = request.POST.get('description', '')
+        img.is_featured = request.POST.get('is_featured') == 'on'
+        
+        if 'image' in request.FILES and request.FILES['image']:
+            img.image = request.FILES['image']
+            
+        img.save()
+        messages.success(request, f'Gallery image "{img.title}" updated!')
+        return redirect('admin_gallery')
+        
+    categories = GalleryCategory.objects.all()
+    return render(request, 'admin/gallery_edit.html', {
+        'img': img, 'categories': categories, 'page': 'gallery',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+
+@admin_required
+def gallery_delete(request, pk):
+    img = get_object_or_404(GalleryImage, pk=pk)
+    img.delete()
+    messages.success(request, 'Gallery image deleted.')
+    return redirect('admin_gallery')
+
+
+@admin_required
+def gallery_category_delete(request, pk):
+    from gallery.models import GalleryCategory
+    cat = get_object_or_404(GalleryCategory, pk=pk)
+    cat_name = cat.name
+    cat.delete()
+    messages.success(request, f'Gallery category "{cat_name}" removed.')
+    return redirect('admin_gallery')
 
 
 @admin_required
@@ -740,3 +1056,137 @@ def handle_promotion(request, pk, action):
         promotion.save()
         messages.success(request, 'Promotion rejected.')
     return redirect('admin_staff_promotions')
+
+
+# ── Manual Reports ────────────────────────────────────────────────────────────
+
+@admin_required
+def admin_reports(request):
+    from bookings.models import ManualReport
+    from django.db.models import Sum
+    import calendar
+    month_filter = request.GET.get('month', '')
+    year_filter = request.GET.get('year', '')
+    
+    reports = ManualReport.objects.all()
+    
+    month_name = ''
+    if month_filter:
+        reports = reports.filter(event_date__month=month_filter)
+        try:
+            month_name = calendar.month_name[int(month_filter)]
+        except:
+            pass
+            
+    if year_filter:
+        reports = reports.filter(event_date__year=year_filter)
+        
+    totals = reports.aggregate(
+        t_boys=Sum('boys_count'),
+        t_bill=Sum('bill_amount'),
+        t_received=Sum('amount_received'),
+        t_profit=Sum('profit')
+    )
+        
+    context = {
+        'reports': reports,
+        'totals': totals,
+        'page': 'reports',
+        'month_filter': month_filter,
+        'month_name': month_name,
+        'year_filter': year_filter,
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    }
+    return render(request, 'admin/reports.html', context)
+
+@admin_required
+def admin_report_add(request):
+    from bookings.models import ManualReport
+    if request.method == 'POST':
+        try:
+            ManualReport.objects.create(
+                event_date = request.POST['event_date'],
+                site_name = request.POST.get('site_name', ''),
+                event_name = request.POST.get('event_name', ''),
+                boys_count = int(request.POST.get('boys_count') or 0),
+                bill_incharge = request.POST.get('bill_incharge', ''),
+                bill_amount = request.POST.get('bill_amount') or 0.00,
+                amount_received = request.POST.get('amount_received') or 0.00,
+                payment_received_on = request.POST.get('payment_received_on') or None,
+                pending_amount = request.POST.get('pending_amount', ''),
+                profit = request.POST.get('profit') or 0.00,
+                is_settled = request.POST.get('is_settled') == 'on'
+            )
+            messages.success(request, 'Report entry added successfully!')
+            return redirect('admin_reports')
+        except Exception as e:
+            messages.error(request, f'Error creating report: {str(e)}')
+            
+    return render(request, 'admin/report_add.html', {
+        'page': 'reports',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+@admin_required
+def admin_report_delete(request, pk):
+    from bookings.models import ManualReport
+    report = get_object_or_404(ManualReport, pk=pk)
+    report.delete()
+    messages.success(request, 'Report entry deleted.')
+    return redirect('admin_reports')
+
+
+@admin_required
+def admin_report_edit(request, pk):
+    from bookings.models import ManualReport
+    report = get_object_or_404(ManualReport, pk=pk)
+    if request.method == 'POST':
+        try:
+            report.event_date = request.POST['event_date']
+            report.site_name = request.POST.get('site_name', '')
+            report.event_name = request.POST.get('event_name', '')
+            report.boys_count = int(request.POST.get('boys_count') or 0)
+            report.bill_incharge = request.POST.get('bill_incharge', '')
+            report.bill_amount = request.POST.get('bill_amount') or 0.00
+            report.amount_received = request.POST.get('amount_received') or 0.00
+            report.payment_received_on = request.POST.get('payment_received_on') or None
+            report.pending_amount = request.POST.get('pending_amount', '')
+            report.profit = request.POST.get('profit') or 0.00
+            report.is_settled = request.POST.get('is_settled') == 'on'
+            report.save()
+            messages.success(request, 'Report entry updated successfully!')
+            return redirect('admin_reports')
+        except Exception as e:
+            messages.error(request, f'Error updating report: {str(e)}')
+            
+    return render(request, 'admin/report_edit.html', {
+        'report': report,
+        'page': 'reports',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+@admin_required
+def staff_notice(request):
+    from staff.models import StaffNotice
+    notice = StaffNotice.objects.filter().order_by('-created_at').first()
+    
+    if request.method == 'POST':
+        message = request.POST.get('message', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if notice:
+            notice.message = message
+            notice.is_active = is_active
+            notice.save()
+        else:
+            StaffNotice.objects.create(message=message, is_active=is_active)
+            
+        messages.success(request, 'Notice Board updated successfully!')
+        return redirect('admin_staff_notice')
+        
+    return render(request, 'admin/notice.html', {
+        'notice': notice,
+        'page': 'staff_notice',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+

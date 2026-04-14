@@ -1,0 +1,66 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Add Financial Report — Mastan's Catering{% endblock %}
+{% block page_title %}Add Financial Report{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width: 800px; margin:0 auto;">
+  <div class="panel-header">
+    <div class="panel-title">Financial Report Details</div>
+    <a href="{% url 'admin_reports' %}" class="panel-link"><i class="fas fa-arrow-left"></i> Back to Financial Reports</a>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <div class="cols-2 responsive-grid">
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" name="event_date" required>
+      </div>
+      <div class="form-group">
+        <label>Site Name</label>
+        <input type="text" name="site_name" required>
+      </div>
+      <div class="form-group">
+        <label>Event Name</label>
+        <input type="text" name="event_name" required>
+      </div>
+      <div class="form-group">
+        <label>No. of Boys</label>
+        <input type="number" name="boys_count" value="0">
+      </div>
+      <div class="form-group">
+        <label>Bill Incharge</label>
+        <input type="text" name="bill_incharge">
+      </div>
+      <div class="form-group">
+        <label>Bill Amount (Boys)</label>
+        <input type="number" step="0.01" name="bill_amount" value="0.00">
+      </div>
+      <div class="form-group">
+        <label>Amount Received (Event)</label>
+        <input type="number" step="0.01" name="amount_received" value="0.00">
+      </div>
+      <div class="form-group">
+        <label>Payment Received On</label>
+        <input type="date" name="payment_received_on">
+      </div>
+      <div class="form-group">
+        <label>Pending Amount</label>
+        <input type="text" name="pending_amount" placeholder="e.g. NIL or numeric">
+      </div>
+      <div class="form-group">
+        <label>Profit</label>
+        <input type="number" step="0.01" name="profit" value="0.00">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:20px;">
+      <label style="display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" name="is_settled" style="width:16px; height:16px;">
+        Settled / Checked
+      </label>
+    </div>
+    <div style="margin-top:24px; text-align:right;">
+      <button type="submit" class="btn btn-gold"><i class="fas fa-save"></i> Save Financial Report</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

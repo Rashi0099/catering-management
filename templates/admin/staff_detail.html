@@ -1,10 +1,10 @@
-```html
+
 {% extends 'admin/custom_base.html' %}
 {% block title %}{{ member.full_name }} — Staff{% endblock %}
 {% block page_title %}Staff: {{ member.full_name }}{% endblock %}
 
 {% block content %}
-<div style="display:flex;gap:8px;margin-bottom:22px">
+<div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap">
   <a href="{% url 'admin_staff' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> All Staff</a>
   <a href="{% url 'admin_staff_edit' member.pk %}" class="btn btn-gold">
     <i class="fas fa-user-edit"></i> Edit Staff
@@ -31,18 +31,10 @@
           <span class="badge badge-confirmed" style="margin-top:4px">{{ member.get_level_display }}</span>
         </div>
       </div>
-      <div class="responsive-grid cols-4" style="gap:12px">
+      <div class="responsive-grid cols-2" style="gap:12px">
         <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
           <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold)">₹{{ revenue|floatformat:0 }}</div>
           <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Revenue Generated</div>
-        </div>
-        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
-          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--green)">₹{{ total_paid|floatformat:0 }}</div>
-          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Total Paid Out</div>
-        </div>
-        <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
-          <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--orange)">₹{{ pending|floatformat:0 }}</div>
-          <div style="font-size:0.66rem;color:var(--muted);text-transform:uppercase;margin-top:3px">Pending Payout</div>
         </div>
         <div style="background:var(--surface);padding:14px;border-radius:9px;text-align:center;border:1px solid var(--border)">
           <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--blue)">{{ member.bookings.count }}</div>
@@ -50,68 +42,7 @@
         </div>
       </div>
     </div>
-
-    <!-- Payout History -->
-    <div class="panel" style="margin-bottom:18px">
-      <div class="panel-header"><div class="panel-title">Payout History</div></div>
-      <table>
-        <thead>
-          <tr><th>Type</th><th>Amount</th><th>For Booking</th><th>Status</th><th>Paid On</th><th>Ref</th><th></th></tr>
-        </thead>
-        <tbody>
-          {% for p in payouts %}
-          <tr>
-            <td>{{ p.get_payout_type_display }}</td>
-            <td style="font-weight:600;color:{% if p.status == 'paid' %}var(--green){% else %}var(--orange){% endif %}">
-              ₹{{ p.amount }}
-            </td>
-            <td style="font-size:0.78rem;color:var(--muted)">
-              {% if p.booking %}{{ p.booking.name }}{% else %}—{% endif %}
-            </td>
-            <td><span class="badge badge-{% if p.status == 'paid' %}confirmed{% elif p.status == 'pending' %}pending{% else %}cancelled{% endif %}">{{ p.get_status_display }}</span></td>
-            <td style="color:var(--muted);font-size:0.78rem">{{ p.paid_on|date:"d M Y"|default:"—" }}</td>
-            <td style="font-family:monospace;font-size:0.73rem;color:var(--muted)">{{ p.reference|default:"—" }}</td>
-            <td>
-              {% if p.status == 'pending' %}
-              <a href="{% url 'admin_payout_paid' p.pk %}" class="btn btn-ghost" style="padding:4px 10px;font-size:0.73rem;color:var(--green);border-color:rgba(46,204,133,0.3)"
-                 onclick="return confirm('Mark Rs.{{ p.amount }} as PAID?')">
-                ✓ Mark Paid
-              </a>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">No payouts yet</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Their Bookings -->
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">Assigned Bookings</div></div>
-      <table>
-        <thead><tr><th>Client</th><th>Event</th><th>Date</th><th>Quoted</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for b in bookings %}
-          <tr style="cursor:pointer" onclick="location.href='{% url 'admin_booking_detail' b.pk %}'">
-            <td style="font-weight:500">{{ b.name }}</td>
-            <td>{{ b.get_event_type_display }}</td>
-            <td style="color:var(--muted)">{{ b.event_date|date:"d M Y" }}</td>
-            <td style="color:var(--gold)">{% if b.quoted_price %}₹{{ b.quoted_price }}{% else %}—{% endif %}</td>
-            <td><span class="badge badge-{{ b.status }}">{{ b.get_status_display }}</span></td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No bookings assigned</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
-  <!-- RIGHT -->
-  <div>
+    <div>
 
     <!-- Staff Info -->
     <div class="panel" style="margin-bottom:18px">
@@ -131,7 +62,7 @@
         </div>
         <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
           <span style="color:var(--muted)">Email</span>
-          <span>{{ member.email|default:"—" }}</span>
+          <span style="word-break:break-all;text-align:right;max-width:65%;">{{ member.email|default:"—" }}</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
           <span style="color:var(--muted)">Age / Height</span>
@@ -168,62 +99,37 @@
       </div>
     </div>
 
-    <!-- Add Payout -->
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">Add Payout</div></div>
-      <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="add_payout"/>
-        <div class="form-group">
-          <label>Payout Type *</label>
-          <select name="payout_type" required>
-            <option value="daily_wage">Daily Wage</option>
-            <option value="salary">Monthly Salary</option>
-            <option value="commission">Event Commission</option>
-            <option value="bonus">Bonus</option>
-            <option value="advance">Advance</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Amount (₹) *</label>
-          <input type="number" name="amount" step="0.01" required placeholder="e.g. 1500"/>
-        </div>
-        <div class="form-group">
-          <label>Link to Booking (optional)</label>
-          <select name="booking_id">
-            <option value="">— None —</option>
-            {% for b in all_bookings %}
-            <option value="{{ b.pk }}">{{ b.name }} — {{ b.event_date|date:"d M" }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select name="status">
-            <option value="pending">Pending</option>
-            <option value="paid">Paid Now</option>
-          </select>
-        </div>
-        <div class="form-group" id="paid_on_group">
-          <label>Date Paid</label>
-          <input type="date" name="paid_on" value="{{ today }}"/>
-        </div>
-        <div class="form-group">
-          <label>Reference (UPI/Bank ID)</label>
-          <input type="text" name="reference" placeholder="e.g. UPI-TXN-12345"/>
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea name="description" rows="2" placeholder="e.g. Wages for Wedding on 15 Jan"></textarea>
-        </div>
-        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
-          <i class="fas fa-plus"></i> Add Payout
-        </button>
-      </form>
-    </div>
 
   </div>
+  </div>
 
+
+  <!-- RIGHT -->
+   <!-- Their Bookings -->
+    <div class="panel">
+      <div class="panel-header"><div class="panel-title">Assigned Bookings</div></div>
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table>
+          <thead><tr><th>Client</th><th>Event</th><th>Date</th><th>Quoted</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for b in bookings %}
+            <tr style="cursor:pointer" onclick="location.href='{% url 'admin_booking_detail' b.pk %}'">
+              <td style="font-weight:500">{{ b.name }}</td>
+              <td>{{ b.get_event_type_display }}</td>
+              <td style="color:var(--muted)">{{ b.event_date|date:"d M Y" }}</td>
+              <td style="color:var(--gold)">{% if b.quoted_price %}₹{{ b.quoted_price }}{% else %}—{% endif %}</td>
+              <td><span class="badge badge-{{ b.status }}">{{ b.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">No bookings assigned</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  
+  
 </div>
 {% endblock %}
 ```
