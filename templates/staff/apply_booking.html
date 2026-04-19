@@ -30,6 +30,14 @@
       </div>
     </div>
 
+    {% if booking.allow_direct_join %}
+    <div style="margin-bottom:20px; padding:16px; background:rgba(46, 204, 113, 0.1); border:1px solid rgba(46, 204, 113, 0.3); border-radius:8px; color:var(--green); text-align:center;">
+      <i class="fas fa-bolt" style="font-size:1.4rem; margin-bottom:8px;"></i><br>
+      <strong style="font-size:1.1rem; font-family:'Playfair Display',serif;">Direct Join Event</strong><br>
+      <span style="font-size:0.9rem;">Your application will be instantly approved! No waiting for admin confirmation.</span>
+    </div>
+    {% endif %}
+
     <div class="panel-hdr">
       <div class="panel-title">Your Application</div>
     </div>
@@ -62,8 +70,12 @@
         </label>
       </div>
 
-      <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; padding:12px; font-size:1.05rem;">
-        <i class="fas fa-paper-plane"></i> Submit Application
+      <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; padding:12px; font-size:1.05rem; {% if booking.allow_direct_join %}background:var(--green);border-color:var(--green);color:white;{% endif %}">
+        {% if booking.allow_direct_join %}
+          <i class="fas fa-bolt"></i> Join Event Now
+        {% else %}
+          <i class="fas fa-paper-plane"></i> Submit Application
+        {% endif %}
       </button>
     </form>
   </div>

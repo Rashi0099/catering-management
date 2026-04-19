@@ -29,7 +29,7 @@
       <div class="panel-title" style="display:inline-block; margin-right:10px;">{{ category.icon }} {{ category.name }}</div>
       <span style="font-size:0.8rem;color:var(--muted)">{{ category.items.count }} items</span>
     </div>
-    <a href="{% url 'admin_menu_category_delete' category.pk %}" onclick="return confirm('WARNING: This will permanently delete the entire \'{{ category.name }}\' category and all its menu items!')" style="color:var(--red); font-size:0.85rem; font-weight:500;">
+    <a href="{% url 'admin_menu_category_delete' category.pk %}" onclick="return handleCustomConfirm(this, 'WARNING: This will permanently delete the entire \'{{ category.name|escapejs }}\' category and all its menu items!', event);" style="color:var(--red); font-size:0.85rem; font-weight:500;">
       <i class="fas fa-trash"></i> Delete Category
     </a>
   </div>
@@ -67,7 +67,7 @@
             <i class="fas fa-edit"></i>
           </a>
           <a href="{% url 'admin_menu_delete' item.pk %}"
-             onclick="return confirm('Remove {{ item.name }} from menu?')"
+             onclick="return handleCustomConfirm(this, 'Remove {{ item.name|escapejs }} from menu?', event);"
              class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem">
             <i class="fas fa-trash"></i>
           </a>

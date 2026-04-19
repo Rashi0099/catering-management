@@ -64,6 +64,7 @@ class Booking(models.Model):
     quota_b       = models.PositiveIntegerField(default=0, help_text="Number of B-Level staff needed")
     quota_c       = models.PositiveIntegerField(default=0, help_text="Number of C-Level staff needed")
     is_published  = models.BooleanField(default=False, help_text="If True, staff can see and apply for this event")
+    allow_direct_join = models.BooleanField(default=False, help_text="If True, staff can join instantly without admin approval.")
     publish_locality = models.CharField(max_length=50, choices=[
         ('all', 'All Localities'),
         ('Kondotty', 'Kondotty'),
@@ -111,6 +112,27 @@ class Booking(models.Model):
             event_dt = dt
             
         return event_dt > (timezone.now() + datetime.timedelta(hours=24))
+
+    def generate_default_tasks(self):
+        if self.tasks.exists():
+            return
+            
+        default_tasks = [
+            {"name": "STAFF & ATTANDANCE", "desc": ""},
+            {"name": "MENU REVIEW", "desc": ""},
+            {"name": "GUEST COUNT & PLANNING", "desc": ""},
+            {"name": "EQUIPMENT & VESSEL CHECK", "desc": ""},
+            {"name": "Plate", "desc": "Used plate and plate"},
+            {"name": "Bottle", "desc": ""},
+            {"name": "Disposable items verification", "desc": ""},
+            {"name": "Courter setup and arrangement", "desc": ""},
+            {"name": "Hygiene and safety check", "desc": "Ensure all staff follow hygiene standards. Check handwashing areas and waste disposal system. Maintain cleanliness throughout the event."},
+            {"name": "Closing responsibility", "desc": ""}
+        ]
+        
+        from .models import EventTask
+        for task in default_tasks:
+            EventTask.objects.create(booking=self, task_name=task["name"], description=task["desc"])
 
 
 class BookingPayment(models.Model):
@@ -215,3 +237,48 @@ class ManualReport(models.Model):
 
     def __str__(self):
         return f"Report: {self.event_name} on {self.event_date}"
+
+
+class EventReport(models.Model):
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='reports')
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submitted_reports')
+    
+    # Financials & Metrics
+    status = models.CharField(max_length=20, choices=[('draft', 'Draft'), ('submitted', 'Submitted')], default='draft')
+    bill_in_charge = models.CharField(max_length=255, default='NIL', blank=True)
+    total_amount   = models.CharField(max_length=255, default='NIL', blank=True)
+    balance_amount = models.CharField(max_length=255, default='NIL', blank=True)
+    pending        = models.CharField(max_length=255, default='NIL', blank=True)
+    
+    # Logistics
+    juice         = models.CharField(max_length=255, default='NIL', blank=True)
+    tea           = models.CharField(max_length=255, default='NIL', blank=True)
+    popcorn       = models.CharField(max_length=255, default='NIL', blank=True)
+    hosting       = models.CharField(max_length=255, default='NIL', blank=True)
+    coat_incharge = models.CharField(max_length=255, default='NIL', blank=True)
+    coat_rent     = models.CharField(max_length=255, default='NIL', blank=True)
+    ta            = models.CharField(max_length=255, default='NIL', blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Report for {self.booking.name} by {self.submitted_by.full_name}"
+
+
+class EventTask(models.Model):
+    """
+    Checklist for Captain responsibilities at an event.
+    Standard tasks are generated automatically per booking.
+    """
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='tasks')
+    task_name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    is_completed = models.BooleanField(default=False)
+    completed_by = models.ForeignKey('staff.Staff', null=True, blank=True, on_delete=models.SET_NULL, related_name='completed_tasks')
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"[{'X' if self.is_completed else ' '}] {self.task_name} - {self.booking}"

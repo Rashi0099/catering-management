@@ -6,7 +6,7 @@
 {% block content %}
 
 {% if active_notice %}
-<div class="panel" style="background: rgba(212, 168, 82, 0.1); border: 1px solid var(--gold); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+<div class="panel" style="background: rgba(212, 168, 82, 0.1); border: 1px solid #ffffff; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
   <div style="display: flex; align-items: flex-start; gap: 12px;">
     <div style="font-size: 1.5rem; color: var(--gold); margin-top: 2px;"><i class="fas fa-bullhorn"></i></div>
     <div style="flex: 1;">
@@ -138,7 +138,7 @@
         {% elif ev.pk in cancel_req_booking_ids %}
           <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Requested</span>
         {% elif ev.is_cancellable %}
-        <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return confirm('Are you sure you want to request cancellation for this event?');">
+        <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Are you sure you want to request cancellation for this event?', event);">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm" style="padding:4px 8px; border:1px solid var(--red); color:var(--red); background:transparent;"><i class="fas fa-times"></i> Cancel</button>
         </form>
@@ -187,7 +187,13 @@
       {% elif ev.is_level_full %}
         <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);"><i class="fas fa-lock"></i> Quota Full</span>
       {% else %}
-        <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--surface);border:1px solid var(--gold);color:var(--gold)"><i class="fas fa-hand-paper"></i> Apply</a>
+        {% if ev.allow_direct_join %}
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+             <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--green);border:1px solid var(--green);color:white"><i class="fas fa-sign-in-alt"></i> Join Now</a>
+          </div>
+        {% else %}
+          <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--surface);border:1px solid var(--gold);color:var(--gold)"><i class="fas fa-hand-paper"></i> Apply</a>
+        {% endif %}
       {% endif %}
     </div>
     {% empty %}

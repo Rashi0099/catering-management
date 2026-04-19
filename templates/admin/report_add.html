@@ -63,4 +63,23 @@
     </div>
   </form>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const billInput = document.querySelector('input[name="bill_amount"]');
+    const recvInput = document.querySelector('input[name="amount_received"]');
+    const profitInput = document.querySelector('input[name="profit"]');
+    
+    function autoCalcProfit() {
+      const bill = parseFloat(billInput.value) || 0;
+      const recv = parseFloat(recvInput.value) || 0;
+      profitInput.value = (recv - bill).toFixed(2);
+    }
+    
+    if(billInput && recvInput && profitInput) {
+        billInput.addEventListener('input', autoCalcProfit);
+        recvInput.addEventListener('input', autoCalcProfit);
+    }
+  });
+</script>
 {% endblock %}

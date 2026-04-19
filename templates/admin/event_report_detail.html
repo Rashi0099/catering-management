@@ -1,0 +1,120 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Report #{{ report.pk }} - {{ report.booking.name }}{% endblock %}
+{% block page_title %}Report Details{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px">
+  <a href="{% url 'admin_event_reports' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Reports</a>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr">
+    <div class="panel-title">Captain Settlement Report</div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <a href="{% url 'staff_submit_report' report.booking.pk %}?from=admin" class="btn btn-ghost btn-sm" style="padding: 4px 10px;"><i class="fas fa-edit" style="margin-right: 4px;"></i> Edit</a>
+      <span class="badge" style="background:var(--surface);color:var(--text);font-size:0.75rem">{{ report.created_at|date:"d M Y, h:i A" }}</span>
+    </div>
+  </div>
+
+  <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px;">
+    <h3 style="margin-top:0; color:var(--text); font-size:1.1rem; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between;">
+      <span>Event Info</span>
+      <span style="color:var(--muted); font-size:0.85rem; font-weight:normal;">Booking ID: #{{ report.booking.pk }}</span>
+    </h3>
+    
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom: 20px;">
+      <div>
+        <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">Date & Day</div>
+        <div style="font-weight:600;">{{ report.booking.event_date|date:"d/m/Y - l" }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">Site Name</div>
+        <div style="font-weight:600;">{{ report.booking.venue|default:"-" }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">Event Name</div>
+        <div style="font-weight:600;">{{ report.booking.name }}</div>
+      </div>
+      <div>
+        <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">No. of Boys</div>
+        <div style="font-weight:600;">{{ report.booking.assigned_to.count }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+    
+    <!-- Financials -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px;">
+      <div style="background:var(--bg); padding:12px 15px; border-bottom:1px solid var(--border); border-radius:10px 10px 0 0; font-weight:600; color:var(--gold);">
+        <i class="fas fa-coins" style="margin-right:6px;"></i> Financial Overview
+      </div>
+      <div style="padding:15px;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 0; color:var(--muted);">Bill In Charge</td>
+            <td style="padding:10px 0; text-align:right; font-weight:500;">{{ report.bill_in_charge }}</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 0; color:var(--muted);">Total Amount</td>
+            <td style="padding:10px 0; text-align:right; font-weight:600; color:var(--text);">{{ report.total_amount }}</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 0; color:var(--muted);">Balance Amount</td>
+            <td style="padding:10px 0; text-align:right; font-weight:500;">{{ report.balance_amount }}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0; color:var(--muted);">Pending</td>
+            <td style="padding:10px 0; text-align:right; font-weight:600; {% if report.pending != 'NIL' and report.pending != '0' and report.pending != '-' %}color:#e65100;{% else %}color:#2e7d32;{% endif %}">{{ report.pending }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Logistics -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px;">
+      <div style="background:var(--bg); padding:12px 15px; border-bottom:1px solid var(--border); border-radius:10px 10px 0 0; font-weight:600; color:var(--gold);">
+        <i class="fas fa-box-open" style="margin-right:6px;"></i> Logistics & Rentals
+      </div>
+      <div style="padding:15px;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+          <tr style="border-bottom:1px dashed var(--border);">
+            <td style="padding:8px 0; color:var(--muted);">Juice</td>
+            <td style="padding:8px 0; text-align:right; font-weight:500;">{{ report.juice }}</td>
+          </tr>
+          <tr style="border-bottom:1px dashed var(--border);">
+            <td style="padding:8px 0; color:var(--muted);">Tea</td>
+            <td style="padding:8px 0; text-align:right; font-weight:500;">{{ report.tea }}</td>
+          </tr>
+          <tr style="border-bottom:1px dashed var(--border);">
+            <td style="padding:8px 0; color:var(--muted);">Popcorn</td>
+            <td style="padding:8px 0; text-align:right; font-weight:500;">{{ report.popcorn }}</td>
+          </tr>
+          <tr style="border-bottom:1px dashed var(--border);">
+            <td style="padding:8px 0; color:var(--muted);">Hosting</td>
+            <td style="padding:8px 0; text-align:right; font-weight:500;">{{ report.hosting }}</td>
+          </tr>
+          <tr style="border-bottom:1px dashed var(--border);">
+            <td style="padding:8px 0; color:var(--muted);">Coat Incharge</td>
+            <td style="padding:8px 0; text-align:right; font-weight:500;">{{ report.coat_incharge }}</td>
+          </tr>
+          <tr style="border-bottom:1px dashed var(--border);">
+            <td style="padding:8px 0; color:var(--muted);">Coat Rent</td>
+            <td style="padding:8px 0; text-align:right; font-weight:500;">{{ report.coat_rent }}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0; color:var(--muted);">TA (Travel)</td>
+            <td style="padding:8px 0; text-align:right; font-weight:500;">{{ report.ta }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    
+  </div>
+  
+  <div style="margin-top:20px; font-size:0.8rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
+    <i class="fas fa-info-circle"></i> This report was submitted directly from the Captain portal by {{ report.submitted_by.full_name }} ({{ report.submitted_by.staff_id }}).
+  </div>
+
+</div>
+{% endblock %}

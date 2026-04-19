@@ -297,8 +297,14 @@
       <i class="nav-icon fas fa-calendar-check"></i> Bookings
       {% if pending_count %}<span class="nav-badge">{{ pending_count }}</span>{% endif %}
     </a>
-    <a href="{% url 'admin_reports' %}" class="nav-item {% if page == 'reports' %}active{% endif %}">
+    <a href="{% url 'admin_reports' %}" class="nav-item {% if page == 'reports' and request.resolver_match.url_name != 'admin_manual_invoice' and request.resolver_match.url_name != 'admin_event_reports' %}active{% endif %}">
       <i class="nav-icon fas fa-file-invoice-dollar"></i> Financial Report
+    </a>
+    <a href="{% url 'admin_manual_invoice' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_manual_invoice' %}active{% endif %}">
+      <i class="nav-icon fas fa-file-pdf"></i> Invoice
+    </a>
+    <a href="{% url 'admin_event_reports' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_event_reports' or request.resolver_match.url_name == 'admin_event_report_detail' %}active{% endif %}">
+      <i class="nav-icon fas fa-clipboard-list"></i> Captain Reports
     </a>
 
     <div class="nav-section-label">Content</div>
@@ -420,5 +426,6 @@
   }
 </script>
 {% block extra_js %}{% endblock %}
+    {% include 'confirm_modal.html' %}
 </body>
 </html>

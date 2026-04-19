@@ -37,39 +37,51 @@ def admin_logout(request):
     return redirect('admin_login')
 
 
+from django.core.cache import cache
+
 @admin_required
 def dashboard(request):
     today = timezone.now().date()
     this_week = today + timedelta(days=7)
 
-    total_bookings     = Booking.objects.count()
-    pending_bookings   = Booking.objects.filter(status='pending').count()
-    confirmed_bookings = Booking.objects.filter(status='confirmed').count()
-    upcoming_events    = Booking.objects.filter(event_date__gte=today, event_date__lte=this_week).count()
+    cache_key = 'admin_dashboard_stats'
+    cached_stats = cache.get(cache_key)
 
-    total_revenue   = Booking.objects.filter(status__in=['confirmed','completed']).aggregate(t=Sum('quoted_price'))['t'] or 0
-    total_received  = Booking.objects.aggregate(t=Sum('amount_received'))['t'] or 0
-    pending_payment = total_revenue - total_received
+    if not cached_stats:
+        total_bookings     = Booking.objects.count()
+        pending_bookings   = Booking.objects.filter(status='pending').count()
+        confirmed_bookings = Booking.objects.filter(status='confirmed').count()
+        upcoming_events    = Booking.objects.filter(event_date__gte=today, event_date__lte=this_week).count()
 
+        total_revenue   = Booking.objects.filter(status__in=['confirmed','completed']).aggregate(t=Sum('quoted_price'))['t'] or 0
+        total_received  = Booking.objects.aggregate(t=Sum('amount_received'))['t'] or 0
+        pending_payment = total_revenue - total_received
+        event_counts    = list(Booking.objects.values('event_type').annotate(count=Count('event_type')))
+        
+        cached_stats = {
+            'total_bookings': total_bookings,
+            'pending_bookings': pending_bookings,
+            'confirmed_bookings': confirmed_bookings,
+            'upcoming_events': upcoming_events,
+            'total_revenue': total_revenue,
+            'total_received': total_received,
+            'pending_payment': pending_payment,
+            'event_counts': event_counts,
+            'menu_count': MenuItem.objects.count(),
+            'staff_count': Staff.objects.filter(is_active=True).count(),
+        }
+        cache.set(cache_key, cached_stats, 60 * 5) # 5 minutes
+
+    # These are dynamic/changing elements so we shouldn't cache them heavily
     recent_bookings = Booking.objects.select_related('created_by').order_by('-created_at')[:5]
     upcoming        = Booking.objects.select_related('created_by').filter(event_date__gte=today, status__in=['confirmed','pending']).order_by('event_date')[:5]
-    event_counts    = list(Booking.objects.values('event_type').annotate(count=Count('event_type')))
 
     context = {
-        'total_bookings': total_bookings,
-        'pending_bookings': pending_bookings,
-        'confirmed_bookings': confirmed_bookings,
-        'upcoming_events': upcoming_events,
-        'total_revenue': total_revenue,
-        'total_received': total_received,
-        'pending_payment': pending_payment,
+        **cached_stats,
         'recent_bookings': recent_bookings,
         'upcoming': upcoming,
-        'event_counts': event_counts,
-        'menu_count': MenuItem.objects.count(),
-        'staff_count': Staff.objects.filter(is_active=True).count(),
         'page': 'dashboard',
-        'pending_count': pending_bookings,
+        'pending_count': cached_stats['pending_bookings'],
     }
     return render(request, 'admin/dashboard.html', context)
 
@@ -118,6 +130,7 @@ def bookings_list(request):
 @admin_required
 def booking_detail(request, pk):
     booking = get_object_or_404(Booking, pk=pk)
+    booking.generate_default_tasks()
     all_staff = Staff.objects.filter(is_active=True)
     payments = booking.payments.all()
 
@@ -177,22 +190,28 @@ def booking_detail(request, pk):
             for sid in staff_ids:
                 status = request.POST.get(f'attendance_status_{sid}', 'present')
                 r_time = request.POST.get(f'reaching_time_{sid}') or None
-                notes  = request.POST.get(f'attendance_notes_{sid}', '')
+                on_time = request.POST.get(f'on_time_{sid}') == 'on'
+                shoes = request.POST.get(f'shoes_{sid}') == 'on'
+                uniform = request.POST.get(f'uniform_{sid}') == 'on'
+                grooming = request.POST.get(f'grooming_{sid}') == 'on'
                 payment_given = request.POST.get(f'payment_given_{sid}') == 'on'
                 
                 att, created = StaffAttendance.objects.get_or_create(
                     booking=booking,
                     staff_id=sid,
                     date=booking.event_date,
-                    defaults={'status': status, 'reaching_time': r_time, 'notes': notes, 'payment_given': payment_given}
+                    defaults={'status': status, 'reaching_time': r_time, 'on_time': on_time, 'shoes': shoes, 'uniform': uniform, 'grooming': grooming, 'payment_given': payment_given}
                 )
                 if not created:
                     att.status = status
                     att.reaching_time = r_time
-                    att.notes = notes
+                    att.on_time = on_time
+                    att.shoes = shoes
+                    att.uniform = uniform
+                    att.grooming = grooming
                     att.payment_given = payment_given
                     att.save()
-            messages.success(request, 'Attendance and reaching times saved successfully!')
+            messages.success(request, 'Attendance and fines saved successfully!')
 
         return redirect('admin_booking_detail', pk=pk)
 
@@ -214,7 +233,11 @@ def booking_detail(request, pk):
     applications_map = {app.staff_id: app for app in booking.applications.filter(status__in=['approved', 'pending'])}
     
     assigned_staff_with_att = []
+    coat_counts = {'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0}
     for s in booking.assigned_to.all():
+        if s.coat_size and s.coat_size in coat_counts:
+            coat_counts[s.coat_size] += 1
+
         app = applications_map.get(s.id)
         phone = app.applicant_phone if app and app.applicant_phone else s.phone
         assigned_staff_with_att.append({
@@ -223,10 +246,14 @@ def booking_detail(request, pk):
             'attendance': attendance_map.get(s.pk)
         })
 
+    # Clean up coat counts with 0
+    coat_counts = {k: v for k, v in coat_counts.items() if v > 0}
+
     context = {
         'booking': booking,
         'all_staff': all_staff,
         'grouped_staff': grouped_staff,
+        'coat_counts': coat_counts,
         'attendance_map': attendance_map,
         'assigned_staff_with_att': assigned_staff_with_att,
         'payments': payments,
@@ -235,6 +262,7 @@ def booking_detail(request, pk):
         'today': timezone.now().date(),
         'page': 'bookings',
         'pending_count': Booking.objects.filter(status='pending').count(),
+        'captain_tasks': booking.tasks.all().order_by('id'),
     }
     return render(request, 'admin/booking_detail.html', context)
 
@@ -243,7 +271,7 @@ def booking_detail(request, pk):
 def download_attendance(request, pk):
     from io import BytesIO
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.pagesizes import letter, landscape
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     
@@ -254,7 +282,7 @@ def download_attendance(request, pk):
     applications_map = {app.staff_id: app for app in booking.applications.all()}
     
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     elements = []
     
     styles = getSampleStyleSheet()
@@ -280,19 +308,35 @@ def download_attendance(request, pk):
     elements.append(Paragraph(client_info, subtitle_style))
     elements.append(Spacer(1, 10))
     
-    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Reaching Time', 'Payment', 'Wage (Rs)']]
+    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Time', 'Late', 'Shoe', 'Unif', 'Grom', 'Paid?', 'Wage (Rs)']]
     total_wage = 0
     
+    def get_tick():
+        return Paragraph('<font name="ZapfDingbats" color="#2e7d32">4</font>', styles['Normal'])
+    
     for staff in assigned_staff:
-        att = attendance_map.get(staff.pk)
+        att = attendance_map.get(staff.id)
         raw_status = att.status if att else 'absent'
         status = att.get_status_display() if att else 'Not Marked'
         r_time = att.reaching_time.strftime('%I:%M %p') if att and att.reaching_time else '—'
-        wage = staff.daily_rate
+        
+        # Calculate individual penalties
+        late_val = get_tick() if (not att or getattr(att, 'on_time', True)) else "-30"
+        shoe_val = get_tick() if (not att or getattr(att, 'shoes', True)) else "-30"
+        unif_val = get_tick() if (not att or getattr(att, 'uniform', True)) else "-30"
+        grom_val = get_tick() if (not att or getattr(att, 'grooming', True)) else "-30"
+            
+        penalty_amount = 0
+        if late_val == "-30": penalty_amount += 30
+        if shoe_val == "-30": penalty_amount += 30
+        if unif_val == "-30": penalty_amount += 30
+        if grom_val == "-30": penalty_amount += 30
+
+        wage = staff.daily_rate - penalty_amount
         if raw_status in ['present', 'half_day']:
             total_wage += wage
             
-        app = applications_map.get(staff.pk)
+        app = applications_map.get(staff.id)
         phone = app.applicant_phone if app and app.applicant_phone else staff.phone
         
         payment_text = "Yes" if att and att.payment_given else "No"
@@ -303,13 +347,17 @@ def download_attendance(request, pk):
             phone,
             staff.get_level_display(),
             r_time,
+            late_val,
+            shoe_val,
+            unif_val,
+            grom_val,
             payment_text,
             f"Rs.{wage}"
         ])
         
-    data.append(['', '', '', '', '', 'Total Estimated Wages:', f"Rs.{total_wage}"])
+    data.append(['', '', '', '', '', '', '', '', '', 'Total Wages:', f"Rs.{total_wage}"])
     
-    table = Table(data, colWidths=[80, 100, 75, 70, 80, 65, 70])
+    table = Table(data, colWidths=[55, 110, 80, 55, 65, 50, 50, 50, 50, 50, 70])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f4f4')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
@@ -370,6 +418,10 @@ def handle_application(request, pk, app_id, action):
         application.status = 'approved' # Revert to approved since cancel is denied
         application.save()
         messages.success(request, 'Cancel request rejected.')
+
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
     return redirect('admin_booking_detail', pk=pk)
 
 
@@ -396,7 +448,8 @@ def admin_create_booking(request):
                 special_requests     = request.POST.get('special_requests', ''),
                 message              = request.POST.get('message', ''),
                 status               = 'confirmed', # Manual admin entry defaults to confirmed
-                quoted_price         = request.POST.get('budget') or None
+                quoted_price         = request.POST.get('budget') or None,
+                allow_direct_join    = request.POST.get('allow_direct_join') == 'on'
             )
             # Admin creating booking is not necessarily assigning themselves, but we can assign later
             messages.success(request, f'Booking for {booking.name} created successfully!')
@@ -437,6 +490,7 @@ def admin_edit_booking(request, pk):
             booking.quota_b = int(request.POST.get('quota_b') or 0)
             booking.quota_c = int(request.POST.get('quota_c') or 0)
             booking.publish_locality = request.POST.get('publish_locality', 'all')
+            booking.allow_direct_join = request.POST.get('allow_direct_join') == 'on'
             
             booking.save()
             messages.success(request, f'Booking #{booking.pk} details and quotas have been updated!')
@@ -603,6 +657,7 @@ def handle_staff_application(request, pk, action):
                 guardian_name=application.guardian_name,
                 guardian_phone=application.guardian_phone,
                 main_locality=application.main_locality,
+                coat_size=application.coat_size,
                 place=application.place,
                 education=application.education,
                 aadhar_card_no=application.aadhar_card_no
@@ -725,6 +780,7 @@ def staff_add(request):
         place = request.POST.get('place', '')
         education = request.POST.get('education', '')
         aadhar_card_no = request.POST.get('aadhar', '')
+        coat_size = request.POST.get('coat_size', '')
 
         try:
             from staff.models import generate_staff_id
@@ -745,6 +801,7 @@ def staff_add(request):
                 guardian_name=guardian_name,
                 guardian_phone=guardian_phone,
                 main_locality=main_locality,
+                coat_size=coat_size,
                 place=place,
                 education=education,
                 aadhar_card_no=aadhar_card_no
@@ -777,6 +834,7 @@ def staff_edit(request, pk):
         member.guardian_name = request.POST.get('guardian_name', '')
         member.guardian_phone = request.POST.get('guardian_phone', '')
         member.main_locality = request.POST.get('main_locality', '')
+        member.coat_size = request.POST.get('coat_size') or None
         member.place = request.POST.get('place', '')
         member.education = request.POST.get('education', '')
         member.aadhar_card_no = request.POST.get('aadhar', '')
@@ -1190,3 +1248,36 @@ def staff_notice(request):
         'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
+@admin_required
+def manual_invoice(request):
+    return render(request, 'admin/manual_invoice.html', {
+        'page': 'reports',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+
+@admin_required
+def event_reports_list(request):
+    from django.core.paginator import Paginator
+    from bookings.models import EventReport
+    reports = EventReport.objects.all().select_related('booking', 'submitted_by')
+    
+    # Simple pagination
+    paginator = Paginator(reports, 30)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'admin/event_reports_list.html', {
+        'reports': page_obj,
+        'page': 'reports',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })
+
+@admin_required
+def event_report_detail(request, pk):
+    from bookings.models import EventReport
+    report = get_object_or_404(EventReport, pk=pk)
+    return render(request, 'admin/event_report_detail.html', {
+        'report': report,
+        'page': 'reports',
+        'pending_count': Booking.objects.filter(status='pending').count(),
+    })

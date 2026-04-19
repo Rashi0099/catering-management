@@ -8,15 +8,20 @@ from django.utils import timezone
 def generate_staff_id():
     """Generates unique staff ID like MS-0001 sequentially"""
     from staff.models import Staff
-    last_staff = Staff.objects.filter(staff_id__startswith='MS-').order_by('staff_id').last()
-    if last_staff:
-        try:
-            num = int(last_staff.staff_id.split('-')[1])
-            new_num = num + 1
-        except Exception:
+    from django.db.utils import ProgrammingError, OperationalError
+    try:
+        last_staff = Staff.objects.filter(staff_id__startswith='MS-').order_by('staff_id').last()
+        if last_staff:
+            try:
+                num = int(last_staff.staff_id.split('-')[1])
+                new_num = num + 1
+            except Exception:
+                new_num = 1
+        else:
             new_num = 1
-    else:
+    except (ProgrammingError, OperationalError):
         new_num = 1
+        
     return f"MS-{new_num:04d}"
 
 
@@ -57,6 +62,13 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     photo      = models.ImageField(upload_to='staff/', blank=True, null=True)
 
     # Detailed Profiling
+    COAT_SIZE_CHOICES = [
+        ('S', 'Small (S)'),
+        ('M', 'Medium (M)'),
+        ('L', 'Large (L)'),
+        ('XL', 'Extra Large (XL)'),
+        ('XXL', 'Double XL (XXL)'),
+    ]
     LOCALITY_CHOICES = [
         ('Kondotty', 'Kondotty'),
         ('Areekode', 'Areekode'),
@@ -66,6 +78,7 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         ('Valluvambram', 'Valluvambram'),
     ]
     main_locality = models.CharField(max_length=50, choices=LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
+    coat_size = models.CharField(max_length=5, choices=COAT_SIZE_CHOICES, blank=True, null=True, help_text="Required coat size")
 
     age = models.PositiveIntegerField(null=True, blank=True)
     height = models.CharField(max_length=20, blank=True)
@@ -147,7 +160,7 @@ class Staff(AbstractBaseUser, PermissionsMixin):
 
 class StaffAttendance(models.Model):
     """Track which events each staff member worked"""
-    STATUS = [('present', 'Present'), ('absent', 'Absent'), ('half_day', 'Half Day')]
+    STATUS = [('present', 'Present'), ('absent', 'Absent')]
 
     staff      = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='attendance')
     booking    = models.ForeignKey('bookings.Booking', on_delete=models.CASCADE,
@@ -155,8 +168,11 @@ class StaffAttendance(models.Model):
     date       = models.DateField(db_index=True)
     status     = models.CharField(max_length=10, choices=STATUS, default='present', db_index=True)
     reaching_time = models.TimeField(null=True, blank=True)
+    on_time    = models.BooleanField(default=True)
+    shoes      = models.BooleanField(default=True)
+    uniform    = models.BooleanField(default=True)
+    grooming   = models.BooleanField(default=True)
     hours      = models.DecimalField(max_digits=4, decimal_places=1, default=8)
-    notes      = models.TextField(blank=True)
     payment_given = models.BooleanField(default=False)
 
     class Meta:
@@ -221,6 +237,7 @@ class StaffApplication(models.Model):
     aadhar_card_no = models.CharField(max_length=20)
     
     main_locality = models.CharField(max_length=50, choices=Staff.LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
+    coat_size = models.CharField(max_length=5, choices=Staff.COAT_SIZE_CHOICES, blank=True, null=True)
     
     guardian_name = models.CharField(max_length=150)
     guardian_phone = models.CharField(max_length=20)

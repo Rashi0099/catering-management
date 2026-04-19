@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime
 from django.db.models import Sum, Count, Q
+from django.db import transaction
 
 from .models import Staff, StaffPayout, StaffAttendance, StaffNotice
 from bookings.models import Booking, BookingPayment
@@ -60,7 +61,7 @@ def staff_download_attendance(request, pk):
     from django.utils import timezone
     from io import BytesIO
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.pagesizes import letter, landscape
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     
@@ -83,7 +84,7 @@ def staff_download_attendance(request, pk):
     applications_map = {app.staff_id: app for app in booking.applications.all()}
     
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     elements = []
     
     styles = getSampleStyleSheet()
@@ -109,33 +110,55 @@ def staff_download_attendance(request, pk):
     elements.append(Paragraph(client_info, subtitle_style))
     elements.append(Spacer(1, 10))
     
-    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Reaching Time', 'Status', 'Wage (Rs)']]
+    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Time', 'Late', 'Shoe', 'Unif', 'Grom', 'Paid?', 'Wage (Rs)']]
     total_wage = 0
+    
+    def get_tick():
+        return Paragraph('<font name="ZapfDingbats" color="#2e7d32">4</font>', styles['Normal'])
     
     for staff in assigned_staff:
         att = attendance_map.get(staff.pk)
         raw_status = att.status if att else 'absent'
         status = att.get_status_display() if att else 'Not Marked'
         r_time = att.reaching_time.strftime('%I:%M %p') if att and att.reaching_time else '—'
-        wage = staff.daily_rate
+        
+        # Calculate individual penalties
+        late_val = get_tick() if (not att or getattr(att, 'on_time', True)) else "-30"
+        shoe_val = get_tick() if (not att or getattr(att, 'shoes', True)) else "-30"
+        unif_val = get_tick() if (not att or getattr(att, 'uniform', True)) else "-30"
+        grom_val = get_tick() if (not att or getattr(att, 'grooming', True)) else "-30"
+            
+        penalty_amount = 0
+        if late_val == "-30": penalty_amount += 30
+        if shoe_val == "-30": penalty_amount += 30
+        if unif_val == "-30": penalty_amount += 30
+        if grom_val == "-30": penalty_amount += 30
+
+        wage = staff.daily_rate - penalty_amount
         if raw_status in ['present', 'half_day']:
             total_wage += wage
             
         app = applications_map.get(staff.pk)
         phone = app.applicant_phone if app and app.applicant_phone else staff.phone
+        payment_text = "Yes" if att and att.payment_given else "No"
+        
         data.append([
             staff.staff_id,
             staff.full_name,
             phone,
             staff.get_level_display(),
             r_time,
-            status,
+            late_val,
+            shoe_val,
+            unif_val,
+            grom_val,
+            payment_text,
             f"Rs.{wage}"
         ])
         
-    data.append(['', '', '', '', '', 'Total Estimated Wages:', f"Rs.{total_wage}"])
+    data.append(['', '', '', '', '', '', '', '', '', 'Total Wages:', f"Rs.{total_wage}"])
     
-    table = Table(data, colWidths=[80, 100, 75, 70, 80, 65, 70])
+    table = Table(data, colWidths=[55, 110, 80, 55, 65, 50, 50, 50, 50, 50, 70])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f4f4')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
@@ -177,6 +200,8 @@ def staff_download_attendance(request, pk):
 
 # ── Staff Dashboard ──────────────────────────────────────────────────────────
 
+from django.core.cache import cache
+
 @login_required(login_url='/staff/login/')
 def staff_dashboard(request):
     """Renders the main dashboard showing personal data, upcoming bookings, and payout summaries."""
@@ -185,15 +210,52 @@ def staff_dashboard(request):
 
     my_bookings   = me.bookings.all()
     my_created    = me.bookings_created.all()
-    pending       = my_bookings.filter(status='pending')
-    upcoming      = my_bookings.filter(event_date__gte=today, status__in=['confirmed', 'in_progress', 'cancelled']).order_by('event_date')[:5]
     
-    # Calculate Published Bookings Quota dynamic availability
+    upcoming      = my_bookings.filter(event_date__gte=today, status__in=['confirmed', 'in_progress', 'cancelled']).order_by('event_date')[:5]
+    recent        = my_created.order_by('-created_at')[:5]
+    my_payouts    = me.payouts.order_by('-created_at')[:5]
+
+    cache_key = f'staff_dash_stats_v2_{me.pk}'
+    cached_stats = cache.get(cache_key)
+
+    if not cached_stats:
+        pending_count = my_bookings.filter(status='pending').count()
+        my_revenue    = my_bookings.filter(status__in=['confirmed','completed']).aggregate(t=Sum('quoted_price'))['t'] or 0
+        total_earned  = me.payouts.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
+        pending_pay   = me.payouts.filter(status='pending').aggregate(t=Sum('amount'))['t'] or 0
+        
+        my_applications = me.event_applications.all()
+        pending_app_booking_ids = list(my_applications.filter(status='pending').values_list('booking_id', flat=True))
+        cancel_req_booking_ids = list(my_applications.filter(status='cancel_requested').values_list('booking_id', flat=True))
+        rejected_app_booking_ids = list(my_applications.filter(status='rejected').values_list('booking_id', flat=True))
+        cancelled_app_booking_ids = list(my_applications.filter(status='cancelled').values_list('booking_id', flat=True))
+
+        day_works = my_bookings.filter(status='completed', session='day').count()
+        night_works = my_bookings.filter(status='completed', session='night').count()
+        
+        cached_stats = {
+            'pending_count': pending_count,
+            'my_revenue': my_revenue,
+            'total_earned': total_earned,
+            'pending_pay': pending_pay,
+            'pending_app_booking_ids': pending_app_booking_ids,
+            'cancel_req_booking_ids': cancel_req_booking_ids,
+            'rejected_app_booking_ids': rejected_app_booking_ids,
+            'cancelled_app_booking_ids': cancelled_app_booking_ids,
+            'day_works': day_works,
+            'night_works': night_works,
+            'total_bookings': my_bookings.count(),
+            'confirmed_count': my_bookings.filter(status='confirmed').count(),
+            'completed_count': my_bookings.filter(status='completed').count(),
+        }
+        cache.set(cache_key, cached_stats, 60) # 1 minute cache for fast reaction
+        
+    # Calculate Published Bookings Quota dynamic availability (already optimized with prefetch)
     available_bookings_qs = Booking.objects.filter(
         status__in=['pending', 'confirmed'], 
         event_date__gte=today,
         is_published=True
-    ).exclude(assigned_to=me).order_by('event_date')
+    ).exclude(assigned_to=me).prefetch_related('applications__staff').order_by('event_date')
     
     available_bookings = []
     for b in available_bookings_qs:
@@ -204,7 +266,8 @@ def staff_dashboard(request):
         if len(available_bookings) >= 5:
             break
             
-        approved_count = b.applications.filter(status='approved', staff__level=me.level).count()
+        # Use Python list comprehension to use prefetched data and avoid N+1 DB hit
+        approved_count = len([app for app in b.applications.all() if app.status == 'approved' and app.staff.level == me.level])
         
         is_full = False
         if me.level == 'captain' and b.quota_captain > 0 and approved_count >= b.quota_captain:
@@ -218,25 +281,11 @@ def staff_dashboard(request):
             
         b.is_level_full = is_full
         available_bookings.append(b)
-    recent        = my_created.order_by('-created_at')[:5]
-    my_revenue    = my_bookings.filter(status__in=['confirmed','completed']).aggregate(t=Sum('quoted_price'))['t'] or 0
-    my_payouts    = me.payouts.order_by('-created_at')[:5]
-    total_earned  = me.payouts.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
-    pending_pay   = me.payouts.filter(status='pending').aggregate(t=Sum('amount'))['t'] or 0
-
-    my_applications = me.event_applications.all()
-    pending_app_booking_ids = list(my_applications.filter(status='pending').values_list('booking_id', flat=True))
-    cancel_req_booking_ids = list(my_applications.filter(status='cancel_requested').values_list('booking_id', flat=True))
-    rejected_app_booking_ids = list(my_applications.filter(status='rejected').values_list('booking_id', flat=True))
-    cancelled_app_booking_ids = list(my_applications.filter(status='cancelled').values_list('booking_id', flat=True))
-
-    day_works = my_bookings.filter(status='completed', session='day').count()
-    night_works = my_bookings.filter(status='completed', session='night').count()
 
     remaining_events = None
     if me.level == 'C':
-        rem_day = max(0, 10 - day_works)
-        rem_night = max(0, 10 - night_works)
+        rem_day = max(0, 10 - cached_stats['day_works'])
+        rem_night = max(0, 10 - cached_stats['night_works'])
         remaining_events = f"{rem_day} Day, {rem_night} Night"
 
     latest_promotion = me.promotion_requests.order_by('-created_at').first()
@@ -244,23 +293,11 @@ def staff_dashboard(request):
 
     return render(request, 'staff/dashboard.html', {
         'me': me,
-        'day_works': day_works,
-        'night_works': night_works,
-        'total_bookings': my_bookings.count(),
-        'confirmed_count': my_bookings.filter(status='confirmed').count(),
-        'completed_count': my_bookings.filter(status='completed').count(),
-        'pending_count':   pending.count(),
+        **cached_stats,
         'upcoming': upcoming,
         'available_bookings': available_bookings,
         'recent_bookings': recent,
-        'my_revenue': my_revenue,
         'my_payouts': my_payouts,
-        'total_earned': total_earned,
-        'pending_pay': pending_pay,
-        'pending_app_booking_ids': pending_app_booking_ids,
-        'cancel_req_booking_ids': cancel_req_booking_ids,
-        'rejected_app_booking_ids': rejected_app_booking_ids,
-        'cancelled_app_booking_ids': cancelled_app_booking_ids,
         'remaining_events': remaining_events,
         'latest_promotion': latest_promotion,
         'active_notice': active_notice,
@@ -372,33 +409,43 @@ def staff_booking_detail(request, pk):
         staff_ids = request.POST.getlist('staff_ids[]')
         date_str = request.POST.get('attendance_date', booking.event_date.strftime('%Y-%m-%d'))
         
-        for sid in staff_ids:
-            status = request.POST.get(f'status_{sid}')
-            reaching_time_str = request.POST.get(f'reaching_{sid}')
-            notes = request.POST.get(f'notes_{sid}', '')
-            
-            try:
-                staff_member = Staff.objects.get(id=sid)
-            except Staff.DoesNotExist:
-                continue
-            
-            reaching_time = None
-            if reaching_time_str:
+        with transaction.atomic():
+            for sid in staff_ids:
+                status = request.POST.get(f'attendance_status_{sid}', 'present')
+                reaching_time_str = request.POST.get(f'reaching_time_{sid}')
+                
+                on_time = request.POST.get(f'on_time_{sid}') == 'on'
+                shoes = request.POST.get(f'shoes_{sid}') == 'on'
+                uniform = request.POST.get(f'uniform_{sid}') == 'on'
+                grooming = request.POST.get(f'grooming_{sid}') == 'on'
+                payment_given = request.POST.get(f'payment_given_{sid}') == 'on'
+                
                 try:
-                    reaching_time = datetime.strptime(reaching_time_str, '%H:%M').time()
-                except ValueError:
-                    pass
-            
-            StaffAttendance.objects.update_or_create(
-                staff=staff_member,
-                date=date_str,
-                booking=booking,
-                defaults={
-                    'status': status,
-                    'reaching_time': reaching_time,
-                    'notes': notes
-                }
-            )
+                    staff_member = Staff.objects.get(id=sid)
+                except Staff.DoesNotExist:
+                    continue
+                
+                reaching_time = None
+                if reaching_time_str:
+                    try:
+                        reaching_time = datetime.strptime(reaching_time_str, '%H:%M').time()
+                    except ValueError:
+                        pass
+                
+                StaffAttendance.objects.update_or_create(
+                    staff=staff_member,
+                    date=date_str,
+                    booking=booking,
+                    defaults={
+                        'status': status,
+                        'reaching_time': reaching_time,
+                        'on_time': on_time,
+                        'shoes': shoes,
+                        'uniform': uniform,
+                        'grooming': grooming,
+                        'payment_given': payment_given
+                    }
+                )
         messages.success(request, f'Attendance marked for {len(staff_ids)} staff members.')
         return redirect('staff_booking_detail', pk=pk)
 
@@ -416,12 +463,17 @@ def staff_booking_detail(request, pk):
             'attendance': att_map.get(s.id)
         })
 
+    # Captain Tasks Logic
+    booking.generate_default_tasks()
+    captain_tasks = booking.tasks.all().order_by('id')
+
     return render(request, 'staff/booking_detail.html', {
         'me': me,
         'booking': booking,
         'payments': payments,
         'today': timezone.now().date(),
         'assigned_staff_list': assigned_staff_list,
+        'captain_tasks': captain_tasks,
     })
 
 
@@ -495,15 +547,27 @@ def staff_apply_booking(request, pk):
         elif request.user in booking.assigned_to.all():
             messages.info(request, "You are already assigned to this event.")
         else:
-            EventApplication.objects.create(
-                booking=booking,
-                staff=request.user,
-                applicant_name=applicant_name,
-                applicant_phone=applicant_phone,
-                note=request.POST.get('note', ''),
-                status='pending'
-            )
-            messages.success(request, f'Application submitted for {booking.name}!')
+            if booking.allow_direct_join:
+                EventApplication.objects.create(
+                    booking=booking,
+                    staff=request.user,
+                    applicant_name=applicant_name,
+                    applicant_phone=applicant_phone,
+                    note=request.POST.get('note', ''),
+                    status='approved'
+                )
+                booking.assigned_to.add(request.user)
+                messages.success(request, f'You have successfully joined {booking.name}!')
+            else:
+                EventApplication.objects.create(
+                    booking=booking,
+                    staff=request.user,
+                    applicant_name=applicant_name,
+                    applicant_phone=applicant_phone,
+                    note=request.POST.get('note', ''),
+                    status='pending'
+                )
+                messages.success(request, f'Application submitted for {booking.name}!')
         return redirect('staff_dashboard')
 
 
@@ -565,4 +629,95 @@ def staff_profile(request):
 def staff_terms(request):
     """Displays the terms and conditions for staff members."""
     return render(request, 'staff/terms.html')
+
+
+@login_required(login_url='/staff/login/')
+def staff_submit_report(request, pk):
+    """Allows assigned Captains to submit or update settlement reports for an event directly to admin."""
+    from bookings.models import EventReport
+    me = request.user
+    
+    booking = get_object_or_404(Booking, pk=pk)
+    
+    if not booking.assigned_to.filter(id=me.id).exists() and not me.is_staff:
+        messages.error(request, 'You do not have access to this booking.')
+        return redirect('staff_dashboard')
+        
+    existing_report = EventReport.objects.filter(booking=booking).first()
+
+    if request.method == 'POST':
+        try:
+            if existing_report and existing_report.status == 'submitted':
+                messages.error(request, 'This report has already been finalized and cannot be modified.')
+                if request.GET.get('from') == 'admin':
+                    return redirect('admin_event_report_detail', pk=existing_report.pk)
+                return redirect('staff_booking_detail', pk=pk)
+
+            action = request.POST.get('action', 'draft')
+
+            if existing_report:
+                report = existing_report
+            else:
+                report = EventReport(booking=booking, submitted_by=me)
+                
+            report.status = 'submitted' if action == 'submit' else 'draft'
+            report.bill_in_charge = request.POST.get('bill_in_charge', 'NIL').strip() or 'NIL'
+            report.total_amount   = request.POST.get('total_amount', 'NIL').strip() or 'NIL'
+            report.balance_amount = request.POST.get('balance_amount', 'NIL').strip() or 'NIL'
+            report.pending        = request.POST.get('pending', 'NIL').strip() or 'NIL'
+            report.juice          = request.POST.get('juice', 'NIL').strip() or 'NIL'
+            report.tea            = request.POST.get('tea', 'NIL').strip() or 'NIL'
+            report.popcorn        = request.POST.get('popcorn', 'NIL').strip() or 'NIL'
+            report.hosting        = request.POST.get('hosting', 'NIL').strip() or 'NIL'
+            report.coat_incharge  = request.POST.get('coat_incharge', 'NIL').strip() or 'NIL'
+            report.coat_rent      = request.POST.get('coat_rent', 'NIL').strip() or 'NIL'
+            report.ta             = request.POST.get('ta', 'NIL').strip() or 'NIL'
+            report.save()
+            
+            messages.success(request, 'Report updated/submitted successfully.')
+            if request.GET.get('from') == 'admin':
+                return redirect('admin_event_report_detail', pk=report.pk)
+            return redirect('staff_booking_detail', pk=pk)
+        except Exception as e:
+            messages.error(request, f'Error submitting report: {e}')
+    
+    assigned_count = booking.assigned_to.count()
+    return render(request, 'staff/submit_report.html', {
+        'booking': booking,
+        'assigned_count': assigned_count,
+        'report': existing_report
+    })
+
+@login_required(login_url='/staff/login/')
+def staff_complete_task(request, pk):
+    """AJAX endpoint to mark a Captain task as completed."""
+    from bookings.models import EventTask
+    from django.utils import timezone
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'})
+        
+    task_id = request.POST.get('task_id')
+    if not task_id:
+        return JsonResponse({'success': False, 'error': 'No task ID provided'})
+        
+    me = request.user
+    task = get_object_or_404(EventTask, id=task_id, booking__id=pk)
+    
+    # Check if they are assigned to booking
+    if not task.booking.assigned_to.filter(id=me.id).exists() and not me.is_staff:
+        return JsonResponse({'success': False, 'error': 'Unauthorized'})
+        
+    if not task.is_completed:
+        task.is_completed = True
+        task.completed_by = me
+        task.completed_at = timezone.now()
+        task.save()
+        
+    return JsonResponse({
+        'success': True,
+        'task_name': task.task_name,
+        'completed_by': task.completed_by.full_name if task.completed_by else 'Unknown'
+    })
 

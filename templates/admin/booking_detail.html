@@ -1,173 +1,383 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Booking #{{ booking.pk }} — Admin{% endblock %}
-{% block page_title %}Booking #{{ booking.pk }}{% endblock %}
+{% block title %}Booking #{{ booking.pk }} — Admin
+  <style>
+    @media (min-width: 901px) {
+      .admin-booking-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .p-client { grid-column: 1; grid-row: 1; }
+      
+      .p-staff { grid-column: 1; grid-row: 2; margin-top:0 !important; }
+      .p-attendance { grid-column: 1; grid-row: 3; margin-top:0 !important; }
+      
+      .p-update { grid-column: 2; grid-row: 1; }
+      .p-captain { grid-column: 2; grid-row: 2; margin-top:0 !important; }
+    }
+    @media (max-width: 900px) {
+      .admin-booking-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .p-client { order: 1; }
+      .p-update { order: 2; margin-top:0 !important; margin-bottom:0 !important; }
+      .p-captain { order: 3; }
+      .p-staff { order: 4; margin-top:0 !important; margin-bottom:0 !important; }
+      .p-attendance { order: 5; margin-top:0 !important; }
+    }
+  </style>
+
+{% endblock %}
+{% block page_title %}Booking #{{ booking.pk }}
+  <style>
+    @media (min-width: 901px) {
+      .admin-booking-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .p-client { grid-column: 1; grid-row: 1; }
+      
+      .p-staff { grid-column: 1; grid-row: 2; margin-top:0 !important; }
+      .p-attendance { grid-column: 1; grid-row: 3; margin-top:0 !important; }
+      
+      .p-update { grid-column: 2; grid-row: 1; }
+      .p-captain { grid-column: 2; grid-row: 2; margin-top:0 !important; }
+    }
+    @media (max-width: 900px) {
+      .admin-booking-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .p-client { order: 1; }
+      .p-update { order: 2; margin-top:0 !important; margin-bottom:0 !important; }
+      .p-captain { order: 3; }
+      .p-staff { order: 4; margin-top:0 !important; margin-bottom:0 !important; }
+      .p-attendance { order: 5; margin-top:0 !important; }
+    }
+  </style>
+
+{% endblock %}
 
 {% block content %}
-<div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <a href="{% url 'admin_bookings' %}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> All Bookings</a>
-    <span class="badge badge-{{ booking.status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_status_display }}</span>
-    <span class="badge badge-{{ booking.payment_status }}" style="padding:8px 14px;font-size:0.82rem">{{ booking.get_payment_status_display }}</span>
-    {% if booking.is_published %}
-      <span class="badge" style="background:rgba(46,204,133,0.15);color:var(--green);padding:8px 14px;font-size:0.82rem"><i class="fas fa-broadcast-tower"></i> Published to Staff</span>
+<div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+  <!-- Left Side Badges -->
+  <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <a href="{% url 'admin_bookings' %}" style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--muted); text-decoration:none; font-size:0.85rem; font-weight:500; transition:background 0.2s;"><i class="fas fa-arrow-left"></i> All Bookings</a>
+    
+    <!-- Status Badges -->
+    {% if booking.status == 'confirmed' %}
+        <span style="padding:4px 12px; border-radius:20px; border:1px solid rgba(46,204,133,0.3); background:rgba(46,204,133,0.1); color:var(--green); font-size:0.8rem; font-weight:600;">Confirmed</span>
+    {% elif booking.status == 'pending' %}
+        <span style="padding:4px 12px; border-radius:20px; border:1px solid rgba(243,156,18,0.3); background:rgba(243,156,18,0.1); color:var(--orange); font-size:0.8rem; font-weight:600;">Pending</span>
     {% else %}
-      <span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);padding:8px 14px;font-size:0.82rem"><i class="fas fa-eye-slash"></i> Hidden from Staff</span>
+        <span style="padding:4px 12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:var(--text); font-size:0.8rem; font-weight:600;">{{ booking.get_status_display }}</span>
+    {% endif %}
+
+    {% if booking.payment_status == 'unpaid' %}
+        <span style="font-size:0.9rem; font-weight:600; color:var(--text);">Unpaid</span>
+    {% else %}
+        <span style="font-size:0.9rem; font-weight:600; color:var(--green);">{{ booking.get_payment_status_display }}</span>
+    {% endif %}
+
+    <!-- Publish Status -->
+    {% if booking.is_published %}
+      <span style="display:inline-flex; align-items:center; gap:6px; color:var(--green); font-size:0.85rem; font-weight:500;"><i class="fas fa-broadcast-tower"></i> Published to Staff Feed</span>
+    {% else %}
+      <span style="display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:0.85rem; font-weight:500;"><i class="fas fa-eye-slash"></i> Hidden from Staff</span>
     {% endif %}
   </div>
   
-  <div style="display:flex;gap:10px;">
-    <form method="post" action="{% url 'admin_publish_booking' booking.pk %}" style="margin:0">
+  <!-- Right Side Actions -->
+  <div style="display:flex;gap:12px;align-items:center;">
+    <form method="post" action="{% url 'admin_publish_booking' booking.pk %}" style="margin:0; display:flex; align-items:center; gap:12px;">
       {% csrf_token %}
       {% if booking.is_published %}
-        <button type="submit" name="action" value="unpublish" class="btn btn-ghost" style="color:#e74c3c"><i class="fas fa-eye-slash"></i> Unpublish</button>
+        <button type="submit" name="action" value="unpublish" class="btn btn-ghost" style="color:#e74c3c; border-radius:8px; font-size:0.85rem;"><i class="fas fa-eye-slash"></i> Unpublish</button>
       {% else %}
-        <div style="display:flex; gap:6px;">
-            <select name="publish_locality" style="padding:6px 12px; border:1px solid rgba(46,204,133,0.3); border-radius:6px; background:var(--surface); color:var(--text); font-size:0.85rem;">
-                <option value="all">🌎 All Localities</option>
-                <option value="Kondotty">📍 Kondotty Only</option>
-                <option value="Areekode">📍 Areekode Only</option>
-                <option value="Edavannappara">📍 Edavannappara Only</option>
-                <option value="Kizhisseri">📍 Kizhisseri Only</option>
-                <option value="University">📍 University Only</option>
-                <option value="Valluvambram">📍 Valluvambram Only</option>
-            </select>
-            <button type="submit" name="action" value="publish" class="btn btn-gold" style="background:rgba(46,204,133,0.1);color:var(--green);border-color:rgba(46,204,133,0.3);padding:6px 14px;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
+        <div style="position:relative;">
+          <i class="fas fa-globe" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--blue); font-size:0.9rem;"></i>
+          <select name="publish_locality" style="padding:8px 32px 8px 36px; border:1px solid rgba(255,255,255,0.1); border-radius:8px; background:rgba(28,33,44,0.6); color:var(--text); font-size:0.85rem; outline:none; cursor:pointer; appearance:none;">
+              <option value="all">All Localities</option>
+              <option value="Kondotty">Kondotty</option>
+              <option value="Areekode">Areekode</option>
+              <option value="Edavannappara">Edavannappara</option>
+              <option value="Kizhisseri">Kizhisseri</option>
+              <option value="University">University</option>
+              <option value="Valluvambram">Valluvambram</option>
+          </select>
+          <i class="fas fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:0.7rem; pointer-events:none;"></i>
         </div>
+        <button type="submit" name="action" value="publish" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(46,204,133,0.1); color:var(--green); border:1px solid rgba(46,204,133,0.4); font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
       {% endif %}
     </form>
-    <a href="{% url 'admin_edit_booking' booking.pk %}" class="btn btn-ghost"><i class="fas fa-edit"></i> Edit Details</a>
+    <a href="{% url 'admin_edit_booking' booking.pk %}" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; text-decoration:none; font-weight:500; transition:background 0.2s;"><i class="fa-regular fa-pen-to-square"></i> Edit Details</a>
   </div>
 </div>
 
-<div class="responsive-grid cols-2" style="gap:20px">
-
-  <!-- LEFT -->
-  <div>
-    <div class="panel" style="margin-bottom:18px">
-      <div class="panel-header"><div class="panel-title">Client & Event</div></div>
-      <div class="responsive-grid cols-3" style="gap:14px">
-        <div><label>Name</label><div style="font-weight:500">{{ booking.name }}</div></div>
-        <div><label>Phone</label><div>{{ booking.phone }}</div></div>
-        <div><label>Email</label><div style="font-size:0.82rem; word-break: break-all;"><a href="mailto:{{ booking.email }}" style="color:var(--gold)">{{ booking.email }}</a></div></div>
-        <div><label>Event Type</label><div>{{ booking.get_event_type_display }}</div></div>
-        <div><label>Session</label><div>{{ booking.get_session_display }}</div></div>
-        <div><label>Date</label><div>{{ booking.event_date|date:"d M Y" }}</div></div>
-        <div><label>Guests</label><div>{{ booking.guest_count }} pax</div></div>
-        {% if booking.venue %}<div style="grid-column:1/-1"><label>Venue</label><div>{{ booking.venue }}</div></div>{% endif %}
-        {% if booking.location_name %}<div style="grid-column:1/-1"><label>Map Location Name</label><div>{{ booking.location_name }}</div></div>{% endif %}
-        {% if booking.location_link %}<div style="grid-column:1/-1"><label>Map Link URL</label><div style="word-break: break-all;"><a href="{{ booking.location_link }}" target="_blank" style="color:var(--gold)">{{ booking.location_link }}</a></div></div>{% endif %}
-        {% if booking.budget %}<div><label>Client Budget</label><div style="color:var(--gold)">₹{{ booking.budget }}</div></div>{% endif %}
-      </div>
-      
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;font-weight:600">Expected Staff Quotas</div>
-        <div class="responsive-grid cols-4" style="gap:10px">
-          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">Captains</div><div style="font-size:1.1rem;font-weight:600;color:var(--gold)">{{ booking.quota_captain }}</div></div>
-          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">A-Level</div><div style="font-size:1.1rem;font-weight:600;color:var(--teal)">{{ booking.quota_a }}</div></div>
-          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">B-Level</div><div style="font-size:1.1rem;font-weight:600;color:var(--blue)">{{ booking.quota_b }}</div></div>
-          <div style="background:var(--bg);padding:8px;border-radius:6px;text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">C-Level</div><div style="font-size:1.1rem;font-weight:600;color:var(--green)">{{ booking.quota_c }}</div></div>
-        </div>
-      </div>
-      {% if booking.message %}
-      <div style="margin-top:14px;padding:12px;background:var(--surface);border-radius:8px;font-size:0.85rem;border-left:3px solid var(--gold)">
-        <div style="font-size:0.68rem;color:var(--muted);margin-bottom:4px">CLIENT MESSAGE</div>
-        {{ booking.message }}
-      </div>
+<!-- 4 TOP STAT CARDS -->
+<style>
+  .stat-ribbon { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:28px; }
+  .ribbon-card { background:rgba(28, 33, 44, 0.4); padding:20px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); display:flex; flex-direction:column; justify-content:center; }
+  .rb-label { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600; }
+  .rb-val { font-size:1.6rem; font-weight:600; color:var(--text); display:flex; align-items:baseline; gap:6px; }
+  .rb-sub { font-size:0.9rem; color:var(--muted); font-weight:400; }
+</style>
+<div class="stat-ribbon">
+  <div class="ribbon-card" style="border-left:2px solid var(--gold);">
+    <div class="rb-label">GUEST COUNT</div>
+    <div class="rb-val">{{ booking.guest_count }} <span class="rb-sub">pax</span></div>
+  </div>
+  <div class="ribbon-card" style="border-left:2px solid var(--muted);">
+    <div class="rb-label">EVENT SESSION</div>
+    <div class="rb-val">{{ booking.get_session_display }}</div>
+  </div>
+  <div class="ribbon-card" style="border-left:2px solid var(--blue);">
+    <div class="rb-label">COAT SIZES</div>
+    <div class="rb-val" style="font-size:1.1rem; flex-wrap:wrap; gap:10px;">
+      {% if coat_counts %}
+        {% for size, count in coat_counts.items %}
+          <div style="display:flex; align-items:center; gap:6px; background:rgba(212,168,82,0.1); padding:4px 8px; border-radius:6px; border:1px solid rgba(212,168,82,0.3);">
+            <span style="font-size:0.9rem; font-weight:600; color:var(--text);">{{ size }}</span>
+            <span style="background:var(--gold); color:var(--bg); border-radius:50%; width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">{{ count }}</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <span style="font-size:0.9rem; color:var(--muted); font-weight:400;">None</span>
       {% endif %}
     </div>
-
-
-
-    <div class="panel">
-      <div class="panel-header"><div class="panel-title">Assigned Staff</div></div>
-      {% if booking.assigned_to.all %}
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        {% for s in booking.assigned_to.all %}
-        <div style="background:var(--surface);border:1px solid var(--border);padding:8px 14px;border-radius:8px;font-size:0.82rem">
-          <span style="color:var(--gold);font-family:monospace">{{ s.staff_id }}</span>
-          <span style="margin-left:8px">{{ s.full_name }}</span>
-          <span style="margin-left:6px;color:var(--muted);font-size:0.73rem">({{ s.get_level_display }})</span>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}<p style="color:var(--muted);font-size:0.83rem">No staff assigned yet.</p>{% endif %}
+  </div>
+  <div class="ribbon-card" style="border-left:2px solid var(--green);">
+    <div class="rb-label">STAFF REQUIRED</div>
+    <div class="rb-val" style="font-size:1.1rem; flex-wrap:wrap; gap:12px; align-items:center;">
+      <span style="color:var(--text); font-weight:700; border-right:1px solid rgba(255,255,255,0.1); padding-right:12px;">{{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }} <span style="font-size:0.75rem; color:var(--muted);">TOTAL</span></span>
+      <span style="color:var(--gold);">{{ booking.quota_captain }} <span style="font-size:0.75rem; color:var(--muted);">C</span></span>
+      <span style="color:var(--text);">{{ booking.quota_a }} <span style="font-size:0.75rem; color:var(--muted);">A</span></span>
+      <span style="color:var(--blue);">{{ booking.quota_b }} <span style="font-size:0.75rem; color:var(--muted);">B</span></span>
+      <span style="color:var(--green);">{{ booking.quota_c }} <span style="font-size:0.75rem; color:var(--muted);">C</span></span>
     </div>
+  </div>
+</div>
 
-    <div class="panel" style="margin-top:18px">
-      <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <div class="panel-title">Event Attendance</div>
-        <a href="{% url 'admin_download_attendance' booking.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
+<div class="admin-booking-layout">
+  <div class="desktop-left-col">
+      <div class="panel p-client" style="margin-bottom:16px;">
+        <div class="panel-hdr">
+          <div class="panel-title"><i class="fas fa-info-circle" style="color:var(--gold);"></i> Client & Event Details</div>
+        </div>
+        
+        <style>
+          .detail-box { background:rgba(18, 22, 28, 0.3); border-radius:8px; padding:14px 16px; border:1px solid rgba(255,255,255,0.02); }
+          .detail-lbl { font-size:0.65rem; color:var(--muted); text-transform:uppercase; margin-bottom:6px; font-weight:600; letter-spacing:0.5px; }
+          .detail-txt { font-size:0.95rem; font-weight:500; color:var(--text); display:flex; align-items:center; gap:8px; }
+        </style>
+        
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+          <div class="detail-box">
+            <div class="detail-lbl">Client Name</div>
+            <div class="detail-txt">{{ booking.name }}</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-lbl">Phone Number</div>
+            <div class="detail-txt">{{ booking.phone }}</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-lbl">Email</div>
+            <div class="detail-txt" style="color:var(--gold); word-break:break-all;"><a href="mailto:{{ booking.email }}" style="color:inherit; text-decoration:none;">{{ booking.email|default:"sakeeek@gmail.com" }}</a></div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-lbl">Event Type</div>
+            <div class="detail-txt">{{ booking.get_event_type_display }}</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-lbl">Event Date</div>
+            <div class="detail-txt"><i class="far fa-calendar-alt" style="color:var(--gold);"></i> {{ booking.event_date|date:"d M Y" }}</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-lbl">Venue</div>
+            <div class="detail-txt"><i class="fas fa-map-marker-alt" style="color:var(--gold);"></i> {{ booking.venue|default:"kk auditorium" }}</div>
+          </div>
+          
+          {% if booking.message %}
+          <div class="detail-box" style="grid-column: 1 / -1;">
+            <div class="detail-lbl">Client Message</div>
+            <div class="detail-txt" style="font-weight:400; line-height:1.5;">{{ booking.message }}</div>
+          </div>
+          {% endif %}
+          
+          {% if booking.location_link or booking.location_name %}
+          <div class="detail-box" style="grid-column: 1 / -1;">
+            <div class="detail-lbl">Location Map</div>
+            <div class="detail-txt" style="display:flex; flex-direction:column; align-items:flex-start; gap:6px;">
+              {% if booking.location_name %}<div style="font-size:0.9rem;">{{ booking.location_name }}</div>{% endif %}
+              {% if booking.location_link %}<a href="{{ booking.location_link }}" target="_blank" style="color:var(--gold); text-decoration:underline; font-size:0.85rem; word-break:break-all;">{{ booking.location_link }}</a>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+
+
+
+
+
+
+
+    <div class="panel p-attendance" style="margin-bottom:16px;">
+      <div class="panel-hdr">
+        <div class="panel-title"><i class="fas fa-clipboard-check" style="color:var(--gold);"></i> Event Attendance</div>
+        <div>
+          <a href="{% url 'admin_download_attendance' booking.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
+        </div>
       </div>
       {% if assigned_staff_with_att %}
       <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="mark_attendance"/>
         <style>
-          .attendance-admin-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; transition:transform 0.2s, box-shadow 0.2s, border-color 0.2s; position:relative; overflow:hidden; }
-          .attendance-admin-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); border-color: rgba(212,168,82,0.4); }
-          .attendance-admin-card .accent-bar { position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg, var(--gold), transparent); }
-          .attendance-admin-input { width:100%; padding:8px 12px; font-size:0.85rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); box-sizing:border-box; transition:border-color 0.2s; }
-          .attendance-admin-input:focus { border-color: var(--gold); outline:none; }
-          input[type="time"].attendance-admin-input { color-scheme:dark; }
+          .prm-att-card { background: rgba(28, 33, 44, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 22px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px; }
+          .prm-att-card:hover { transform: translateY(-5px); border-color: rgba(212,168,82,0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.25); background: rgba(28, 33, 44, 0.7); }
+          .prm-input { width: 100%; background: rgba(15, 18, 23, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease; outline: none; box-sizing: border-box; }
+          .prm-input:focus, .prm-input:hover { border-color: rgba(212,168,82,0.5); background: rgba(15, 18, 23, 0.8); }
+          input[type="time"].prm-input { color-scheme: dark; }
+          .prm-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 6px; display: block; font-weight: 600; }
+          
+          /* Custom Checkbox */
+          .prm-checkbox-wrap { display: flex; align-items: center; justify-content: center; height: 100%; cursor: pointer; }
+          .prm-checkbox { display: none; }
+          .prm-checkbox + .prm-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.15); background: rgba(15, 18, 23, 0.6); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+          .prm-checkbox:checked + .prm-box { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 12px rgba(212,168,82,0.4); }
+          .prm-checkbox:checked + .prm-box::after { content: '\f00c'; font-family: 'Font Awesome 5 Free'; font-weight: 900; color: #12161c; font-size: 0.75rem; }
         </style>
-        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap:16px;">
+        <div style="margin-bottom:15px; position:relative;">
+          <i class="fas fa-search" style="position:absolute; left:12px; top:12px; color:var(--muted);"></i>
+          <input type="text" id="admin-att-search" placeholder="Search staff attendance by name..." class="prm-input" style="padding-left:36px; padding-top:10px; padding-bottom:10px; font-size:0.9rem;" onkeyup="filterAdminAtt()">
+        </div>
+        <script>
+        function filterAdminAtt() {
+            let input = document.getElementById("admin-att-search").value.toLowerCase();
+            let cards = document.querySelectorAll(".prm-att-card");
+            cards.forEach(card => {
+                let text = card.textContent.toLowerCase();
+                if (text.indexOf(input) > -1) {
+                    card.style.display = "flex";
+                } else {
+                    card.style.display = "none";
+                }
+            });
+        }
+        </script>
+        
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap:20px; margin-top:20px;">
           {% for item in assigned_staff_with_att %}
-          <div class="attendance-admin-card">
-            <div class="accent-bar"></div>
+          <div class="prm-att-card">
             <input type="hidden" name="attendance_staff_id" value="{{ item.staff.pk }}"/>
             
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
-              <div>
-                <div style="font-weight:600; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                  <i class="fas fa-user-tie" style="color:var(--gold); font-size:1.2rem;"></i>
-                  {{ item.staff.full_name }}
+            <!-- Header Section -->
+            <div style="display:flex; justify-content:space-between; align-items:center; z-index: 1;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div style="width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg, rgba(212,168,82,0.25) 0%, rgba(212,168,82,0.05) 100%); border:2px solid rgba(212,168,82,0.4); display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(212,168,82,0.2), inset 0 0 10px rgba(212,168,82,0.1); overflow:hidden; flex-shrink:0;">
+                  {% if item.staff.photo %}
+                    <img src="{{ item.staff.photo.url }}" alt="{{ item.staff.full_name }}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                  {% else %}
+                    <div style="font-weight:800; font-size:1.5rem; color:var(--gold); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">{{ item.staff.first_name|slice:":1"|upper }}</div>
+                  {% endif %}
                 </div>
-                <div style="font-size:0.75rem; color:var(--muted); margin-top:4px; margin-left:28px;">
-                  <span style="font-family:monospace; color:var(--gold);">{{ item.staff.staff_id }}</span> • <i class="fas fa-phone-alt"></i> {{ item.phone }} • {{ item.staff.get_level_display }}
+                <div>
+                  <div style="font-weight:800; font-size:1.1rem; color:#fff; letter-spacing:0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.4);">
+                    {{ item.staff.full_name }}
+                  </div>
+                  <div style="font-size:0.75rem; color:var(--gold); margin-top:4px; font-family:monospace; letter-spacing:0.8px;">
+                    <i class="fas fa-id-badge" style="font-size:0.65rem; opacity:0.8; margin-right:3px;"></i>{{ item.staff.staff_id }} 
+                    <span style="color:rgba(255,255,255,0.4); font-family:sans-serif; margin-left:4px; letter-spacing:0;">• {{ item.staff.get_level_display }}</span>
+                  </div>
                 </div>
-              </div>
-              
-              <div style="flex-shrink:0;">
-                <select name="attendance_status_{{ item.staff.pk }}" class="attendance-admin-input" style="padding:6px 12px; font-weight:500; cursor:pointer;">
-                  <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
-                  <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
-                  <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
-                  <option value="half_day" {% if item.attendance and item.attendance.status == 'half_day' %}selected{% endif %}>🌗 Half Day</option>
-                </select>
               </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: minmax(85px, 1fr) minmax(100px, 2fr) auto; gap:10px; align-items:flex-end;">
-              <div>
-                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;"><i class="far fa-clock"></i> Time</label>
-                <input type="time" name="reaching_time_{{ item.staff.pk }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="attendance-admin-input" style="padding:8px 4px; font-size:0.8rem;"/>
+            <!-- Inputs Section -->
+            <div style="z-index: 1; display:flex; flex-direction:column; gap:14px;">
+              
+              <!-- Status & Paid Row -->
+              <div style="display:grid; grid-template-columns: 1fr auto; gap:14px;">
+                <div>
+                  <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
+                  <select name="attendance_status_{{ item.staff.pk }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
+                    <option value="present" {% if not item.attendance or item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+                    <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
+                  </select>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                  <label class="prm-label" style="text-align:center;"><i class="fas fa-rupee-sign" style="margin-right:2px;"></i> Paid</label>
+                  <label class="prm-checkbox-wrap">
+                    <input type="checkbox" class="prm-checkbox" name="payment_given_{{ item.staff.pk }}" {% if item.attendance.payment_given %}checked{% endif %} />
+                    <div class="prm-box"></div>
+                  </label>
+                </div>
               </div>
-              <div>
-                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;"><i class="far fa-comment-alt"></i> Notes</label>
-                <input type="text" name="attendance_notes_{{ item.staff.pk }}" value="{{ item.attendance.notes }}" placeholder="Notes" class="attendance-admin-input" style="font-size:0.8rem;"/>
+
+              <!-- Time & Checkboxes Row -->
+              <div style="display:flex; flex-direction:column; gap:10px; padding-top:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <label class="prm-label" style="margin-bottom:0;"><i class="far fa-clock"></i> Time</label>
+                    <input type="time" name="reaching_time_{{ item.staff.pk }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
+                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="On Time">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">On Time</span>
+                    <input type="checkbox" name="on_time_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="Shoe">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Shoe</span>
+                    <input type="checkbox" name="shoes_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="Uniform">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Uniform</span>
+                    <input type="checkbox" name="uniform_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="Grooming">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Grooming</span>
+                    <input type="checkbox" name="grooming_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                </div>
               </div>
-              <div style="display:flex; flex-direction:column; align-items:center; padding-bottom:6px;">
-                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;">Paid</label>
-                <input type="checkbox" name="payment_given_{{ item.staff.pk }}" style="width:18px; height:18px; accent-color:var(--gold); cursor:pointer;" {% if item.attendance.payment_given %}checked{% endif %} />
-              </div>
+
             </div>
           </div>
           {% endfor %}
         </div>
-        <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; margin-top:14px;">
-          <i class="fas fa-check-circle"></i> Save Attendance
-        </button>
+        
+        <div style="margin-top:24px; text-align:right;">
+          <button type="submit" class="btn" style="background:linear-gradient(135deg, var(--gold) 0%, #aa843a 100%); color:#12161c; padding:12px 28px; font-size:1rem; font-weight:700; border-radius:12px; border:none; box-shadow:0 6px 20px rgba(212,168,82,0.3); transition:all 0.3s ease; cursor:pointer;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 25px rgba(212,168,82,0.4)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 20px rgba(212,168,82,0.3)';">
+            <i class="fas fa-check-circle" style="margin-right:8px;"></i> Save Event Attendance
+          </button>
+        </div>
       </form>
       {% else %}
-      <p style="color:var(--muted); font-size:0.83rem;">Assign staff to mark attendance.</p>
+      <div style="grid-column:1/-1; text-align:center; padding:48px 20px; background:rgba(28, 33, 44, 0.3); backdrop-filter:blur(10px); border:1px dashed rgba(255,255,255,0.08); border-radius:16px; margin-top:20px;">
+        <div style="width:70px; height:70px; border-radius:50%; background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; border:1px solid rgba(255,255,255,0.05);">
+          <i class="fas fa-users-slash" style="font-size:2rem; color:var(--gold); opacity:0.8;"></i>
+        </div>
+        <div style="font-size:1.1rem; font-weight:600; color:#fff; margin-bottom:8px;">No Staff Assigned Yet</div>
+        <div style="font-size:0.85rem; color:var(--muted); max-width:300px; margin:0 auto;">Please assign staff from the "Update Booking" panel to begin marking attendance.</div>
+      </div>
       {% endif %}
     </div>
   </div>
-
-  <!-- RIGHT -->
-  <div>
-    <div class="panel" style="margin-bottom:14px">
-      <div class="panel-header"><div class="panel-title">Update Booking</div></div>
+  <div class="desktop-right-col">
+    <div class="panel p-update" style="margin-bottom:16px;">
+      <div class="panel-hdr">
+        <div class="panel-title"><i class="fas fa-edit" style="color:var(--gold);"></i> Update Booking</div>
+      </div>
       <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="update_booking"/>
@@ -274,7 +484,80 @@
         </button>
       </form>
     </div>
-  </div>
 
+    <div class="panel p-captain" style="margin-bottom:16px;">
+      <div class="panel-hdr">
+        <div class="panel-title"><i class="fas fa-list-check" style="color:var(--gold);"></i> Captain Checklist</div>
+      </div>
+      <style>
+        .capt-task-details > summary { list-style: none; outline: none; }
+        .capt-task-details > summary::-webkit-details-marker { display: none; }
+        .capt-task-details[open] .fa-chevron-down { transform: rotate(180deg) translateY(0) !important; }
+        .capt-task-details .fa-chevron-down { transition: transform 0.2s; }
+      </style>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+          {% if captain_tasks %}
+              {% for task in captain_tasks %}
+              <details class="capt-task-details" style="background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <summary style="display:flex; align-items:flex-start; padding:12px; gap:12px; cursor:{% if task.description %}pointer{% else %}default{% endif %};">
+                  <div style="padding-top:2px;">
+                    {% if task.is_completed %}
+                      <i class="fas fa-check-circle" style="color:#2e7d32; font-size:1.2rem;"></i>
+                    {% else %}
+                      <i class="far fa-circle" style="color:var(--muted); font-size:1.2rem;"></i>
+                    {% endif %}
+                  </div>
+                  <div style="flex:1;">
+                      <div style="font-weight:600; font-size:0.95rem; display:flex; align-items:center; gap:8px; {% if task.is_completed %}text-decoration:line-through; color:var(--muted);{% else %}color:var(--text);{% endif %}">
+                        {{ task.task_name }}
+                        {% if task.description %}
+                          <i class="fas fa-chevron-down" style="font-size:0.75rem; color:var(--gold); transform: translateY(1px);"></i>
+                        {% endif %}
+                      </div>
+                    {% if task.is_completed %}
+                      <div style="font-size:0.75rem; color:var(--muted); margin-top:4px;">
+                        <i class="fas fa-user-check"></i> Completed by {{ task.completed_by.full_name }}
+                      </div>
+                    {% endif %}
+                  </div>
+                </summary>
+                {% if task.description %}
+                <div style="padding: 0 12px 12px 42px; font-size:0.85rem; color:var(--muted); opacity: 0.9; line-height: 1.4; margin-top:-4px;">
+                  • {{ task.description }}
+                </div>
+                {% endif %}
+              </details>
+              {% endfor %}
+          {% else %}
+              <div style="text-align:center; padding:15px; color:var(--muted); font-size:0.9rem; background: var(--bg); border: 1px dashed rgba(212,168,82,0.3); border-radius: 8px; margin:auto;">Tasks generated automatically when Captain opens event dashboard.</div>
+          {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
+
+  <style>
+    @media (min-width: 901px) {
+      .admin-booking-layout {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      .desktop-left-col { flex: 1.8; display: flex; flex-direction: column; gap: 24px; }
+      .desktop-right-col { flex: 1.2; display: flex; flex-direction: column; gap: 24px; }
+    }
+    @media (max-width: 900px) {
+      .admin-booking-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .desktop-left-col, .desktop-right-col { display: contents; }
+      .p-client { order: 1; }
+      .p-update { order: 2; }
+      .p-captain { order: 3; }
+      .p-attendance { order: 4; }
+    }
+  </style>
+
 {% endblock %}

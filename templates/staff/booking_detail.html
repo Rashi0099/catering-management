@@ -8,12 +8,23 @@
   <a href="{% url 'staff_bookings' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
 </div>
 
-<div class="responsive-grid cols-2" style="gap:18px">
+<style>
+@media (max-width: 768px) {
+    .staff-booking-layout { display: flex !important; flex-direction: column !important; gap: 16px !important; }
+    .staff-booking-col { display: contents !important; }
+    #panel-location { order: 1; margin-bottom: 0 !important; }
+    #panel-report { order: 2; margin-bottom: 0 !important; }
+    #panel-checklist { order: 3; margin-bottom: 0 !important; }
+    #panel-attendance { order: 4; margin-bottom: 0 !important; }
+}
+</style>
+
+<div class="responsive-grid cols-2 staff-booking-layout" style="gap:18px">
 
   <!-- LEFT -->
-  <div>
+  <div class="staff-booking-col">
     <!-- Client -->
-    <div class="panel" style="margin-bottom:16px">
+    <div class="panel" id="panel-location" style="margin-bottom:16px">
       <div class="panel-hdr"><div class="panel-title">Event Location & Time</div>
         <span class="badge b-{{ booking.status }}">{{ booking.get_status_display }}</span>
       </div>
@@ -36,7 +47,7 @@
 
     <!-- Attendance Marking (For Captain) -->
     {% if me.level == 'captain' or me.is_staff %}
-    <div class="panel" style="margin-bottom:16px">
+    <div class="panel" id="panel-attendance" style="margin-bottom:16px">
       <div class="panel-hdr"><div class="panel-title">Mark Attendance</div>
         <div>
           <span class="badge" style="background:var(--surface);color:var(--text);font-size:0.75rem">{{ booking.event_date|date:"d M Y" }}</span>
@@ -49,47 +60,118 @@
         <input type="hidden" name="attendance_date" value="{{ booking.event_date|date:'Y-m-d' }}">
         
         <style>
-          .attendance-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; transition:transform 0.2s, box-shadow 0.2s, border-color 0.2s; position:relative; overflow:hidden; }
-          .attendance-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); border-color: rgba(212,168,82,0.4); }
-          .attendance-card .accent-bar { position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg, var(--gold), transparent); }
-          .attendance-input { width:100%; padding:8px 12px; font-size:0.85rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); box-sizing:border-box; transition:border-color 0.2s; }
-          .attendance-input:focus { border-color: var(--gold); outline:none; }
-          input[type="time"].attendance-input { color-scheme:dark; }
+          .prm-att-card { background: rgba(28, 33, 44, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 22px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px; }
+          .prm-att-card:hover { transform: translateY(-5px); border-color: rgba(212,168,82,0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.25); background: rgba(28, 33, 44, 0.7); }
+          .prm-input { width: 100%; background: rgba(15, 18, 23, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease; outline: none; box-sizing: border-box; }
+          .prm-input:focus, .prm-input:hover { border-color: rgba(212,168,82,0.5); background: rgba(15, 18, 23, 0.8); }
+          input[type="time"].prm-input { color-scheme: dark; }
+          .prm-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 6px; display: block; font-weight: 600; }
+          
+          /* Custom Checkbox */
+          .prm-checkbox-wrap { display: flex; align-items: center; justify-content: center; height: 100%; cursor: pointer; }
+          .prm-checkbox { display: none; }
+          .prm-checkbox + .prm-box { width: 22px; height: 22px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.15); background: rgba(15, 18, 23, 0.6); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+          .prm-checkbox:checked + .prm-box { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 12px rgba(212,168,82,0.4); }
+          .prm-checkbox:checked + .prm-box::after { content: '\f00c'; font-family: 'Font Awesome 5 Free'; font-weight: 900; color: #12161c; font-size: 0.75rem; }
         </style>
-        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap:16px; margin-top:16px;">
+
+        <div style="margin-bottom:15px; position:relative; margin-top:10px;">
+          <i class="fas fa-search" style="position:absolute; left:12px; top:12px; color:var(--muted);"></i>
+          <input type="text" id="staff-att-search" placeholder="Search staff attendance by name..." class="prm-input" style="padding-left:36px; padding-top:10px; padding-bottom:10px; font-size:0.9rem;" onkeyup="filterStaffAtt()">
+        </div>
+        <script>
+        function filterStaffAtt() {
+            let input = document.getElementById("staff-att-search").value.toLowerCase();
+            let cards = document.querySelectorAll(".prm-att-card");
+            cards.forEach(card => {
+                let text = card.textContent.toLowerCase();
+                if (text.indexOf(input) > -1) {
+                    card.style.display = "flex";
+                } else {
+                    card.style.display = "none";
+                }
+            });
+        }
+        </script>
+
+        <!-- Using minmax 240px to safely stack 2 grid elements in the Left Column dynamically -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:16px; margin-top:16px;">
           {% for item in assigned_staff_list %}
-          <div class="attendance-card">
-            <div class="accent-bar"></div>
-            <input type="hidden" name="staff_ids[]" value="{{ item.staff.id }}">
+          <div class="prm-att-card">
+            <input type="hidden" name="staff_ids[]" value="{{ item.staff.id }}"/>
             
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
-              <div>
-                <div style="font-weight:600; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
-                  <i class="fas fa-user-circle" style="color:var(--gold); font-size:1.2rem;"></i>
-                  {{ item.staff.full_name }}
+            <!-- Header Section -->
+            <div style="display:flex; justify-content:space-between; align-items:center; z-index: 1;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div style="width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg, rgba(212,168,82,0.25) 0%, rgba(212,168,82,0.05) 100%); border:2px solid rgba(212,168,82,0.4); display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(212,168,82,0.2), inset 0 0 10px rgba(212,168,82,0.1); overflow:hidden; flex-shrink:0;">
+                  {% if item.staff.photo %}
+                    <img src="{{ item.staff.photo.url }}" alt="{{ item.staff.full_name }}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                  {% else %}
+                    <div style="font-weight:800; font-size:1.5rem; color:var(--gold); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">{{ item.staff.first_name|slice:":1"|upper }}</div>
+                  {% endif %}
                 </div>
-                <div style="font-size:0.75rem; color:var(--muted); margin-top:4px; margin-left:26px;"><i class="fas fa-phone-alt"></i> {{ item.phone }} • {{ item.staff.get_level_display }}</div>
-              </div>
-              
-              <div style="flex-shrink:0;">
-                <select name="status_{{ item.staff.id }}" class="attendance-input" style="padding:6px 12px; font-weight:500; cursor:pointer;">
-                  <option value="pending" {% if item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
-                  <option value="present" {% if item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
-                  <option value="absent" {% if item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
-                  <option value="half_day" {% if item.attendance.status == 'half_day' %}selected{% endif %}>🌗 Half Day</option>
-                </select>
+                <div>
+                  <div style="font-weight:800; font-size:1.1rem; color:#fff; letter-spacing:0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.4);">
+                    {{ item.staff.full_name }}
+                  </div>
+                  <div style="font-size:0.75rem; color:var(--gold); margin-top:4px; font-family:monospace; letter-spacing:0.8px;">
+                    <i class="fas fa-id-badge" style="font-size:0.65rem; opacity:0.8; margin-right:3px;"></i>{{ item.staff.staff_id }} 
+                    <span style="color:rgba(255,255,255,0.4); font-family:sans-serif; margin-left:4px; letter-spacing:0;">• {{ item.staff.get_level_display }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: minmax(85px, 1fr) minmax(100px, 2fr); gap:10px; align-items:flex-end;">
-              <div>
-                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;"><i class="far fa-clock"></i> Time</label>
-                <input type="time" name="reaching_{{ item.staff.id }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="attendance-input" style="padding:8px 4px; font-size:0.8rem;">
+            <!-- Inputs Section -->
+            <div style="z-index: 1; display:flex; flex-direction:column; gap:14px;">
+              
+              <!-- Status & Paid Row -->
+              <div style="display:grid; grid-template-columns: 1fr auto; gap:14px;">
+                <div>
+                  <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
+                  <select name="attendance_status_{{ item.staff.id }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
+                    <option value="present" {% if not item.attendance or item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+                    <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
+                  </select>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                  <label class="prm-label" style="text-align:center;"><i class="fas fa-rupee-sign" style="margin-right:2px;"></i> Paid</label>
+                  <label class="prm-checkbox-wrap">
+                    <input type="checkbox" class="prm-checkbox" name="payment_given_{{ item.staff.id }}" {% if item.attendance.payment_given %}checked{% endif %} />
+                    <div class="prm-box"></div>
+                  </label>
+                </div>
               </div>
-              <div>
-                <label style="font-size:0.68rem; color:var(--muted); display:block; margin-bottom:6px; white-space:nowrap;"><i class="far fa-comment-alt"></i> Notes</label>
-                <input type="text" name="notes_{{ item.staff.id }}" value="{{ item.attendance.notes|default:'' }}" placeholder="Notes" class="attendance-input" style="font-size:0.8rem;">
+
+              <!-- Time & Checkboxes Row -->
+              <div style="display:flex; flex-direction:column; gap:10px; padding-top:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <label class="prm-label" style="margin-bottom:0;"><i class="far fa-clock"></i> Time</label>
+                    <input type="time" name="reaching_time_{{ item.staff.id }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="On Time">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">On Time</span>
+                    <input type="checkbox" name="on_time_{{ item.staff.id }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Shoe">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Shoe</span>
+                    <input type="checkbox" name="shoes_{{ item.staff.id }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Uniform">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Uniform</span>
+                    <input type="checkbox" name="uniform_{{ item.staff.id }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Grooming">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Grooming</span>
+                    <input type="checkbox" name="grooming_{{ item.staff.id }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                  </label>
+                </div>
               </div>
+
             </div>
           </div>
           {% empty %}
@@ -114,7 +196,225 @@
   </div>
 
   <!-- RIGHT -->
-  <div>
+  <div class="staff-booking-col">
+
+    {% if me.level == 'captain' or me.is_staff %}
+    <!-- Post-Event Report -->
+    <div class="panel" id="panel-report" style="margin-bottom:16px;">
+      <div class="panel-hdr"><div class="panel-title">Post-Event Report</div></div>
+      {% with existing_report=booking.reports.first %}
+        {% if existing_report %}
+          <div style="font-size:0.85rem; color:var(--muted); line-height: 1.5; padding:8px 0;">
+            <i class="fas fa-check-circle" style="color:#2e7d32; margin-right:4px;"></i> Report submitted by <strong>{{ existing_report.submitted_by.full_name }}</strong>.
+          </div>
+          <div style="margin-top:12px;">
+            {% if existing_report.status == 'submitted' %}
+              <a href="{% url 'staff_submit_report' booking.pk %}" class="btn btn-ghost w-100" style="justify-content:center; border:1px solid rgba(255,255,255,0.1);"><i class="fas fa-file-invoice" style="margin-right:6px;"></i> View Settlement Report</a>
+            {% else %}
+              <a href="{% url 'staff_submit_report' booking.pk %}" class="btn btn-gold w-100" style="justify-content:center;"><i class="fas fa-edit" style="margin-right:6px;"></i> Edit Settlement Report</a>
+            {% endif %}
+          </div>
+        {% else %}
+          <div style="font-size:0.85rem; color:var(--muted); margin-bottom:12px; line-height: 1.4;">
+            Submit the final event settlement and financial report to the Admin.
+          </div>
+          <a href="{% url 'staff_submit_report' booking.pk %}" class="btn btn-gold w-100" style="justify-content:center;"><i class="fas fa-file-invoice-dollar" style="margin-right:6px;"></i> Fill Settlement Report</a>
+        {% endif %}
+      {% endwith %}
+    </div>
+    <!-- Live Responsibilities Checklist -->
+    <div class="panel" id="panel-checklist" style="margin-bottom:16px;">
+      <div class="panel-hdr">
+        <div class="panel-title"><i class="fas fa-tasks" style="color:var(--gold); margin-right:6px;"></i> Live Responsibilities</div>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">
+        Tap anywhere on an item to mark it as completed. Once completed, your name will be permanently recorded beside it.
+      </div>
+      
+      <style>
+        .capt-task-card {
+          background: rgba(15, 18, 24, 0.65); 
+          border: 1px solid rgba(255, 255, 255, 0.05); 
+          border-radius: 12px; margin-bottom: 10px;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .capt-task-header {
+          display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer;
+        }
+        .capt-task-click-area {
+          display: flex; gap: 14px; align-items: center; flex: 1;
+        }
+        .capt-task-card:hover:not(.completed) {
+          background: rgba(22, 27, 36, 0.85); 
+          border-color: rgba(212, 168, 82, 0.3); 
+          transform: translateY(-2px); 
+          box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .capt-task-indicator { flex-shrink: 0; }
+        .capt-task-circle {
+          width: 22px; height: 22px; border-radius: 6px; 
+          border: 2px solid rgba(255, 255, 255, 0.15); 
+          background: rgba(0, 0, 0, 0.2);
+          transition: all 0.3s; display: flex; align-items: center; justify-content: center;
+        }
+        .capt-task-card:hover:not(.completed) .capt-task-circle {
+          border-color: rgba(255, 255, 255, 0.5); 
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .capt-task-card.completed {
+          background: rgba(46, 204, 133, 0.05); 
+          border-color: rgba(46, 204, 133, 0.2);
+        }
+        .capt-task-card.completed .capt-task-name {
+          text-decoration: line-through; color: var(--muted);
+        }
+        .capt-task-card.completed .capt-task-indicator i {
+          color: var(--green); font-size: 1.35rem; 
+        }
+        .capt-task-name {
+          font-weight: 600; font-size: 0.95rem; color: var(--text); transition: color 0.3s;
+        }
+        .capt-task-meta {
+          font-size: 0.78rem; color: var(--green); margin-top: 6px; display: flex; align-items: center; gap: 5px;
+        }
+        
+        .capt-desc-expander {
+          padding: 4px 8px; color: var(--text); opacity: 0.7; transition: opacity 0.3s;
+        }
+        .capt-desc-expander:hover { opacity: 1; }
+        .capt-desc-expander i { transition: transform 0.3s; }
+        .capt-task-card.expanded .capt-desc-expander i { transform: rotate(180deg); }
+        .capt-task-desc-wrap {
+          display: none; padding: 0 16px 14px 52px; font-size: 0.85rem; color: var(--muted); line-height: 1.45;
+        }
+        .capt-task-card.expanded .capt-task-desc-wrap { display: block; animation: fadeDown 0.2s ease-out; }
+        @keyframes fadeDown { 0%{opacity:0; transform:translateY(-5px);} 100%{opacity:1; transform:translateY(0);} }
+      </style>
+
+      <div id="captain-tasks-list">
+        {% for task in captain_tasks %}
+          <div class="capt-task-card {% if task.is_completed %}completed{% endif %}" data-task-id="{{ task.id }}">
+            <div class="capt-task-header">
+              
+              <div class="capt-task-click-area">
+                <div class="capt-task-indicator">
+                  {% if task.is_completed %}
+                    <i class="fas fa-check-circle"></i>
+                  {% else %}
+                    <div class="capt-task-circle"></div>
+                  {% endif %}
+                </div>
+                <div>
+                  <div class="capt-task-name">{{ task.task_name }}</div>
+                  <div class="capt-task-meta-anchor">
+                    {% if task.is_completed %}
+                    <div class="capt-task-meta">
+                      <i class="fas fa-user-check"></i> Completed by {{ task.completed_by.full_name }}
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              {% if task.description %}
+              <div class="capt-desc-expander" onclick="event.stopPropagation(); this.closest('.capt-task-card').classList.toggle('expanded');">
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              {% endif %}
+              
+            </div>
+            
+            {% if task.description %}
+            <div class="capt-task-desc-wrap">
+              — {{ task.description }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    
+    <script>
+    document.querySelectorAll('.capt-task-click-area').forEach(area => {
+        area.addEventListener('click', function(event) {
+            const card = this.closest('.capt-task-card');
+            if (card.classList.contains('completed')) return;
+            
+            event.preventDefault(); 
+            
+            const taskId = card.getAttribute('data-task-id');
+            const message = "Are you sure you have completed this task? This cannot be undone and will be permanently recorded under your name.";
+            
+            if (typeof window.customConfirmFn === 'function') {
+                window.customConfirmFn(message, function(confirmed) {
+                    if (confirmed) {
+                        executePremiumTaskCompletion(card, taskId);
+                    }
+                });
+            } else {
+                if(confirm(message)) {
+                    executePremiumTaskCompletion(card, taskId);
+                }
+            }
+        });
+    });
+
+    function executePremiumTaskCompletion(card, taskId) {
+        // Visual loading state
+        card.style.opacity = '0.5';
+        card.style.pointerEvents = 'none';
+                
+        fetch("{% url 'staff_complete_task' booking.pk %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-CSRFToken": document.querySelector('input[name="csrfmiddlewaretoken"]').value
+            },
+            body: "task_id=" + taskId
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                // Instantly morph the DOM safely without refreshing
+                card.style.opacity = '1';
+                card.classList.add('completed');
+                
+                const indicator = card.querySelector('.capt-task-indicator');
+                indicator.innerHTML = '<i class="fas fa-check-circle"></i>';
+                
+                const anchor = card.querySelector('.capt-task-meta-anchor');
+                anchor.insertAdjacentHTML('beforeend', `
+                  <div class="capt-task-meta" style="animation: fadeUp 0.3s ease-out;">
+                    <i class="fas fa-user-check"></i> Completed by ${data.completed_by}
+                  </div>
+                `);
+
+                // Strip the exact exact event listeners by cloning the card
+                const newCard = card.cloneNode(true);
+                card.parentNode.replaceChild(newCard, card);
+
+            } else {
+                card.style.opacity = '1';
+                card.style.pointerEvents = 'auto';
+                if (typeof window.customConfirmFn === 'function') {
+                    alert("Failed to complete task: " + data.error);
+                }
+            }
+        })
+        .catch(err => {
+            card.style.opacity = '1';
+            card.style.pointerEvents = 'auto';
+            alert("Network error.");
+        });
+    }
+    </script>
+    
+    <style>
+      @keyframes popIn { 0%{transform:scale(0.5);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+      @keyframes fadeUp { 0%{transform:translateY(5px);opacity:0;} 100%{transform:translateY(0);opacity:1;} }
+    </style>
+
+    {% endif %}
 
     <!-- Booking Info Box -->
     <div class="panel">

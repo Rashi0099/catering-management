@@ -16,6 +16,37 @@
     <form method="post">
       {% csrf_token %}
       
+      <div style="background:rgba(212,168,82,0.04); border:1px solid rgba(212,168,82,0.4); padding:20px; border-radius:8px; margin-bottom:24px">
+        <div class="panel-title" style="margin-bottom:16px;font-size:1rem;color:var(--gold)"><i class="fas fa-users" style="margin-right:6px"></i> Staff Quotas & Direct Join</div>
+        <div class="responsive-grid cols-4" style="gap:16px;margin-bottom:16px">
+          <div class="form-group">
+            <label style="color:var(--gold)">Captains Needed</label>
+            <input type="number" name="quota_captain" value="{{ booking.quota_captain }}"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--teal)">A-Level Needed</label>
+            <input type="number" name="quota_a" value="{{ booking.quota_a }}"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--blue)">B-Level Needed</label>
+            <input type="number" name="quota_b" value="{{ booking.quota_b }}"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--green)">C-Level Needed</label>
+            <input type="number" name="quota_c" value="{{ booking.quota_c }}"/>
+          </div>
+        </div>
+        <div id="quotaTotalDisplay" style="font-size:0.85rem; color:var(--muted); margin-top:8px; text-align:right;">Total Staff Requested: <span id="quotaTotalCount" style="font-weight:600; color:var(--gold);">0</span></div>
+        <div class="form-group" style="padding-top: 15px; border-top:1px solid rgba(212,168,82,0.2); margin-top:15px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" name="allow_direct_join" {% if booking.allow_direct_join %}checked{% endif %} style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold);">
+            <strong>Enable Direct Join</strong>
+            <span style="font-size:0.85rem;color:var(--muted);font-weight:normal;">(Staff can join without admin approval)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="panel-title" style="margin-bottom:16px;font-size:0.9rem">Client Details</div>
       <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:20px">
         <div class="form-group">
           <label>Full Name *</label>
@@ -98,28 +129,7 @@
         </div>
       </div>
 
-      <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px">
-        <div class="panel-title" style="margin-bottom:16px;font-size:0.9rem">Staff Quotas</div>
-        <div class="responsive-grid cols-4" style="gap:16px;margin-bottom:16px">
-          <div class="form-group">
-            <label style="color:var(--gold)">Captains Needed</label>
-            <input type="number" name="quota_captain" value="{{ booking.quota_captain }}"/>
-          </div>
-          <div class="form-group">
-            <label style="color:var(--teal)">A-Level Needed</label>
-            <input type="number" name="quota_a" value="{{ booking.quota_a }}"/>
-          </div>
-          <div class="form-group">
-            <label style="color:var(--blue)">B-Level Needed</label>
-            <input type="number" name="quota_b" value="{{ booking.quota_b }}"/>
-          </div>
-          <div class="form-group">
-            <label style="color:var(--green)">C-Level Needed</label>
-            <input type="number" name="quota_c" value="{{ booking.quota_c }}"/>
-          </div>
-        </div>
-        <div id="quotaTotalDisplay" style="font-size:0.85rem; color:var(--muted); margin-top:8px; text-align:right;">Total Staff Requested: <span id="quotaTotalCount" style="font-weight:600; color:var(--gold);">0</span></div>
-      </div>
+
       
       <script>
         document.addEventListener('DOMContentLoaded', function() {

@@ -45,9 +45,12 @@ urlpatterns = [
     path('gallery/category/<int:pk>/delete/', admin_views.gallery_category_delete, name='admin_gallery_category_delete'),
     path('team/',                         admin_views.team_page,             name='admin_team'),
 
-    # Reports
+    # Reports & Invoice
     path('reports/',                      admin_views.admin_reports,         name='admin_reports'),
+    path('reports/event-reports/',        admin_views.event_reports_list,    name='admin_event_reports'),
+    path('reports/event-reports/<int:pk>/', admin_views.event_report_detail,  name='admin_event_report_detail'),
     path('reports/add/',                  admin_views.admin_report_add,      name='admin_report_add'),
     path('reports/<int:pk>/edit/',        admin_views.admin_report_edit,     name='admin_report_edit'),
     path('reports/<int:pk>/delete/',      admin_views.admin_report_delete,   name='admin_report_delete'),
+    path('invoice/manual/',               admin_views.manual_invoice,        name='admin_manual_invoice'),
 ]

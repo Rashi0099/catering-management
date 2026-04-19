@@ -102,13 +102,25 @@
 
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
+          <label>Coat Size</label>
+          <select name="coat_size">
+            <option value="" {% if not member.coat_size %}selected{% endif %}>No Coat Info</option>
+            <option value="S" {% if member.coat_size == 'S' %}selected{% endif %}>Small (S)</option>
+            <option value="M" {% if member.coat_size == 'M' %}selected{% endif %}>Medium (M)</option>
+            <option value="L" {% if member.coat_size == 'L' %}selected{% endif %}>Large (L)</option>
+            <option value="XL" {% if member.coat_size == 'XL' %}selected{% endif %}>Extra Large (XL)</option>
+            <option value="XXL" {% if member.coat_size == 'XXL' %}selected{% endif %}>Double XL (XXL)</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Education</label>
           <input type="text" name="education" value="{{ member.education }}"/>
         </div>
-        <div class="form-group">
-          <label>Aadhar Card No.</label>
-          <input type="text" name="aadhar" value="{{ member.aadhar_card_no }}"/>
-        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Aadhar Card No.</label>
+        <input type="text" name="aadhar" value="{{ member.aadhar_card_no }}"/>
       </div>
 
       <div class="form-group">

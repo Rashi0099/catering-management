@@ -17,7 +17,7 @@
     {% for cat in categories %}
       <span class="badge" style="background:var(--body-bg); border:1px solid var(--border); padding:6px 12px; display:inline-flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text);">
         {{ cat.name }}
-        <a href="{% url 'admin_gallery_category_delete' cat.pk %}" onclick="return confirm('WARNING: Delete the entire \'{{ cat.name }}\' gallery category? All images inside will be deleted as well!')" style="color:var(--red); display:flex; align-items:center;">
+        <a href="{% url 'admin_gallery_category_delete' cat.pk %}" onclick="return handleCustomConfirm(this, 'WARNING: Delete the entire \'{{ cat.name|escapejs }}\' gallery category? All images inside will be deleted as well!', event);" style="color:var(--red); display:flex; align-items:center;">
           <i class="fas fa-times-circle"></i>
         </a>
       </span>
@@ -42,7 +42,7 @@
         <a href="{% url 'admin_gallery_edit' img.pk %}" class="btn btn-secondary" style="padding:4px 10px;font-size:0.72rem;margin-left:auto">
           <i class="fas fa-edit"></i>
         </a>
-        <a href="{% url 'admin_gallery_delete' img.pk %}" class="btn btn-danger" style="padding:4px 10px;font-size:0.72rem;" onclick="return confirm('Delete this image?')">
+        <a href="{% url 'admin_gallery_delete' img.pk %}" class="btn btn-danger" style="padding:4px 10px;font-size:0.72rem;" onclick="return handleCustomConfirm(this, 'Delete this image?', event);">
           <i class="fas fa-trash"></i>
         </a>
       </div>

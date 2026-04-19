@@ -89,8 +89,8 @@
             <span style="font-size:0.75rem; color:var(--text);">{{ app.created_at|date:"h:i A" }}</span>
           </td>
           <td style="text-align:right;">
-            <a href="{% url 'admin_handle_staff_application' app.pk 'approve' %}" class="btn" style="background: rgba(46,204,133,0.12); color: var(--green); border: 1px solid rgba(46,204,133,0.2); padding:6px 12px; font-size:0.85rem; text-decoration:none;" onclick="return confirm('Approve this application and create a staff account?');">Approve</a>
-            <a href="{% url 'admin_handle_staff_application' app.pk 'reject' %}" class="btn btn-danger" style="padding:6px 12px; font-size:0.85rem;" onclick="return confirm('Reject this application?');">Reject</a>
+            <a href="{% url 'admin_handle_staff_application' app.pk 'approve' %}" class="btn" style="background: rgba(46,204,133,0.12); color: var(--green); border: 1px solid rgba(46,204,133,0.2); padding:6px 12px; font-size:0.85rem; text-decoration:none;" onclick="return handleCustomConfirm(this, 'Approve this application and create a staff account?', event);">Approve</a>
+            <a href="{% url 'admin_handle_staff_application' app.pk 'reject' %}" class="btn btn-danger" style="padding:6px 12px; font-size:0.85rem;" onclick="return handleCustomConfirm(this, 'Reject this application?', event);">Reject</a>
           </td>
         </tr>
         {% empty %}

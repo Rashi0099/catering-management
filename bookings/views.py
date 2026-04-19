@@ -23,7 +23,8 @@ def booking_form(request):
                 try:
                     booking = event_form.save()
                     try:
-                        send_mail(
+                        from core.utils import send_mail_background
+                        send_mail_background(
                             subject=f'🍽️ New Booking: {booking.get_event_type_display()} — {booking.name}',
                             message=f"New booking received!\n\nClient: {booking.name}\nEmail: {booking.email}\nPhone: {booking.phone}\nEvent: {booking.get_event_type_display()}\nDate: {booking.event_date}\nView in admin: /admin-panel/bookings/{booking.pk}/\n",
                             from_email=settings.EMAIL_HOST_USER,

@@ -97,6 +97,8 @@
     .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 500; cursor: pointer; text-decoration: none; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
     .btn-teal   { background: linear-gradient(135deg, var(--teal), var(--teal-dk)); color: #0f1117; font-weight: 600; }
     .btn-teal:hover { filter: brightness(1.1); }
+    .btn-gold   { background: linear-gradient(135deg, var(--gold), var(--gold-dk, #d97706)); color: #0f1117; font-weight: 600; box-shadow: 0 4px 10px rgba(251, 191, 36, 0.2); }
+    .btn-gold:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 14px rgba(251, 191, 36, 0.3); }
     .btn-ghost  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
     .btn-ghost:hover { color: var(--text); border-color: var(--text); }
     .btn-sm     { padding: 5px 12px; font-size: 0.76rem; }
@@ -261,5 +263,6 @@
   }
 </script>
 {% block extra_js %}{% endblock %}
+  {% include 'confirm_modal.html' %}
 </body>
 </html>

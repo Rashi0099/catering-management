@@ -1,0 +1,369 @@
+{% extends 'admin/custom_base.html' %}
+{% load static %}
+
+{% block title %}Invoice | Admin Panel{% endblock %}
+{% block page_title %}Invoice{% endblock %}
+
+{% block extra_css %}
+<style>
+  .invoice-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    gap: 40px;
+  }
+  
+  .form-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 30px;
+    width: 100%;
+    max-width: 800px;
+  }
+  
+  .preview-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    background: #e4e5f1;
+    padding: 40px;
+    border-radius: 14px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+  }
+
+  /* Items Table in Form */
+  .items-table {
+    width: 100%;
+    margin-bottom: 15px;
+  }
+  .items-table th { padding: 5px; font-size: 0.7rem; }
+  .items-table td { padding: 5px; }
+  .items-table input { padding: 6px; font-size: 0.8rem; width: 100%; box-sizing: border-box; }
+  
+  .btn-sm {
+    padding: 4px 8px; font-size: 0.7rem; border-radius: 6px;
+  }
+  
+  .form-section-title {
+    font-size: 0.85rem;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Exact Reference Design with Premium Feel */
+  #invoice-preview {
+    background: #ffffff;
+    color: #000000;
+    font-family: 'DM Sans', sans-serif;
+    padding: 40px;
+    width: 794px; /* A4 width exactly */
+    box-sizing: border-box;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15); /* Nice floating paper effect */
+  }
+
+  #invoice-preview p { margin: 0; }
+  
+  .invoice-header-line {
+    border-bottom: 2px solid #d4a852;
+    margin: 15px 0;
+  }
+  
+  .table-header {
+    background-color: #d4a852;
+    color: #ffffff;
+  }
+
+  .premium-table th {
+    padding: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 1px solid #e0def8;
+  }
+  .premium-table td {
+    padding: 12px;
+    font-size: 14px;
+    border: 1px solid #e0def8;
+  }
+  .premium-table tfoot td {
+    border-top: 2px solid #444;
+    border: 1px solid white;
+    font-weight: bold;
+    font-size: 15px;
+  }
+  
+  /* Fallback reliable table layout for html2canvas headers */
+  .layout-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    border: none;
+  }
+  .layout-table td {
+    border: none;
+    vertical-align: top;
+    padding: 0;
+  }
+</style>
+<!-- html2pdf.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="invoice-container">
+  <!-- Form Panel -->
+  <div class="form-panel">
+    
+    <div class="form-section-title">Invoice Generator</div>
+    <div class="grid-2" style="gap: 10px; margin-bottom: 10px;">
+      <div class="form-group">
+        <label>Invoice No.</label>
+        <input type="text" id="inp-inv-no" value="98" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="text" id="inp-date" value="07-04-2026" oninput="updatePreview()">
+      </div>
+    </div>
+    
+    <div class="form-section-title">Client Details (Bill To)</div>
+    <div class="form-group">
+      <label>Client Name (e.g. Flora event)</label>
+      <input type="text" id="inp-bill-to" placeholder="Client Name" oninput="updatePreview()">
+    </div>
+    <div class="form-group">
+      <label>Contact No.</label>
+      <input type="text" id="inp-contact" placeholder="Phone Number" oninput="updatePreview()">
+    </div>
+
+    <div class="form-section-title">Items</div>
+    <table class="items-table" id="items-input-table">
+      <thead>
+        <tr>
+          <th>Item Name</th>
+          <th width="80">HSN/SAC</th>
+          <th width="60">Qty</th>
+          <th width="80">Price/Unit</th>
+          <th width="30"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Initial rows -->
+      </tbody>
+    </table>
+    <button class="btn btn-ghost btn-sm" onclick="addItemRow()" style="margin-bottom: 20px;"><i class="fas fa-plus"></i> Add Item</button>
+
+    <div style="margin-top: 20px;">
+      <button class="btn btn-gold w-100" style="width:100%; justify-content:center; padding: 12px; font-size:0.95rem; font-weight: bold;" onclick="downloadPDF()">
+        <i class="fas fa-file-pdf"></i> Download PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden Preview Panel -->
+  <div class="preview-wrapper" style="position: absolute; top: -10000px; left: -10000px;">
+    <div id="invoice-preview">
+      
+      <!-- Top Header using reliable table layout -->
+      <table class="layout-table">
+        <tr>
+          <td style="width: 50%; text-align: left;">
+            <h2 style="margin: 0; font-family: 'Playfair Display', serif; font-size: 26px; color: #1a1a1a; font-weight: bold;">Mastan catering</h2>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: #333;">Kondotty</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: #333;">Phone no.: 6235240942</p>
+          </td>
+          <td style="width: 50%; text-align: right; vertical-align: top;">
+             <img src="{% static 'images/logo.png' %}" alt="Mastan's CATERING & EVENTS" style="height: 60px;">
+          </td>
+        </tr>
+      </table>
+
+      <div class="invoice-header-line"></div>
+      
+      <!-- Tax Invoice Title Centered -->
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h3 style="margin: 0; font-size: 24px; color: #ebcd91; font-weight: bold; font-family: 'Playfair Display', serif;">Tax Invoice</h3>
+      </div>
+
+      <!-- Bill To & Invoice Info using reliable table layout -->
+      <table class="layout-table" style="margin-bottom: 25px;">
+        <tr>
+          <td style="width: 50%; text-align: left;">
+            <div style="margin: 0; font-weight: bold; font-size: 15px; margin-bottom: 12px;">Bill To</div>
+            <p style="margin: 0; font-weight: bold; margin-bottom: 8px; font-size: 15px;" id="prev-bill-to">Flora event</p>
+            <p style="margin: 0; font-size: 14px;">Contact No.: <span id="prev-contact">97473 73502</span></p>
+          </td>
+          <td style="width: 50%; text-align: right;">
+            <div style="margin: 0; font-weight: bold; font-size: 15px; margin-bottom: 12px;">Invoice Details</div>
+            <p style="margin: 0; margin-bottom: 8px; font-weight: bold; font-size: 14px;">Invoice No.: <span id="prev-inv-no" style="font-weight: normal;">98</span></p>
+            <p style="margin: 0; font-weight: bold; font-size: 14px;">Date: <span id="prev-date" style="font-weight: normal;">07-04-2026</span></p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Table exactly matching photo styling -->
+      <table class="premium-table" style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 20px;">
+        <thead class="table-header">
+          <tr>
+            <th style="width: 5%; border: 1px solid #e0def8;">#</th>
+            <th style="width: 30%; border: 1px solid #e0def8;">Item Name</th>
+            <th style="width: 15%; border: 1px solid #e0def8;">HSN/ SAC</th>
+            <th style="text-align: left; width: 15%; border: 1px solid #e0def8;">Quantity</th>
+            <th style="text-align: right; width: 15%; border: 1px solid #e0def8;">Price/ Unit</th>
+            <th style="text-align: right; width: 20%; border: 1px solid #e0def8;">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="prev-tbody">
+          <!-- Rows -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" style="border-top: 1px solid #1a1a1a; padding: 0;"></td>
+          </tr>
+          <tr>
+            <td colspan="3" style="text-align: left; border: none !important;">Total</td>
+            <td style="text-align: left; border: none !important;" id="prev-tot-qty">42</td>
+            <td style="text-align: right; border: none !important;"></td>
+            <td style="text-align: right; border: none !important;" id="prev-tot-amt">₹ 27,000.00</td>
+          </tr>
+          <tr>
+            <td colspan="6" style="border-top: 1px solid #1a1a1a; padding: 0;"></td>
+          </tr>
+        </tfoot>
+      </table>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let items = [
+    { name: 'Supervisor', hsn: '', qty: 2, price: 900.00 },
+    { name: 'Captain', hsn: '', qty: 5, price: 750.00 },
+    { name: 'Juice', hsn: '', qty: 3, price: 750.00 },
+    { name: 'Boys', hsn: '', qty: 32, price: 600.00 }
+  ];
+
+  function renderInputTable() {
+    const tbody = document.querySelector('#items-input-table tbody');
+    tbody.innerHTML = '';
+    items.forEach((item, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" value="${item.name}" oninput="updateItem(${index}, 'name', this.value)" placeholder="Name"></td>
+        <td><input type="text" value="${item.hsn}" oninput="updateItem(${index}, 'hsn', this.value)" placeholder="HSN/SAC"></td>
+        <td><input type="number" value="${item.qty}" oninput="updateItem(${index}, 'qty', this.value)"></td>
+        <td><input type="number" value="${item.price}" oninput="updateItem(${index}, 'price', this.value)"></td>
+        <td><button class="btn btn-danger btn-sm" onclick="removeItem(${index})" style="padding:4px 6px;"><i class="fas fa-times"></i></button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    updatePreview();
+  }
+
+  function addItemRow() {
+    items.push({ name: '', hsn: '', qty: 1, price: 0 });
+    renderInputTable();
+  }
+
+  function removeItem(index) {
+    items.splice(index, 1);
+    renderInputTable();
+  }
+
+  function updateItem(index, field, value) {
+    if (field === 'qty' || field === 'price') {
+      items[index][field] = parseFloat(value) || 0;
+    } else {
+      items[index][field] = value;
+    }
+    updatePreview();
+  }
+
+  // Use simple fallback for money to ensure html2pdf handles fonts well
+  function formatMoney(amount) {
+    return parseFloat(amount).toFixed(2);
+  }
+
+  function updatePreview() {
+    // Basic Details
+    document.getElementById('prev-bill-to').innerText = document.getElementById('inp-bill-to').value || '-';
+    document.getElementById('prev-contact').innerText = document.getElementById('inp-contact').value || '-';
+    document.getElementById('prev-inv-no').innerText = document.getElementById('inp-inv-no').value || '-';
+    document.getElementById('prev-date').innerText = document.getElementById('inp-date').value || '-';
+
+    // Items
+    const prevTbody = document.getElementById('prev-tbody');
+    prevTbody.innerHTML = '';
+    let totQty = 0;
+    let totAmt = 0;
+
+    items.forEach((item, index) => {
+      const amount = item.qty * item.price;
+      totQty += (parseFloat(item.qty) || 0);
+      totAmt += amount;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td style="font-weight: bold;">${item.name}</td>
+        <td>${item.hsn}</td>
+        <td style="text-align: left;">${item.qty}</td>
+        <td style="text-align: right;">₹ ${formatMoney(item.price)}</td>
+        <td style="text-align: right;">₹ ${formatMoney(amount)}</td>
+      `;
+      prevTbody.appendChild(tr);
+    });
+
+    document.getElementById('prev-tot-qty').innerText = totQty;
+    document.getElementById('prev-tot-amt').innerText = '₹ ' + formatMoney(totAmt);
+  }
+
+  function downloadPDF() {
+    // Scroll element into view and reset window scroll to ensure flawless html2canvas conversion
+    const element = document.getElementById('invoice-preview');
+    element.scrollIntoView({ behavior: "instant", block: "start", inline: "nearest" });
+    
+    // Slight delay to ensure paint is complete before capturing
+    setTimeout(() => {
+      const opt = {
+        margin:       0,
+        filename:     'Invoice_' + document.getElementById('inp-inv-no').value + '.pdf',
+        image:        { type: 'jpeg', quality: 1 },
+        html2canvas:  { 
+           scale: 2, 
+           useCORS: true, 
+           logging: false
+        },
+        jsPDF:        { unit: 'in', format: 'A4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }, 200);
+  }
+
+  // Initialize defaults
+  function initializeDefaults() {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    
+    document.getElementById('inp-date').value = `${day}-${month}-${year}`;
+    
+    // Auto-generate invoice number
+    const randomInv = 'INV-' + Math.floor(100000 + Math.random() * 900000);
+    document.getElementById('inp-inv-no').value = randomInv;
+  }
+
+  initializeDefaults();
+  renderInputTable();
+</script>
+{% endblock %}

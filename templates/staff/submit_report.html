@@ -1,0 +1,112 @@
+{% extends 'staff/base.html' %}
+{% block title %}Post-Event Settlement Report{% endblock %}
+{% block page_title %}Submit Report{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px">
+  <a href="{% url 'staff_booking_detail' booking.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Booking</a>
+</div>
+
+<div class="panel">
+  <div class="panel-hdr"><div class="panel-title">Post-Event Settlement Report</div>
+    <span class="badge" style="background:var(--surface);color:var(--gold);">Booking #{{ booking.pk }}</span>
+  </div>
+  
+  <p style="font-size:0.85rem; color:var(--muted); line-height: 1.5; margin-bottom: 20px;">
+    Please fill in the financial and logistics details for the completed event. Default answers are "NIL". Fill exactly what you know. 
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    
+    <div style="background:var(--surface); padding: 15px; border-radius: 8px; border: 1px dashed var(--border); margin-bottom: 20px;">
+      <h3 style="font-size: 0.85rem; color: var(--gold); text-transform: uppercase; margin-top: 0; margin-bottom: 12px; font-weight: 600;">Event Constants (Pre-filled)</h3>
+      <div class="grid-2">
+        <div class="form-group">
+          <label style="color:var(--muted); font-size:0.75rem;">Date</label>
+          <div style="font-weight: 600;">{{ booking.event_date|date:"d/m/Y" }}</div>
+        </div>
+        <div class="form-group">
+          <label style="color:var(--muted); font-size:0.75rem;">Site Name</label>
+          <div style="font-weight: 600;">{{ booking.venue|default:"-" }}</div>
+        </div>
+        <div class="form-group">
+          <label style="color:var(--muted); font-size:0.75rem;">Event Name</label>
+          <div style="font-weight: 600;">{{ booking.name }}</div>
+        </div>
+        <div class="form-group">
+          <label style="color:var(--muted); font-size:0.75rem;">No. of Boys</label>
+          <div style="font-weight: 600;">{{ assigned_count }}</div>
+        </div>
+      </div>
+    </div>
+    
+    <h3 style="font-size: 0.85rem; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; font-weight: 600;">Financial Settlement</h3>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Bill In Charge</label>
+        <input type="text" name="bill_in_charge" placeholder="NIL" value="{{ report.bill_in_charge|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Total Amount</label>
+        <input type="text" name="total_amount" placeholder="NIL" value="{{ report.total_amount|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Balance Amount</label>
+        <input type="text" name="balance_amount" placeholder="NIL" value="{{ report.balance_amount|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Pending</label>
+        <input type="text" name="pending" placeholder="NIL" value="{{ report.pending|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+    </div>
+
+    <h3 style="font-size: 0.85rem; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; margin-top: 10px; font-weight: 600;">Logistics & Rentals</h3>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Juice</label>
+        <input type="text" name="juice" placeholder="NIL" value="{{ report.juice|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Tea</label>
+        <input type="text" name="tea" placeholder="NIL" value="{{ report.tea|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Popcorn</label>
+        <input type="text" name="popcorn" placeholder="NIL" value="{{ report.popcorn|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Hosting</label>
+        <input type="text" name="hosting" placeholder="NIL" value="{{ report.hosting|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Coat Incharge</label>
+        <input type="text" name="coat_incharge" placeholder="NIL" value="{{ report.coat_incharge|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Coat Rent</label>
+        <input type="text" name="coat_rent" placeholder="NIL" value="{{ report.coat_rent|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label>TA (Travel Allowance)</label>
+        <input type="text" name="ta" placeholder="NIL" value="{{ report.ta|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+    </div>
+
+    {% if report and report.status == 'submitted' %}
+    <div style="margin-top:24px; padding:16px; background:rgba(46,204,133,0.1); border:1px solid var(--green); border-radius:8px; text-align:center; color:var(--green); font-weight:500;">
+      <i class="fas fa-lock"></i> This report has been finalized and submitted securely.
+    </div>
+    {% else %}
+    <div style="margin-top:24px; display:flex; gap:16px;">
+      <button type="submit" name="action" value="draft" class="btn btn-ghost" style="flex:1; padding:14px; font-size:1rem; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+        <i class="fas fa-save" style="margin-right:6px;"></i> Save Draft
+      </button>
+      <button type="submit" name="action" value="submit" class="btn btn-gold" style="flex:1; padding:14px; font-size:1rem; font-weight: 600; justify-content: center;" onclick="return handleCustomConfirm(this, 'Are you sure you want to finalize this report? It cannot be edited after final submission.', event);">
+        <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Final Submit
+      </button>
+    </div>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

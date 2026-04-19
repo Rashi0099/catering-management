@@ -1,0 +1,60 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Captain Event Reports{% endblock %}
+{% block page_title %}Captain Event Reports{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-hdr"><div class="panel-title">Submitted Settlement Reports</div></div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Event Location</th>
+          <th>Captain</th>
+          <th>Total Billed</th>
+          <th>Pending</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in reports %}
+        <tr>
+          <td><div style="font-weight:500;">{{ report.booking.event_date|date:"d M Y" }}</div></td>
+          <td>{{ report.booking.name }}<div class="caption">{{ report.booking.venue|default:"-" }}</div></td>
+          <td>{{ report.submitted_by.full_name }}<div class="caption">{{ report.submitted_by.staff_id }}</div></td>
+          <td>{{ report.total_amount }}</td>
+          <td>
+            {% if report.pending != 'NIL' and report.pending != '0' and report.pending != '-' %}
+              <span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;">{{ report.pending }}</span>
+            {% else %}
+              <span class="badge" style="background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;">NIL</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'admin_event_report_detail' report.pk %}" class="btn btn-ghost btn-sm" style="color:var(--gold)">View Full Report</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center; padding:30px; color:var(--muted)">No reports have been submitted yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  {% if reports.has_other_pages %}
+  <div class="pagination">
+    {% if reports.has_previous %}
+      <a href="?page={{ reports.previous_page_number }}">Previous</a>
+    {% endif %}
+    <span class="current">Page {{ reports.number }} of {{ reports.paginator.num_pages }}</span>
+    {% if reports.has_next %}
+      <a href="?page={{ reports.next_page_number }}">Next</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

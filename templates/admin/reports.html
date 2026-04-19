@@ -89,7 +89,7 @@
         </td>
         <td>
           <a href="{% url 'admin_report_edit' r.pk %}" class="btn btn-ghost"><i class="fas fa-pencil-alt"></i> Edit</a>
-          <a href="{% url 'admin_report_delete' r.pk %}" class="btn btn-danger" onclick="return confirm('Delete this report?');"><i class="fas fa-trash"></i> Delete</a>
+          <a href="{% url 'admin_report_delete' r.pk %}" class="btn btn-danger" onclick="return handleCustomConfirm(this, 'Delete this report?', event);"><i class="fas fa-trash"></i> Delete</a>
         </td>
       </tr>
       {% empty %}
