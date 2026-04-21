@@ -8,13 +8,21 @@ def auto_complete_past_bookings():
     """
     Finds all 'confirmed' bookings with an event_date in the past
     and automatically marks them as 'completed'.
+    Rate-limited to run once every 10 minutes.
     """
+    lock_key = 'auto_complete_lock'
+    if cache.get(lock_key):
+        return
+
     today = timezone.now().date()
     past_confirmed = Booking.objects.filter(status='confirmed', event_date__lt=today)
     if past_confirmed.exists():
         past_confirmed.update(status='completed')
         # Invalidate dashboard cache so counts update immediately
         cache.delete('admin_dashboard_stats')
+    
+    # Set lock for 10 minutes
+    cache.set(lock_key, True, 600)
 
 
 def get_pending_count():

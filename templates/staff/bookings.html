@@ -9,7 +9,7 @@
 {% block content %}
 <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
   <form method="get" style="display:flex;gap:8px;flex:1;min-width:280px">
-    <input type="text" name="q" placeholder="Search by name or phone..." value="{{ search }}" style="flex:1"/>
+    <input type="text" name="q" placeholder="Search by name" value="{{ search }}" style="flex:1"/>
     <select name="status" style="width:auto" onchange="this.form.submit()">
       <option value="">All</option>
       <option value="pending"     {% if status_filter == 'pending'     %}selected{% endif %}>Pending</option>

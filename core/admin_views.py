@@ -338,6 +338,7 @@ def handle_application(request, pk, app_id, action):
             messages.error(request, 'No cancel request to reject.')
         else:
             application.status = 'approved'  # Revert to approved since cancel is denied
+            application.cancel_rejected = True  # Flag shown on staff portal
             application.save()
             messages.success(request, 'Cancel request rejected.')
 

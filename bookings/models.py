@@ -1,5 +1,8 @@
 from django.db import models
 from django.conf import settings
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.cache import cache
 
 
 class Booking(models.Model):
@@ -219,6 +222,7 @@ class EventApplication(models.Model):
     applicant_phone = models.CharField(max_length=20)
     note = models.TextField(blank=True, help_text="Note from staff to admin")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    cancel_rejected = models.BooleanField(default=False, help_text="True if admin denied a cancel request")
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -299,3 +303,10 @@ class EventTask(models.Model):
 
     def __str__(self):
         return f"[{'X' if self.is_completed else ' '}] {self.task_name} - {self.booking}"
+
+
+@receiver([post_save, post_delete], sender=Booking)
+def invalidate_booking_caches(sender, instance, **kwargs):
+    """Clear admin counters when bookings are created, updated, or deleted."""
+    cache.delete('pending_booking_count')
+    cache.delete('admin_dashboard_stats')

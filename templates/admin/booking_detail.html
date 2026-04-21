@@ -280,6 +280,7 @@
           <div style="flex: 1;">
             <select id="admin-att-status-filter" class="prm-input" style="padding-top:10px; padding-bottom:10px; font-size:0.9rem; cursor:pointer;" onchange="filterAdminAtt()">
               <option value="all">All</option>
+              <option value="pending">Pending</option>
               <option value="present">Present</option>
               <option value="absent">Absent</option>
             </select>
@@ -344,7 +345,8 @@
                 <div>
                   <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
                   <select name="attendance_status_{{ item.staff.pk }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
-                    <option value="present" {% if not item.attendance or item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+                    <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
+                    <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
                     <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
                   </select>
                 </div>

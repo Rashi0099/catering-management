@@ -6,71 +6,72 @@
 {% block extra_css %}
 <style>
   .booking-hero {
-    padding: 140px 5% 80px;
-    background: linear-gradient(rgba(10,15,24,0.8), rgba(10,15,24,0.8)), url('{% static 'images/hero_luxury.png' %}');
-    background-size: cover; background-position: center;
+    padding: 140px 5% 100px;
+    background: var(--bg);
     text-align: center;
   }
   .booking-wrap {
-    max-width: 900px; margin: -50px auto 100px;
+    max-width: 960px; margin: -50px auto 100px;
     padding: 0 5%;
   }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  .form-group { margin-bottom: 24px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .form-group { margin-bottom: 28px; }
   .form-group.full { grid-column: 1 / -1; }
   
   label {
-    display: block; font-size: 0.72rem; font-weight: 700;
+    display: block; font-size: 0.75rem; font-weight: 700;
     color: var(--gold); text-transform: uppercase;
-    letter-spacing: 0.15em; margin-bottom: 10px;
+    letter-spacing: 0.15em; margin-bottom: 12px;
   }
   
   input, select, textarea {
-    width: 100%; padding: 16px 20px;
-    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
-    border-radius: 12px; color: #fff;
-    font-family: 'Outfit', sans-serif; font-size: 0.95rem;
+    width: 100%; padding: 18px 24px;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 14px; color: var(--brown);
+    font-family: 'Outfit', sans-serif; font-size: 1rem;
     transition: all 0.3s;
   }
   input:focus, select:focus, textarea:focus {
     outline: none; border-color: var(--gold);
-    background: rgba(255,255,255,0.05);
-    box-shadow: 0 0 20px rgba(212,168,82,0.15);
+    box-shadow: 0 0 0 4px rgba(200, 148, 10, 0.1);
   }
-  textarea { resize: vertical; min-height: 120px; }
+  textarea { resize: vertical; min-height: 140px; }
   
   .form-section-title {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 1.4rem; color: #fff;
-    margin: 40px 0 24px; grid-column: 1/-1;
-    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    font-size: 1.6rem; color: var(--brown);
+    margin: 48px 0 28px; grid-column: 1/-1;
+    padding-bottom: 14px; border-bottom: 1px solid var(--border);
+    font-weight: 600;
   }
   
   .tabs {
-    display: flex; gap: 12px; margin-bottom: 40px; justify-content: center;
+    display: flex; gap: 16px; margin-bottom: 48px; justify-content: center;
   }
   .tab-btn {
-    padding: 14px 32px; border: 1px solid var(--border);
-    background: var(--glass); color: var(--muted);
-    border-radius: 10px; font-weight: 600; cursor: pointer;
-    backdrop-filter: blur(10px); transition: all 0.3s;
+    padding: 16px 36px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    border-radius: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.3s; font-size: 0.95rem;
   }
   .tab-btn.active {
-    background: var(--gold); color: #fff; border-color: var(--gold);
-    box-shadow: 0 10px 20px rgba(212,168,82,0.2);
+    background: var(--brown); color: #fff; border-color: var(--brown);
+    box-shadow: 0 10px 30px rgba(61, 28, 2, 0.15);
   }
   
   .booking-section { display: none; margin-top: 20px; }
-  .booking-section.active { display: block; animation: fadeIn 0.5s ease; }
+  .booking-section.active { display: block; animation: fadeIn 0.6s cubic-bezier(0.2, 0, 0, 1); }
   
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
   
   @media (max-width:768px) {
     .form-grid { grid-template-columns: 1fr; }
     .booking-wrap { margin-top: -30px; }
+    .tabs { flex-direction: column; width: 100%; }
+    .tab-btn { width: 100%; text-align: center; }
   }
 </style>
 {% endblock %}
@@ -78,18 +79,18 @@
 {% block content %}
 
 <div class="booking-hero">
-  <div class="section-tag">Reservations & Careers</div>
-  <h1 class="section-title">Shape Your Experience</h1>
-  <div class="divider"></div>
-  <p class="section-sub" style="color:rgba(255,255,255,0.7)">Excellence is in the details. Share your vision or join our prestigious team today.</p>
+  <div class="section-tag" style="color:var(--gold); font-weight:700; letter-spacing:0.2em; text-transform:uppercase; font-size:0.75rem; margin-bottom:16px;">✦ Reservations & Careers</div>
+  <h1 class="section-title" style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.5rem, 5vw, 4rem); color:var(--brown); margin-bottom:20px;">Shape Your Experience</h1>
+  <div class="divider" style="width:60px; height:3px; background:var(--gold); margin:20px auto; border-radius:2px;"></div>
+  <p class="section-sub" style="font-size:1.1rem; color:var(--muted); max-width:640px; line-height:1.7; margin:0 auto;">Excellence is in the details. Share your vision or join our prestigious team today.</p>
 </div>
 
 <div class="booking-wrap">
-  <div class="glass-card" style="border-radius:32px; padding:60px;">
+  <div class="glass-card" style="background:#fff; border:1px solid var(--border); border-radius:32px; padding:60px; box-shadow:0 20px 50px rgba(61,28,2,0.08)">
 
     {% if error %}
-    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171; padding:16px 24px; border-radius:12px; margin-bottom:40px; font-weight:500;">
-      <i class="fas fa-exclamation-circle" style="margin-right:10px;"></i> {{ error }}
+    <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); color:#dc2626; padding:18px 28px; border-radius:14px; margin-bottom:40px; font-weight:600; display:flex; align-items:center;">
+      <i class="fas fa-exclamation-circle" style="margin-right:12px; font-size:1.2rem;"></i> {{ error }}
     </div>
     {% endif %}
 
@@ -127,7 +128,7 @@
             <label>Event Type</label>
             <div style="position:relative;">
               {{ event_form.event_type }}
-              <i class="fas fa-chevron-down" style="position:absolute; right:20px; top:18px; font-size:0.8rem; pointer-events:none; opacity:0.5;"></i>
+              <i class="fas fa-chevron-down" style="position:absolute; right:20px; top:22px; font-size:0.8rem; pointer-events:none; opacity:0.4; color:var(--brown);"></i>
             </div>
           </div>
           <div class="form-group">
@@ -157,8 +158,8 @@
             <textarea name="message" placeholder="Describe your vision, menu preferences, or additional services needed...">{{ event_form.message.value|default:'' }}</textarea>
           </div>
         </div>
-        <button type="submit" name="submit_event" class="btn-primary" style="width:100%; justify-content:center; margin-top:30px; border:none; cursor:pointer;">
-          <i class="fas fa-paper-plane" style="margin-right:10px;"></i> Reserve Your Exclusive Catering
+        <button type="submit" name="submit_event" class="btn-primary" style="width:100%; padding:22px; border-radius:14px; border:none; background:var(--brown); color:#fff; font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:all 0.3s;" onmouseover="this.style.background='var(--brown-lt)'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 30px rgba(61,28,2,0.2)'" onmouseout="this.style.background='var(--brown)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+          <i class="fas fa-paper-plane"></i> Reserve Your Exclusive Catering
         </button>
       </form>
     </div>
@@ -173,22 +174,22 @@
             <div class="form-group {% if field.name == 'place' or field.name == 'education' %}full{% endif %}">
               <label>{{ field.label }} {% if field.field.required %}*{% endif %}</label>
               {% if field.name == 'image' %}
-                <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                <div style="background:var(--bg); padding:18px; border-radius:14px; border:1px solid var(--border);">
                   {{ field }}
                 </div>
               {% else %}
                 {{ field }}
               {% endif %}
               {% if field.errors %}
-                <div style="color:#f87171; font-size:0.75rem; margin-top:8px;">
+                <div style="color:#dc2626; font-size:0.8rem; margin-top:8px; font-weight:500;">
                   {% for error in field.errors %}• {{ error }}<br>{% endfor %}
                 </div>
               {% endif %}
             </div>
           {% endfor %}
         </div>
-        <button type="submit" name="submit_staff" class="btn-primary" style="width:100%; justify-content:center; margin-top:30px; border:none; cursor:pointer;">
-          <i class="fas fa-id-badge" style="margin-right:10px;"></i> Submit Professional Application
+        <button type="submit" name="submit_staff" class="btn-primary" style="width:100%; padding:22px; border-radius:14px; border:none; background:var(--brown); color:#fff; font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:all 0.3s;" onmouseover="this.style.background='var(--brown-lt)'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 30px rgba(61,28,2,0.2)'" onmouseout="this.style.background='var(--brown)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+          <i class="fas fa-id-badge"></i> Submit Professional Application
         </button>
       </form>
     </div>

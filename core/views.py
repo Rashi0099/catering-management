@@ -10,12 +10,15 @@ def csrf_failure(request, reason=''):
     return render(request, 'core/403_csrf.html', {'reason': reason}, status=403)
 
 def home(request):
-    """Renders the homepage displaying featured menu items and testimonials."""
+    """Renders the homepage displaying featured menu items, testimonials, and gallery images."""
+    from gallery.models import GalleryImage
     featured_items = MenuItem.objects.filter(is_featured=True, is_available=True)[:6]
     testimonials   = Testimonial.objects.filter(is_featured=True)[:3]
+    gallery_images = GalleryImage.objects.all().order_by('-id')[:5]
     return render(request, 'core/home.html', {
         'featured_items': featured_items,
         'testimonials': testimonials,
+        'gallery_images': gallery_images,
     })
 
 

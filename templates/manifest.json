@@ -3,7 +3,7 @@
   "short_name": "{{ short_name }}",
   "start_url": "{{ start_url }}",
   "display": "standalone",
-  "background_color": "#111111",
+  "background_color": "#ffffff",
   "theme_color": "#d4a852",
   "description": "Catering Management Application",
   "icons": [

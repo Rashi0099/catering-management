@@ -10,7 +10,7 @@ from django.db import transaction
 from django.core.cache import cache
 
 from .models import Staff, StaffPayout, StaffAttendance, StaffNotice
-from bookings.models import Booking, BookingPayment
+from bookings.models import Booking, BookingPayment, EventApplication
 
 
 # ── Authentication ───────────────────────────────────────────────────────────
@@ -148,6 +148,7 @@ def staff_dashboard(request):
         cancel_req_booking_ids = list(my_applications.filter(status='cancel_requested').values_list('booking_id', flat=True))
         rejected_app_booking_ids = list(my_applications.filter(status='rejected').values_list('booking_id', flat=True))
         cancelled_app_booking_ids = list(my_applications.filter(status='cancelled').values_list('booking_id', flat=True))
+        cancel_rejected_booking_ids = list(my_applications.filter(status='approved', cancel_rejected=True).values_list('booking_id', flat=True))
 
         day_works = my_bookings.filter(status='completed', session='day').count()
         night_works = my_bookings.filter(status='completed', session='night').count()
@@ -162,6 +163,7 @@ def staff_dashboard(request):
             'cancel_req_booking_ids': cancel_req_booking_ids,
             'rejected_app_booking_ids': rejected_app_booking_ids,
             'cancelled_app_booking_ids': cancelled_app_booking_ids,
+            'cancel_rejected_booking_ids': cancel_rejected_booking_ids,
             'day_works': day_works,
             'night_works': night_works,
             'long_works': long_works,
@@ -445,10 +447,31 @@ def staff_apply_booking(request, pk):
     
     # If POST, process the application
     if request.method == 'POST':
-        from bookings.models import EventApplication
-        
         try:
             with transaction.atomic():
+                # Lock the booking row for the duration of this transaction to prevent quota race conditions
+                booking = Booking.objects.select_for_update().get(pk=pk)
+                
+                approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
+                is_full = False
+                
+                if request.user.level == 'captain':
+                    if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
+                        is_full = True
+                elif request.user.level == 'A':
+                    if booking.quota_a > 0 and approved_count >= booking.quota_a:
+                        is_full = True
+                elif request.user.level == 'B':
+                    if booking.quota_b > 0 and approved_count >= booking.quota_b:
+                        is_full = True
+                elif request.user.level == 'C':
+                    if booking.quota_c > 0 and approved_count >= booking.quota_c:
+                        is_full = True
+
+                if is_full:
+                    messages.error(request, f"Sorry, the {request.user.get_level_display()} quota is fully booked for this event.")
+                    return redirect('staff_dashboard')
+
                 # --- SHIFT CONSTRAINT VALIDATION ---
                 # A staff member cannot have 2 pending/approved applications OR direct assignments 
                 # on the exact same date for the exact same session (Day/Day or Night/Night).

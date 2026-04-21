@@ -4,21 +4,21 @@
 {% block nav_menu %}active{% endblock %}
 
 {% block content %}
-<div style="padding:140px 5% 100px; background:linear-gradient(var(--bg), var(--surface)); min-height:100vh;">
-  <div class="section-header" style="margin-bottom:60px">
-    <div class="section-tag">Chef's Gallery</div>
-    <h1 class="section-title">Curated Menu</h1>
-    <div class="divider"></div>
-    <p class="section-sub">A symphony of flavors crafted with the finest local ingredients and global inspiration.</p>
+<div style="padding:140px 5% 100px; background:var(--bg); min-height:100vh;">
+  <div class="section-header" style="margin-bottom:60px; text-align:center;">
+    <div class="section-tag" style="color:var(--gold); font-weight:700; letter-spacing:0.2em; text-transform:uppercase; font-size:0.75rem; margin-bottom:16px;">✦ Chef's Gallery</div>
+    <h1 class="section-title" style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.2rem, 5vw, 3.5rem); color:var(--brown); margin-bottom:20px;">Curated Menu</h1>
+    <div class="divider" style="width:60px; height:3px; background:var(--gold); margin:20px auto; border-radius:2px;"></div>
+    <p class="section-sub" style="font-size:1.05rem; color:var(--muted); max-width:580px; line-height:1.7; margin:0 auto;">A symphony of flavors crafted with the finest local ingredients and global inspiration.</p>
   </div>
 
   <!-- Category Tabs -->
   <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:60px">
-    <a href="{% url 'menu' %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if not active_category %}var(--gold){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if not active_category %}#fff{% else %}var(--muted){% endif %}; background:{% if not active_category %}var(--gold){% else %}var(--glass){% endif %}; transition:all 0.3s; backdrop-filter:blur(10px);">
+    <a href="{% url 'menu' %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if not active_category %}var(--brown){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if not active_category %}#fff{% else %}var(--muted){% endif %}; background:{% if not active_category %}var(--brown){% else %}transparent{% endif %}; transition:all 0.3s;">
       All Collections
     </a>
     {% for cat in categories %}
-    <a href="{% url 'menu_category' cat.slug %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if active_category.slug == cat.slug %}var(--gold){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if active_category.slug == cat.slug %}#fff{% else %}var(--muted){% endif %}; background:{% if active_category.slug == cat.slug %}var(--gold){% else %}var(--glass){% endif %}; transition:all 0.3s; backdrop-filter:blur(10px);">
+    <a href="{% url 'menu_category' cat.slug %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if active_category.slug == cat.slug %}var(--brown){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if active_category.slug == cat.slug %}#fff{% else %}var(--muted){% endif %}; background:{% if active_category.slug == cat.slug %}var(--brown){% else %}transparent{% endif %}; transition:all 0.3s;">
       {{ cat.icon }} {{ cat.name }}
     </a>
     {% endfor %}
@@ -27,32 +27,32 @@
   <!-- Menu Items Grid -->
   <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:30px">
     {% for item in items %}
-    <div class="glass-card" style="padding:24px; border-radius:24px;">
-      <div style="height:200px; border-radius:16px; overflow:hidden; margin-bottom:20px; border:1px solid var(--border);">
+    <div class="glass-card" style="background:#fff; border:1px solid var(--border); padding:24px; border-radius:24px; transition:transform 0.3s; box-shadow:0 10px 30px rgba(61,28,2,0.05);" onmouseover="this.style.transform='translateY(-8px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="height:220px; border-radius:16px; overflow:hidden; margin-bottom:20px; border:1px solid var(--border); background:#fdf9f3;">
         {% if item.image %}
         <img src="{{ item.image.url }}" style="width:100%; height:100%; object-fit:cover;" alt="{{ item.name }}"/>
         {% else %}
-        <div style="width:100%; height:100%; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; font-size:3.5rem;">🍽️</div>
+        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:3.5rem;">🍽️</div>
         {% endif %}
       </div>
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-        <h4 style="font-family:'Cormorant Garamond',serif; font-size:1.45rem; color:#fff;">{{ item.name }}</h4>
+        <h4 style="font-family:'Cormorant Garamond',serif; font-size:1.45rem; color:var(--brown); font-weight:600;">{{ item.name }}</h4>
         <span style="color:var(--gold); font-weight:700; font-size:1.1rem;">₹{{ item.price }}</span>
       </div>
       <p style="color:var(--muted); font-size:0.9rem; line-height:1.7; margin-bottom:20px;">{{ item.description }}</p>
       <div style="display:flex; gap:8px; border-top:1px solid var(--border); padding-top:16px;">
         {% if item.is_vegetarian %}
-        <span style="font-size:0.7rem; background:rgba(46,125,50,0.1); color:#81c784; padding:4px 10px; border-radius:6px; border:1px solid rgba(46,125,50,0.2);">VEGETARIAN</span>
+        <span style="font-size:0.7rem; background:rgba(56,142,60,0.06); color:#2e7d32; padding:4px 10px; border-radius:6px; border:1px solid rgba(56,142,60,0.15); font-weight:700;">VEGETARIAN</span>
         {% endif %}
         {% if item.is_gluten_free %}
-        <span style="font-size:0.7rem; background:rgba(91,141,238,0.1); color:#9cc3ff; padding:4px 10px; border-radius:6px; border:1px solid rgba(91,141,238,0.2);">GLUTEN FREE</span>
+        <span style="font-size:0.7rem; background:rgba(91,141,238,0.06); color:#1a73e8; padding:4px 10px; border-radius:6px; border:1px solid rgba(91,141,238,0.15); font-weight:700;">GLUTEN FREE</span>
         {% endif %}
       </div>
     </div>
     {% empty %}
-    <div style="grid-column:1/-1; text-align:center; padding:100px; background:var(--glass); border-radius:24px; border:1.5px dashed var(--border);">
+    <div style="grid-column:1/-1; text-align:center; padding:100px; background:var(--surface); border-radius:24px; border:1.5px dashed var(--border);">
       <div style="font-size:4rem; margin-bottom:24px; opacity:0.3;">🍽️</div>
-      <h3 style="color:#fff; margin-bottom:10px;">Collection Coming Soon</h3>
+      <h3 style="color:var(--brown); margin-bottom:10px;">Collection Coming Soon</h3>
       <p style="color:var(--muted);">We are currently curating new culinary delights. Stay tuned.</p>
     </div>
     {% endfor %}
@@ -60,9 +60,9 @@
 </div>
 
 <!-- CTA -->
-<div style="background:var(--surface); padding:100px 5%; text-align:center; border-top:1px solid var(--border);">
-  <h2 style="font-family:'Cormorant Garamond',serif; font-size:2.8rem; color:#fff; margin-bottom:20px;">Looking for something bespoke?</h2>
-  <p style="color:var(--muted); max-width:600px; margin:0 auto 40px; line-height:1.8;">Our executive chefs can design a custom menu perfectly balanced for your specific event theme and dietary requirements.</p>
-  <a href="{% url 'booking' %}" class="btn-primary" style="padding:18px 45px;">Request a Custom Proposal</a>
+<div style="background:linear-gradient(135deg, var(--brown) 0%, var(--brown-lt) 100%); padding:120px 5%; text-align:center; color:#fff;">
+  <h2 style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.5rem, 5vw, 3.5rem); color:#fff; margin-bottom:24px;">Looking for something bespoke?</h2>
+  <p style="color:rgba(255,255,255,0.7); max-width:640px; margin:0 auto 48px; line-height:1.8; font-size:1.1rem;">Our executive chefs can design a custom menu perfectly balanced for your specific event theme and dietary requirements.</p>
+  <a href="{% url 'booking' %}" class="btn-primary" style="padding:20px 50px; background:var(--gold); border-radius:12px; text-decoration:none; color:#fff; font-weight:700; font-size:1.05rem; display:inline-block; transition:all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 30px rgba(200, 148, 10, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">Request a Custom Proposal</a>
 </div>
 {% endblock %}

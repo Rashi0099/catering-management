@@ -34,10 +34,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Custom apps — staff MUST be first (custom AUTH_USER_MODEL)
-    'staff',
+    'staff.apps.StaffConfig',
     'core',
     'menu',
-    'bookings',
+    'bookings.apps.BookingsConfig',
     'gallery',
     'webpush',
 ]

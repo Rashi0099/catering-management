@@ -1,8 +1,6 @@
 {% extends 'staff/base.html' %}
 {% block title %}My Dashboard — Mastan's Catering & Services{% endblock %}
 {% block nav_dash %}active{% endblock %}
-{% block page_title %}Welcome, {{ me.first_name }} 👋{% endblock %}
-
 {% block content %}
 
 {% if active_notice %}
@@ -55,7 +53,7 @@
       <!-- Box 2: Completed Events -->
       <div style="width:100%; padding:24px 12px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
         <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:1.8rem; color:var(--teal); text-align:center;">{{ me.total_events_completed }}</div>
-        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:500; text-align:center;">Completed</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:500; text-align:center;"> Event Completed</div>
       </div>
 
       <!-- Box 3: Progression/Decision -->
@@ -122,38 +120,10 @@
 
 <style>
   .stats-row-3 { grid-template-columns: repeat(3, 1fr) !important; }
-  .mobile-tabs { display: none; }
   @media (max-width: 768px) {
     .stats-row-3 { grid-template-columns: 1fr !important; }
-    .mobile-tabs { 
-      display: flex; gap: 8px; margin-bottom: 16px; background: rgba(255,255,255,0.03); 
-      padding: 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
-    }
-    .m-tab-btn {
-      flex: 1; padding: 10px; border: none; background: transparent; color: var(--muted);
-      border-radius: 8px; font-weight: 600; font-family: 'DM Sans', sans-serif; font-size: 0.82rem;
-      transition: all 0.2s;
-    }
-    .m-tab-btn.active {
-      background: var(--surface); color: var(--teal); box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-    #panel-upcoming { display: block; }
-    #panel-available { display: none; }
   }
 </style>
-
-<div class="mobile-tabs" id="mobileTabsContainer">
-  <button class="m-tab-btn active" id="btn-upcoming" onclick="switchDashboardTab('upcoming')">Confirmed Events</button>
-  <button class="m-tab-btn" id="btn-available" onclick="switchDashboardTab('available')" style="position: relative;">
-    Available Shifts
-    {% if available_bookings|length > 0 %}
-      <span style="position: absolute; top: 0; right: 0; background: var(--red); color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: bold; transform: translate(30%, -30%); box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);">
-        {{ available_bookings|length }}
-      </span>
-    {% endif %}
-  </button>
-</div>
-
 <div class="grid2">
   <!-- Confirmed Events -->
   <div class="panel" id="panel-upcoming">
@@ -229,8 +199,14 @@
         </div>
       </div>
       
-      {% if ev.pk in pending_app_booking_ids %}
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+      {% if ev.pk in cancel_rejected_booking_ids %}
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(41,182,246,0.1); color:#29b6f6; border:1px solid rgba(41,182,246,0.3); border-radius:8px; padding:5px 10px; font-size:0.75rem; font-weight:600;">
+            <i class="fas fa-info-circle"></i> Admin Not Approved Cancel
+          </span>
+        </div>
+      {% elif ev.pk in pending_app_booking_ids %}
+        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
           <span class="badge b-pending" style="background:rgba(212,168,82,0.1); color:var(--gold); border:1px solid rgba(212,168,82,0.2);">Pending Approval</span>
           {% if ev.is_cancellable %}
           <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Withdraw this application?', event);">
@@ -244,7 +220,7 @@
       {% elif ev.pk in rejected_app_booking_ids %}
         <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Not Approved</span>
       {% elif ev.pk in cancelled_app_booking_ids %}
-        <div style="font-size:0.75rem; color:var(--red); font-weight:500; text-align:right;">You already cancelled booking,<br>pls contact admin</div>
+        <div style="font-size:0.75rem; color:var(--red); font-weight:500; text-align:center;">You already cancelled booking, pls contact admin</div>
       {% elif ev.is_level_full %}
         <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);"><i class="fas fa-lock"></i> Quota Full</span>
       {% else %}
@@ -266,43 +242,6 @@
   </div>
 </div>
 
-<script>
-  function switchDashboardTab(tab) {
-    if (window.innerWidth > 768) return;
-    
-    const panelU = document.getElementById('panel-upcoming');
-    const panelA = document.getElementById('panel-available');
-    const btnU = document.getElementById('btn-upcoming');
-    const btnA = document.getElementById('btn-available');
-    
-    if(tab === 'available') {
-      panelA.style.display = 'block';
-      panelU.style.display = 'none';
-      btnA.classList.add('active');
-      btnU.classList.remove('active');
-    } else {
-      panelA.style.display = 'none';
-      panelU.style.display = 'block';
-      btnU.classList.add('active');
-      btnA.classList.remove('active');
-    }
-  }
 
-  // Ensure layouts restore flawlessly when crossing viewport boundaries
-  window.addEventListener('resize', () => {
-    const panelU = document.getElementById('panel-upcoming');
-    const panelA = document.getElementById('panel-available');
-    
-    if(window.innerWidth > 768) {
-      panelU.style.display = 'block';
-      panelA.style.display = 'block';
-    } else {
-      // Revert to active tab
-      const isAvailableActive = document.getElementById('btn-available').classList.contains('active');
-      panelA.style.display = isAvailableActive ? 'block' : 'none';
-      panelU.style.display = !isAvailableActive ? 'block' : 'none';
-    }
-  });
-</script>
 
 {% endblock %}

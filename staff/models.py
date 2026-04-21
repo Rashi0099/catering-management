@@ -174,13 +174,13 @@ class Staff(AbstractBaseUser, PermissionsMixin):
 
 class StaffAttendance(models.Model):
     """Track which events each staff member worked"""
-    STATUS = [('present', 'Present'), ('absent', 'Absent')]
+    STATUS = [('pending', 'Pending'), ('present', 'Present'), ('absent', 'Absent')]
 
     staff      = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='attendance')
     booking    = models.ForeignKey('bookings.Booking', on_delete=models.CASCADE,
                                     related_name='staff_attendance', null=True, blank=True)
     date       = models.DateField(db_index=True)
-    status     = models.CharField(max_length=10, choices=STATUS, default='present', db_index=True)
+    status     = models.CharField(max_length=10, choices=STATUS, default='pending', db_index=True)
     reaching_time = models.TimeField(null=True, blank=True)
     on_time    = models.BooleanField(default=True)
     shoes      = models.BooleanField(default=True)
@@ -299,4 +299,16 @@ class StaffNotice(models.Model):
     def __str__(self):
         status = "Active" if self.is_active else "Inactive"
         return f"[{status}] Notice {self.id}"
+
+
+class FCMDevice(models.Model):
+    """Stores Firebase Messaging tokens for Push Notifications"""
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='fcm_devices')
+    token = models.TextField(unique=True)
+    device_name = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.staff.full_name} - {self.device_name or 'Unknown Device'}"
 

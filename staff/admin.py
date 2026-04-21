@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Staff, StaffPayout, StaffAttendance, StaffNotice
+from .models import Staff, StaffPayout, StaffAttendance, StaffNotice, StaffApplication
 from .forms import StaffCreationForm
 
 @admin.register(Staff)
@@ -43,3 +43,9 @@ class StaffNoticeAdmin(admin.ModelAdmin):
     list_display = ['message', 'is_active', 'created_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['message']
+
+@admin.register(StaffApplication)
+class StaffApplicationAdmin(admin.ModelAdmin):
+    list_display = ['full_name', 'phone_1', 'status', 'created_at']
+    list_filter  = ['status', 'created_at']
+    search_fields = ['full_name', 'phone_1', 'phone_2', 'email', 'place', 'education']

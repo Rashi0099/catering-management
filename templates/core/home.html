@@ -3,124 +3,594 @@
 {% block title %}Mastan's Catering & Services — Premium Catering in Kozhikode{% endblock %}
 {% block nav_home %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ══════════════════════════════════
+   WIX-STYLE SINGLE SCROLL HOME
+══════════════════════════════════ */
+body { overflow-x: hidden; }
+
+/* ── HERO ── */
+#s-hero {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.h-bg {
+  position: absolute; inset: -80px;
+  background: url("{% static 'images/focus-on-the-fork-on-the-napkin-next-to-the-catering-served-on-the-day-of-the-celebration.webp' %}") center/cover no-repeat;
+  will-change: transform;
+  transform: scale(1.1);
+}
+.h-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(61,28,2,0.72) 0%, rgba(61,28,2,0.35) 60%, rgba(10,4,0,0.75) 100%);
+}
+.h-content {
+  position: relative; z-index: 2;
+  text-align: center;
+  padding: 0 5%;
+  max-width: 860px;
+}
+.h-eyebrow {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 28px;
+  opacity: 0; animation: fadeUp 0.9s 0.3s ease forwards;
+}
+.h-eyebrow::before, .h-eyebrow::after {
+  content: ''; display: block; width: 36px; height: 1px; background: var(--gold); opacity: 0.6;
+}
+.h-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  color: #fff; line-height: 1.05; margin-bottom: 24px;
+  opacity: 0; animation: fadeUp 1s 0.5s ease forwards;
+}
+.h-title em { font-style: italic; color: var(--gold-lt); }
+.h-line {
+  width: 55px; height: 2px; background: var(--gold);
+  margin: 0 auto 24px;
+  opacity: 0; animation: fadeUp 0.7s 0.7s ease forwards;
+}
+.h-sub {
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  color: rgba(255,255,255,0.72); line-height: 1.85;
+  max-width: 520px; margin: 0 auto 50px;
+  opacity: 0; animation: fadeUp 0.9s 0.85s ease forwards;
+}
+.h-btns {
+  display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;
+  opacity: 0; animation: fadeUp 0.9s 1.05s ease forwards;
+}
+.btn-hp {
+  padding: 17px 44px; border-radius: 3px;
+  font-weight: 600; font-size: 0.85rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+  transition: all 0.35s ease;
+}
+.btn-hp-fill {
+  background: var(--gold); color: #fff;
+  box-shadow: 0 8px 28px rgba(200,148,10,0.35);
+}
+.btn-hp-fill:hover { background: var(--gold-lt); transform: translateY(-3px); box-shadow: 0 16px 44px rgba(200,148,10,0.45); }
+.btn-hp-ghost {
+  border: 1.5px solid rgba(255,255,255,0.5); color: #fff;
+  backdrop-filter: blur(6px);
+}
+.btn-hp-ghost:hover { border-color: var(--gold); color: var(--gold-lt); transform: translateY(-3px); }
+.h-scroll-hint {
+  position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%);
+  z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  opacity: 0; animation: fadeUp 1s 1.4s ease forwards;
+}
+
+/* ── HERO CARDS (Booking & Staff) ── */
+.h-cards {
+  display: flex; gap: 20px; align-items: stretch; justify-content: center;
+  margin-top: 42px; opacity: 0; animation: fadeUp 1s 1.2s ease forwards;
+}
+.hc-card {
+  background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 14px;
+  padding: 18px 24px; display: flex; align-items: center; gap: 16px;
+  color: #fff; text-decoration: none; text-align: left;
+  transition: all 0.35s ease; flex: 1; max-width: 290px;
+}
+.hc-card:hover {
+  background: rgba(255,255,255,0.12); transform: translateY(-4px);
+  border-color: rgba(200,148,10,0.4);
+}
+.hc-icon {
+  width: 44px; height: 44px; background: rgba(200,148,10,0.2);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  color: var(--gold-lt); font-size: 1.1rem; flex-shrink: 0;
+}
+.hc-body { display: flex; flex-direction: column; flex: 1; }
+.hc-body strong { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 2px; }
+.hc-body span { font-size: 0.72rem; opacity: 0.65; letter-spacing: 0.02em; }
+.hc-arrow { font-size: 0.85rem; opacity: 0.4; transition: opacity 0.3s; }
+.hc-card:hover .hc-arrow { opacity: 1; color: var(--gold-lt); }
+
+@media (max-width: 600px) {
+  .h-cards { flex-direction: column; align-items: center; }
+  .hc-card { width: 100%; max-width: 100%; }
+}
+
+.scroll-mouse {
+  width: 24px; height: 40px;
+  border: 2px solid rgba(255,255,255,0.45); border-radius: 12px;
+  display: flex; justify-content: center; padding-top: 7px;
+}
+.scroll-wheel {
+  width: 3px; height: 7px; background: var(--gold); border-radius: 2px;
+  animation: wheel 2s ease-in-out infinite;
+}
+.scroll-label { font-size: 0.62rem; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+
+/* ── ABOUT (split screen) ── */
+#s-about {
+  display: flex; align-items: stretch; padding: 0; min-height: 90vh;
+}
+.ab-img {
+  flex: 1; min-height: 480px;
+  background: url("{% static 'images/wedding-planners-250x250.webp' %}") center/cover no-repeat;
+  position: relative;
+}
+.ab-img::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to right, transparent 60%, rgba(250,246,240,0.06));
+}
+.ab-body {
+  flex: 1; display: flex; align-items: center;
+  padding: 100px 8% 80px; background: var(--bg);
+}
+.ab-inner { max-width: 480px; }
+.eyebrow {
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold);
+  display: inline-flex; align-items: center; gap: 10px; margin-bottom: 18px;
+}
+.eyebrow::before { content:''; display:block; width:24px; height:1.5px; background:var(--gold); }
+.big-h {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 4vw, 3.4rem); color: var(--brown); line-height: 1.12; margin-bottom: 22px;
+}
+.big-h em { font-style: italic; color: var(--gold); }
+.ab-inner p { font-size: 0.97rem; color: var(--muted); line-height: 1.88; margin-bottom: 16px; }
+.stat-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 20px; padding: 32px 0;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  margin: 36px 0;
+}
+.stat-row .s-n {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.5rem; font-weight: 600; color: var(--brown); line-height: 1;
+}
+.stat-row .s-l {
+  font-size: 0.68rem; color: var(--gold);
+  text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; margin-top: 6px;
+}
+
+/* ── PARALLAX STRIP ── */
+.p-strip {
+  height: 65vh; min-height: 380px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.p-strip-bg {
+  position: absolute; inset: -80px;
+  background: url("{% static 'images/hero_luxury.png' %}") center/cover no-repeat;
+  will-change: transform;
+}
+.p-strip-ov { position: absolute; inset: 0; background: rgba(61,28,2,0.6); }
+.p-strip-txt { position: relative; z-index: 2; text-align: center; padding: 0 5%; }
+.p-strip-txt h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.4rem, 6vw, 5rem); color: #fff; line-height: 1.1;
+}
+.p-strip-txt h2 em { font-style: italic; color: var(--gold-lt); }
+.p-strip-txt p { color: rgba(255,255,255,0.6); font-size: 1rem; margin-top: 14px; letter-spacing: 0.05em; }
+
+/* ── MENU ── */
+#s-menu { padding: 108px 5%; background: var(--surface); }
+.sec-center { text-align: center; margin-bottom: 68px; }
+.sec-center p { color: var(--muted); font-size: 0.95rem; line-height: 1.8; max-width: 460px; margin: 14px auto 0; }
+.menu-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 26px; max-width: 1200px; margin: 0 auto;
+}
+.mc {
+  background: #fff; border-radius: 2px; overflow: hidden;
+  box-shadow: 0 4px 22px rgba(0,0,0,0.055);
+  transition: transform 0.45s ease, box-shadow 0.45s ease;
+}
+.mc:hover { transform: translateY(-12px); box-shadow: 0 26px 60px rgba(61,28,2,0.12); }
+.mc-img {
+  height: 240px; overflow: hidden; position: relative;
+  background: linear-gradient(135deg, #f5ede5, #edddd0);
+  display: flex; align-items: center; justify-content: center; font-size: 3.5rem;
+}
+.mc-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.65s ease; }
+.mc:hover .mc-img img { transform: scale(1.1); }
+.mc-badge {
+  position: absolute; top: 14px; right: 14px;
+  background: var(--brown); color: var(--gold);
+  padding: 5px 14px; border-radius: 2px; font-size: 0.78rem; font-weight: 700;
+}
+.mc-body { padding: 28px 28px 32px; }
+.mc-name { font-family: 'Cormorant Garamond', serif; font-size: 1.45rem; color: var(--brown); margin-bottom: 10px; }
+.mc-desc { font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
+
+/* ── CTA STRIP (booking + staff as separate page links) ── */
+#s-cta {
+  background: var(--brown); padding: 80px 5%;
+}
+.cta-wrap {
+  max-width: 1100px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.cta-card {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px; padding: 52px 44px;
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+  transition: background 0.35s ease;
+}
+.cta-card:hover { background: rgba(255,255,255,0.04); }
+.cta-card::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,148,10,0.07), transparent 70%);
+}
+.cta-icon {
+  width: 64px; height: 64px; border-radius: 4px;
+  background: rgba(200,148,10,0.15); border: 1px solid rgba(200,148,10,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; color: var(--gold); margin-bottom: 28px;
+}
+.cta-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  color: #fff; margin-bottom: 16px; line-height: 1.2;
+}
+.cta-title em { font-style: italic; color: var(--gold-lt); }
+.cta-desc { color: rgba(255,255,255,0.58); font-size: 0.94rem; line-height: 1.78; margin-bottom: 36px; flex: 1; }
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 15px 34px; border-radius: 3px;
+  font-weight: 600; font-size: 0.85rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  text-decoration: none; width: fit-content;
+  transition: all 0.35s ease;
+}
+.btn-cta-gold { background: var(--gold); color: #fff; box-shadow: 0 6px 22px rgba(200,148,10,0.3); }
+.btn-cta-gold:hover { background: var(--gold-lt); transform: translateY(-3px); box-shadow: 0 14px 36px rgba(200,148,10,0.45); }
+.btn-cta-ghost { border: 1.5px solid rgba(255,255,255,0.3); color: #fff; }
+.btn-cta-ghost:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-3px); }
+.cta-perks { margin-top: 24px; display: flex; flex-direction: column; gap: 9px; }
+.cta-perk { display: flex; align-items: center; gap: 9px; font-size: 0.82rem; color: rgba(255,255,255,0.48); }
+.cta-perk i { color: var(--gold); font-size: 0.65rem; }
+@media (max-width: 768px) { .cta-wrap { grid-template-columns: 1fr; } }
+
+/* ── GALLERY ── */
+#s-gallery { padding: 108px 5%; }
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 220px;
+  gap: 10px;
+  max-width: 1200px; margin: 0 auto;
+}
+.gg-item { overflow: hidden; border-radius: 2px; position: relative; cursor: pointer; }
+.gg-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+.gg-item:nth-child(4) { grid-column: span 2; }
+.gg-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s ease; }
+.gg-item:hover img { transform: scale(1.1); }
+.gg-ov {
+  position: absolute; inset: 0; background: rgba(61,28,2,0);
+  transition: background 0.4s ease; display: flex; align-items: center; justify-content: center;
+}
+.gg-item:hover .gg-ov { background: rgba(61,28,2,0.38); }
+.gg-ico { color: #fff; font-size: 1.4rem; opacity: 0; transform: scale(0.7); transition: all 0.35s ease; }
+.gg-item:hover .gg-ico { opacity: 1; transform: scale(1); }
+@media (max-width: 768px) {
+  .gallery-grid { grid-template-columns: repeat(2,1fr); grid-auto-rows: 180px; }
+  .gallery-grid .gg-item:nth-child(1) { grid-column: span 2; grid-row: span 1; }
+  .gallery-grid .gg-item:nth-child(4) { grid-column: span 1; }
+}
+
+/* ── CONTACT ── */
+#s-contact { padding: 108px 5%; background: var(--surface); }
+.contact-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 80px; max-width: 1100px; margin: 0 auto; align-items: center;
+}
+.ci-list { display: flex; flex-direction: column; gap: 16px; margin-top: 32px; }
+.ci {
+  display: flex; align-items: center; gap: 14px;
+  text-decoration: none; color: var(--text);
+  padding: 15px 18px; border: 1px solid var(--border); border-radius: 3px;
+  transition: all 0.28s ease;
+}
+.ci:hover { border-color: var(--gold); background: rgba(200,148,10,0.04); transform: translateX(4px); color: var(--brown); }
+.ci-ico {
+  width: 42px; height: 42px; border-radius: 3px;
+  background: rgba(200,148,10,0.09); display: flex; align-items: center; justify-content: center;
+  color: var(--gold); font-size: 0.95rem; flex-shrink: 0;
+}
+.ci-ico.wa { background: rgba(37,211,102,0.1); color: #25D366; }
+.ci strong { display: block; font-size: 0.87rem; font-weight: 600; color: var(--brown); }
+.ci span { font-size: 0.77rem; color: var(--muted); }
+.cform {
+  background: #fff; padding: 52px 46px; border-radius: 3px;
+  box-shadow: 0 8px 36px rgba(61,28,2,0.06);
+}
+.cform h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: var(--brown); margin-bottom: 30px; }
+.frow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ff { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.ff label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ff input, .ff textarea {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 3px;
+  padding: 13px 15px; font-family: 'Outfit', sans-serif; font-size: 0.92rem;
+  color: var(--text); outline: none; transition: border-color 0.25s; resize: none;
+}
+.ff input:focus, .ff textarea:focus { border-color: var(--gold); background: #fff; }
+.btn-send {
+  width: 100%; background: var(--brown); color: #fff; border: none;
+  padding: 15px; border-radius: 3px; font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px;
+  transition: all 0.35s ease; margin-top: 6px;
+}
+.btn-send:hover { background: var(--brown-lt); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(61,28,2,0.2); }
+@media (max-width: 768px) {
+  .contact-grid { grid-template-columns: 1fr; gap: 44px; }
+  .frow { grid-template-columns: 1fr; }
+  .cform { padding: 34px 26px; }
+  #s-about { flex-direction: column; }
+  .ab-img { min-height: 300px; }
+  .ab-body { padding: 70px 6%; }
+}
+
+/* ── WHATSAPP FAB ── */
+#wa-fab {
+  position: fixed; bottom: 30px; right: 30px; z-index: 999;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: #25D366; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.45rem; text-decoration: none;
+  box-shadow: 0 8px 26px rgba(37,211,102,0.45);
+  transition: all 0.33s ease;
+  animation: wap 3.5s ease-in-out infinite;
+}
+#wa-fab:hover { transform: scale(1.13) translateY(-4px); box-shadow: 0 16px 40px rgba(37,211,102,0.55); animation: none; }
+#wa-fab .wa-tip {
+  position: absolute; right: 68px;
+  background: #25D366; color: #fff;
+  font-size: 0.78rem; font-weight: 600;
+  padding: 7px 14px; border-radius: 20px;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transform: translateX(8px); transition: all 0.25s;
+}
+#wa-fab:hover .wa-tip { opacity: 1; transform: translateX(0); }
+
+/* ── REVEAL ── */
+.rv { opacity: 0; transform: translateY(34px); transition: opacity 0.75s cubic-bezier(0.2,0,0,1), transform 0.75s cubic-bezier(0.2,0,0,1); }
+.rv.on { opacity: 1; transform: none; }
+.rv-img { opacity: 0; clip-path: inset(10% 10% 10% 10%); transform: scale(0.92); transition: all 1.2s cubic-bezier(0.2,0,0,1); }
+.rv-img.on { opacity: 1; clip-path: inset(0 0 0 0); transform: scale(1); }
+.rl { opacity: 0; transform: translateX(-38px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.rl.on { opacity: 1; transform: none; }
+.rr { opacity: 0; transform: translateX(38px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.rr.on { opacity: 1; transform: none; }
+
+/* ── KEYFRAMES ── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+@keyframes wheel { 0% { transform: translateY(0); opacity: 1; } 60% { transform: translateY(10px); opacity: 0; } 61% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes wap { 0%, 100% { box-shadow: 0 8px 26px rgba(37,211,102,0.45); } 50% { box-shadow: 0 8px 46px rgba(37,211,102,0.65), 0 0 0 10px rgba(37,211,102,0.09); } }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<!-- HERO -->
-<section class="hero" style="min-height:90vh; display:flex; align-items:center; background:linear-gradient(rgba(10,15,24,0.7), rgba(10,15,24,0.7)), url('{% static 'images/hero_luxury.png' %}'); background-size:cover; background-position:center; padding-top:100px;">
-  <div class="hero-content" style="max-width:800px; text-align:left;">
-    <div class="section-tag">✦ Premium Excellence</div>
-    <h1 style="font-family:'Cormorant Garamond',serif; font-size:clamp(3rem, 8vw, 5.5rem); color:#fff; line-height:1; margin-bottom:24px;">
-      Taste the Art of <em style="font-style:italic; color:var(--gold);">Catering</em>
-    </h1>
-    <p style="font-size:1.15rem; color:var(--muted); line-height:1.8; margin-bottom:40px; max-width:600px;">
-      Exquisite culinary experiences tailored for your most precious moments. From intimate weddings to grand corporate affairs, we define luxury on every plate.
-    </p>
-    <div style="display:flex; gap:20px; flex-wrap:wrap;">
-      <a href="{% url 'booking' %}" class="btn-primary" style="padding:18px 40px;">Begin Planning <i class="fas fa-calendar-alt"></i></a>
-      <a href="{% url 'menu' %}" class="btn-outline" style="padding:18px 40px;">Explore Menu</a>
+<!-- ══ HERO ══ -->
+<section id="s-hero">
+  <div class="h-bg" id="heroBg"></div>
+  <div class="h-overlay"></div>
+  <div class="h-content">
+    <div class="h-eyebrow">Premium Catering · Kozhikode</div>
+    <h1 class="h-title">Elegance<br>On Every <em>Plate</em>.</h1>
+    <div class="h-line"></div>
+    <p class="h-sub">Luxury catering crafted for weddings, corporate events &amp; grand celebrations — served with grace.</p>
+    <div class="h-cards">
+      <a href="{% url 'booking' %}#event" class="hc-card">
+        <div class="hc-icon"><i class="fas fa-calendar-check"></i></div>
+        <div class="hc-body">
+          <strong>Event Booking</strong>
+          <span>Reserve your date</span>
+        </div>
+        <i class="fas fa-arrow-right hc-arrow"></i>
+      </a>
+      <a href="{% url 'booking' %}#staff" class="hc-card">
+        <div class="hc-icon"><i class="fas fa-id-badge"></i></div>
+        <div class="hc-body">
+          <strong>Staff Application</strong>
+          <span>Join our elite team</span>
+        </div>
+        <i class="fas fa-arrow-right hc-arrow"></i>
+      </a>
+    </div>
+  </div>
+  <div class="h-scroll-hint">
+    <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+    <span class="scroll-label">Scroll</span>
+  </div>
+</section>
+
+<!-- ══ ABOUT ══ -->
+<section id="s-about" style="padding:0;">
+  <div class="ab-img rl"></div>
+  <div class="ab-body">
+    <div class="ab-inner rr">
+      <span class="eyebrow">Our Story</span>
+      <h2 class="big-h">Mastan's <em>Catering</em> &amp; Services</h2>
+      <p>For over a decade, Mastan's Catering has been the trusted name behind Kozhikode's most memorable celebrations. We blend traditional Kerala flavours with refined modern presentation.</p>
+      <p>From intimate private dinners to grand wedding banquets — every dish carries the same dedication to quality, taste and elegance.</p>
+      <div class="stat-row">
+        <div><div class="s-n">500+</div><div class="s-l">Events</div></div>
+        <div><div class="s-n">10+</div><div class="s-l">Years</div></div>
+        <div><div class="s-n">50k+</div><div class="s-l">Guests</div></div>
+      </div>
+      <a href="{% url 'booking' %}" class="btn-primary">Plan Your Event →</a>
     </div>
   </div>
 </section>
 
-<!-- SERVICES -->
-<section style="background:linear-gradient(var(--bg), var(--surface));">
-  <div class="section-header">
-    <div class="section-tag">Direct From Our Kitchen</div>
-    <h2 class="section-title">Luxury Service Styles</h2>
-    <div class="divider"></div>
-    <p class="section-sub">We bring a touch of class and a burst of flavor to every occasion.</p>
+<!-- ══ PARALLAX STRIP ══ -->
+<div class="p-strip">
+  <div class="p-strip-bg" id="pBg"></div>
+  <div class="p-strip-ov"></div>
+  <div class="p-strip-txt rv">
+    <h2>Every Event, <em>Perfectly</em> Served.</h2>
+    <p>Weddings · Corporates · Private Galas · Anniversaries</p>
   </div>
-  
-  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
-    <div class="glass-card">
-      <div style="font-size:2.5rem; margin-bottom:20px;">💍</div>
-      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Grand Weddings</h3>
-      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">Bespoke wedding banquets designed to reflect your unique love story. Elegant presentation meets soulful taste.</p>
-    </div>
-    <div class="glass-card">
-      <div style="font-size:2.5rem; margin-bottom:20px;">🏆</div>
-      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Corporate Galas</h3>
-      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">Professional catering that aligns with your brand's prestige. Perfect for launches, retreats, and high-level board meetings.</p>
-    </div>
-    <div class="glass-card">
-      <div style="font-size:2.5rem; margin-bottom:20px;">🥂</div>
-      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Private Dinners</h3>
-      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">Transform your home into a 5-star venue. Chef-curated menus served with absolute discretion and finesse.</p>
-    </div>
-    <div class="glass-card">
-      <div style="font-size:2.5rem; margin-bottom:20px;">🌟</div>
-      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Themed Events</h3>
-      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">From traditional Kerala Sadhya to modern International fusion — we create immersive culinary worlds.</p>
-    </div>
-  </div>
-</section>
+</div>
 
-<!-- FEATURED MENU -->
-{% if featured_items %}
-<section style="background:var(--surface);">
-  <div class="section-header">
-    <div class="section-tag">Chef's Selection</div>
-    <h2 class="section-title">Signature Creations</h2>
-    <div class="divider"></div>
+<!-- ══ MENU ══ -->
+<section id="s-menu">
+  <div class="sec-center rv">
+    <span class="eyebrow" style="justify-content:center;">Chef's Selection</span>
+    <h2 class="big-h" style="text-align:center;">Signature <em>Dishes</em></h2>
+    <p>A curated selection from our kitchen, crafted with the finest local produce.</p>
   </div>
-  
-  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:30px;">
-    {% for item in featured_items %}
-    <div style="background:var(--card); border:1px solid var(--border); border-radius:24px; overflow:hidden; transition:transform 0.3s;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'">
-      <div style="height:220px; overflow:hidden; position:relative;">
-        {% if item.image %}
-        <img src="{{ item.image.url }}" style="width:100%; height:100%; object-fit:cover;" alt="{{ item.name }}"/>
-        {% else %}
-        <div style="width:100%; height:100%; background:linear-gradient(45deg, #1f2937, #111827); display:flex; align-items:center; justify-content:center; font-size:3rem;">🍽️</div>
-        {% endif %}
-        <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); padding:4px 12px; border-radius:50px; font-weight:600; color:var(--gold); font-size:0.85rem;">
-          ₹{{ item.price }}
+  <div class="menu-grid">
+    {% if featured_items %}
+      {% for item in featured_items %}
+      <div class="mc rv-img" style="transition-delay:{{ forloop.counter0 }}00ms;">
+        <div class="mc-img">
+          {% if item.image %}<img src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy">{% else %}🍽️{% endif %}
+          <div class="mc-badge">₹{{ item.price }}</div>
+        </div>
+        <div class="mc-body">
+          <div class="mc-name">{{ item.name }}</div>
+          <p class="mc-desc">{{ item.description|truncatechars:100 }}</p>
         </div>
       </div>
-      <div style="padding:24px;">
-        <h4 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; color:#fff; margin-bottom:10px;">{{ item.name }}</h4>
-        <p style="color:var(--muted); font-size:0.88rem; line-height:1.6; margin-bottom:20px;">{{ item.description|truncatechars:100 }}</p>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold);">Available for Order</span>
-          <div style="width:12px; height:12px; border:1px solid {% if item.is_vegetarian %}#2e7d32{% else %}#c62828{% endif %}; display:flex; align-items:center; justify-content:center;">
-            <div style="width:6px; height:6px; background:{% if item.is_vegetarian %}#2e7d32{% else %}#c62828{% endif %}; border-radius:50%;"></div>
-          </div>
+      {% endfor %}
+    {% else %}
+      {% for x in "abc" %}
+      <div class="mc rv-img">
+        <div class="mc-img">🍽️</div>
+        <div class="mc-body">
+          <div class="mc-name">Signature Dish</div>
+          <p class="mc-desc">Premium ingredients, expertly prepared for your celebration.</p>
+        </div>
+      </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</section>
+
+
+<!-- ══ GALLERY ══ -->
+<section id="s-gallery">
+  <div class="sec-center rv">
+    <span class="eyebrow" style="justify-content:center;">Portfolio</span>
+    <h2 class="big-h" style="text-align:center;">Event <em>Gallery</em></h2>
+  </div>
+  <div class="gallery-grid">
+    {% if gallery_images %}
+      {% for img in gallery_images %}
+      <div class="gg-item rv-img" style="transition-delay: {{ forloop.counter0 }}00ms;">
+        <img src="{{ img.image.url }}" alt="{{ img.title|default:'Gallery Image' }}" loading="lazy">
+        <div class="gg-ov"><i class="fas fa-expand gg-ico"></i></div>
+      </div>
+      {% endfor %}
+    {% else %}
+      {% for x in "abcde" %}
+      <div class="gg-item rv-img" style="transition-delay: {{ forloop.counter0 }}00ms;">
+        <img src="{% static 'images/focus-on-the-fork-on-the-napkin-next-to-the-catering-served-on-the-day-of-the-celebration.webp' %}" alt="Gallery Placeholder" loading="lazy">
+        <div class="gg-ov"><i class="fas fa-expand gg-ico"></i></div>
+      </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</section>
+
+<!-- ══ CONTACT ══ -->
+<section id="s-contact">
+  <div class="contact-grid">
+    <div class="rl">
+      <span class="eyebrow">Get In Touch</span>
+      <h2 class="big-h">Let's Plan Your <em>Event</em></h2>
+      <p style="color:var(--muted);font-size:0.97rem;line-height:1.85;margin-top:14px;">Have questions or ready to book? Reach us through any of the channels below — we're always happy to help.</p>
+      <div class="ci-list">
+        <a href="tel:+919876543210" class="ci">
+          <div class="ci-ico"><i class="fas fa-phone"></i></div>
+          <div><strong>+91 98765 43210</strong><span>Call us anytime</span></div>
+        </a>
+        <a href="https://wa.me/919876543210" class="ci" target="_blank" rel="noopener">
+          <div class="ci-ico wa"><i class="fab fa-whatsapp"></i></div>
+          <div><strong>WhatsApp Us</strong><span>Quick response guaranteed</span></div>
+        </a>
+        <a href="mailto:hello@mastanscatering.com" class="ci">
+          <div class="ci-ico"><i class="fas fa-envelope"></i></div>
+          <div><strong>hello@mastanscatering.com</strong><span>Email enquiries</span></div>
+        </a>
+        <div class="ci" style="cursor:default;">
+          <div class="ci-ico"><i class="fas fa-map-marker-alt"></i></div>
+          <div><strong>Kozhikode, Kerala</strong><span>Serving all of North Kerala</span></div>
         </div>
       </div>
     </div>
-    {% endfor %}
-  </div>
-  
-  <div style="text-align:center; margin-top:60px;">
-    <a href="{% url 'menu' %}" class="btn-outline">View Full Collection <i class="fas fa-chevron-right"></i></a>
+    <div class="cform rr">
+      <h3>Send a Message</h3>
+      {% if contact_success %}
+        <div style="background:rgba(200,148,10,0.08);border:1px solid rgba(200,148,10,0.3);padding:20px;border-radius:4px;color:var(--brown);margin-bottom:24px;font-size:0.95rem;">
+          ✓ Message sent! We'll get back to you shortly.
+        </div>
+      {% endif %}
+      <form method="post" action="{% url 'contact' %}">
+        {% csrf_token %}
+        <div class="frow">
+          <div class="ff"><label>Name</label><input type="text" name="name" placeholder="Muhammed Ali" required></div>
+          <div class="ff"><label>Phone</label><input type="tel" name="phone" placeholder="+91 9876543210"></div>
+        </div>
+        <div class="ff"><label>Message</label><textarea name="message" rows="5" placeholder="Tell us about your event..."></textarea></div>
+        <button type="submit" class="btn-send"><i class="fas fa-paper-plane"></i> Send Message</button>
+      </form>
+    </div>
   </div>
 </section>
-{% endif %}
 
-<!-- TESTIMONIALS -->
+<!-- ══ TESTIMONIALS ══ -->
 {% if testimonials %}
-<section>
-  <div class="section-header">
-    <div class="section-tag">Reflections</div>
-    <h2 class="section-title">Client Stories</h2>
-    <div class="divider"></div>
+<section style="padding:100px 5%;background:var(--surface);">
+  <div class="sec-center rv">
+    <span class="eyebrow" style="justify-content:center;">Reviews</span>
+    <h2 class="big-h" style="text-align:center;">What Our <em>Clients</em> Say</h2>
   </div>
-  
-  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:30px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;max-width:1100px;margin:0 auto;">
     {% for t in testimonials %}
-    <div class="glass-card" style="padding:40px; display:flex; flex-direction:column; justify-content:space-between;">
-      <div>
-        <div style="color:var(--gold); font-size:0.8rem; margin-bottom:20px;">
-          {% for i in "12345" %}{% if forloop.counter <= t.rating %}★{% else %}☆{% endif %}{% endfor %}
-        </div>
-        <blockquote style="font-family:'Cormorant Garamond',serif; font-size:1.25rem; font-style:italic; color:#fff; line-height:1.6; margin-bottom:30px; position:relative;">
-          <span style="position:absolute; top:-10px; left:-20px; font-size:3rem; opacity:0.1; color:var(--gold);">"</span>
-          {{ t.review }}
-        </blockquote>
+    <div class="glass-card rv" style="padding:42px 34px;transition-delay:{{ forloop.counter0 }}00ms;border-radius:2px;position:relative;">
+      <div style="color:var(--gold);font-size:0.85rem;letter-spacing:2px;margin-bottom:18px;">
+        {% for i in "12345" %}{% if forloop.counter <= t.rating %}★{% else %}☆{% endif %}{% endfor %}
       </div>
+      <p style="font-family:'Cormorant Garamond',serif;font-size:1.18rem;font-style:italic;color:var(--brown);line-height:1.72;margin-bottom:26px;">"{{ t.review }}"</p>
       <div>
-        <div style="font-weight:600; color:var(--gold); font-size:0.95rem;">{{ t.client_name }}</div>
-        <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:4px;">{{ t.event_type }}</div>
+        <strong style="font-size:0.93rem;color:var(--brown);">{{ t.client_name }}</strong>
+        <div style="font-size:0.73rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">{{ t.event_type }}</div>
       </div>
     </div>
     {% endfor %}
@@ -128,13 +598,45 @@
 </section>
 {% endif %}
 
-<!-- CTA -->
-<section style="background:var(--bg); border-top:1px solid var(--border); padding:120px 5%;">
-  <div style="max-width:800px; margin:0 auto; text-align:center;">
-    <h2 style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.5rem, 6vw, 4rem); color:#fff; margin-bottom:24px;">Your Vision, <em style="color:var(--gold);">Tastefully</em> Executed.</h2>
-    <p style="font-size:1.1rem; color:var(--muted); margin-bottom:44px; line-height:1.8;">Connect with our experts today to begin crafting a menu that will leave your guests in awe.</p>
-    <a href="{% url 'booking' %}" class="btn-primary" style="padding:20px 50px; font-size:1.1rem;">Secure Your Date Today</a>
-  </div>
-</section>
+<!-- ══ WHATSAPP FAB ══ -->
+<a href="https://wa.me/919876543210" id="wa-fab" target="_blank" rel="noopener" aria-label="Chat on WhatsApp">
+  <i class="fab fa-whatsapp"></i>
+  <span class="wa-tip">Chat on WhatsApp</span>
+</a>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  /* Hero menu smooth scroll */
+  document.getElementById('heroMenu')?.addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById('s-menu')?.scrollIntoView({ behavior:'smooth' });
+  });
+
+  /* Parallax */
+  const heroBg = document.getElementById('heroBg');
+  const pBg    = document.getElementById('pBg');
+  window.addEventListener('scroll', () => {
+    const sy = window.scrollY;
+    if (heroBg) heroBg.style.transform = `scale(1.1) translateY(${sy * 0.28}px)`;
+    if (pBg) {
+      const rect = pBg.parentElement.getBoundingClientRect();
+      pBg.style.transform = `translateY(${-rect.top * 0.22}px)`;
+    }
+  }, { passive: true });
+
+  /* Scroll reveal */
+  const ro = new IntersectionObserver(entries => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('on'), i * 70);
+        ro.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.rv, .rl, .rr, .rv-img').forEach(el => ro.observe(el));
+})();
+</script>
 {% endblock %}

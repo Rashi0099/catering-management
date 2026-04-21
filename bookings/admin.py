@@ -11,7 +11,7 @@ class BookingAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
     fieldsets = (
         ('Client Info', {'fields': ('name', 'email', 'phone', 'company')}),
-        ('Event Details', {'fields': ('event_type', 'event_date', 'event_time', 'venue', 'guest_count', 'budget')}),
+        ('Event Details', {'fields': ('event_type', 'event_date', 'event_time', 'venue', 'location_name', 'location_link', 'guest_count', 'budget')}),
         ('Requirements', {'fields': ('dietary_requirements', 'special_requests', 'message')}),
         ('Admin', {'fields': ('status', 'admin_notes', 'quoted_price', 'assigned_to', 'is_published', 'publish_locality', 'created_at', 'updated_at')}),
     )
@@ -20,10 +20,10 @@ class BookingAdmin(admin.ModelAdmin):
         is_new = obj.pk is None
         was_published = False
         if not is_new:
-            from .models import Booking
             try:
-                was_published = Booking.objects.get(pk=obj.pk).is_published
-            except Booking.DoesNotExist:
+                # Use current instance from DB to check previous state
+                was_published = self.model.objects.get(pk=obj.pk).is_published
+            except self.model.DoesNotExist:
                 pass
                 
         super().save_model(request, obj, form, change)
@@ -34,15 +34,16 @@ class BookingAdmin(admin.ModelAdmin):
                 from webpush import send_user_notification
                 from django.contrib.auth import get_user_model
                 
+                location = obj.location_name or obj.venue or 'TBA'
                 payload = {
                     "head": "New Shift Available!",
-                    "body": f"{obj.get_event_type_display()} on {obj.event_date} at {obj.location_name or 'TBA'}.",
+                    "body": f"{obj.get_event_type_display()} on {obj.event_date} at {location}.",
                     "icon": "/static/images/logo.png",
                     "url": "/staff/bookings/"
                 }
                 
                 Staff = get_user_model()
-                targets = Staff.objects.filter(is_active=True) # All active staff
+                targets = Staff.objects.filter(is_active=True)
                 if obj.publish_locality and obj.publish_locality != 'all':
                     targets = targets.filter(main_locality=obj.publish_locality)
                     
@@ -52,7 +53,9 @@ class BookingAdmin(admin.ModelAdmin):
                     except Exception:
                         pass
             except Exception as e:
-                print("Web Push Error:", e)
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Web Push Error: {e}")
 
 
 @admin.register(Testimonial)

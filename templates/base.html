@@ -8,262 +8,455 @@
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <title>{% block title %}Mastan's Catering & Services Catering{% endblock %}</title>
+  <title>{% block title %}Mastan's Catering & Services{% endblock %}</title>
+
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
-  <!-- PWA Headers -->
+
+  <!-- PWA -->
   <link rel="icon" type="image/png" href="{% static 'icons/icon-192x192.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
   <link rel="manifest" href="{% url 'manifest.json' %}?start_url=/&name=Mastan's%20Catering&short_name=Mastan">
-  <meta name="theme-color" content="#faf6f0">
-  <style>
-    :root {
-      --bg:      #0a0f18;
-      --surface: #111827;
-      --card:    #1f2937;
-      --gold:    #d4a852;
-      --gold-dk: #b88a3e;
-      --text:    #f3f4f6;
-      --muted:   #9ca3af;
-      --border:  rgba(255,255,255,0.08);
-      --glass:   rgba(255,255,255,0.03);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); }
 
-    /* ── NAV ── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-      background: rgba(10,15,24,0.85);
-      backdrop-filter: blur(15px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 5%;
-      display: flex; align-items: center; justify-content: space-between;
-      height: 75px;
-      transition: all 0.3s;
+  <style>
+    /* ══════════════════════════════════
+       ORIGINAL COLOUR TOKENS — UNCHANGED
+    ══════════════════════════════════ */
+    :root {
+      --bg:        #eaddd1;
+      --surface:   #f9f5f2;
+      --card:      #ffffff;
+      --gold:      #c8940a;
+      --gold-dk:   #a67c08;
+      --gold-lt:   #e6aa20;
+      --gold-glow: rgba(200,148,10,0.14);
+      --brown:     #3d1c02;
+      --brown-lt:  #5e2a03;
+      --text:      #1a120b;
+      --muted:     #6b5e52;
+      --border:    rgba(61,28,2,0.08);
+      --shadow:    rgba(61,28,2,0.06);
     }
-    nav.scrolled { background: rgba(5,8,15,0.95); box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+
+    /* ══════════════════════════════════
+       RESET & BASE
+    ══════════════════════════════════ */
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══════════════════════════════════
+       NAVIGATION
+    ══════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 5%;
+      background: transparent;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid transparent;
+      transition: background 0.35s, border-color 0.35s, box-shadow 0.35s;
+    }
+    nav.scrolled {
+      background: rgba(234, 221, 209, 0.96);
+      border-bottom-color: var(--border);
+      box-shadow: 0 4px 30px var(--shadow);
+    }
+
+    /* Brand */
     .nav-brand {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem; font-weight: 600;
-      color: #fff; text-decoration: none;
+      font-size: 1.55rem; font-weight: 600;
+      color: #ffffff; text-decoration: none;
       display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+      transition: color 0.35s;
+    }
+    nav.scrolled .nav-brand { color: var(--brown); }
+    .nav-brand img {
+      height: 38px; width: 38px; border-radius: 50%; object-fit: cover;
+      background: #ffffff;
+      border: 1.5px solid rgba(200,148,10,0.4);
+      box-shadow: 0 0 0 3px rgba(200,148,10,0.08);
     }
     .nav-brand span { color: var(--gold); }
-    .nav-links { display: flex; align-items: center; gap: 32px; }
-    .nav-links a {
-      font-size: 0.88rem; font-weight: 500; color: var(--muted);
-      text-decoration: none; letter-spacing: 0.05em;
-      transition: color 0.2s; position: relative;
-    }
-    .nav-links a:hover, .nav-links a.active { color: var(--gold); }
-    .nav-cta {
-      background: var(--gold); color: #fff !important;
-      padding: 10px 24px; border-radius: 8px;
-    }
-    .nav-cta:hover { background: var(--gold-dk); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212,168,82,0.3); }
 
-    /* ── SECTIONS ── */
-    section { padding: 100px 5%; position: relative; }
-    .section-tag {
-      display: inline-block;
-      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em;
-      text-transform: uppercase; color: var(--gold);
-      margin-bottom: 16px;
+    /* Links */
+    .nav-links { display: flex; align-items: center; gap: 2px; }
+
+    .nav-links a {
+      font-size: 0.82rem; font-weight: 500; letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.85); text-decoration: none;
+      padding: 8px 13px; border-radius: 8px;
+      transition: color 0.3s, background 0.3s;
+      position: relative;
     }
+    nav.scrolled .nav-links a { color: var(--muted); }
+
+    .nav-links a:hover      { color: #ffffff; background: rgba(255,255,255,0.1); }
+    nav.scrolled .nav-links a:hover { color: var(--brown); background: rgba(61,28,2,0.04); }
+
+    .nav-links a.active     { color: #ffffff; }
+    nav.scrolled .nav-links a.active { color: var(--brown); }
+
+    .nav-links a.active::after {
+      content: '';
+      position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+      width: 16px; height: 2px; background: var(--gold); border-radius: 2px;
+    }
+
+    /* Mobile Menu Toggle */
+    .mobile-menu-btn {
+      display: none; flex-direction: column; gap: 5px; cursor: pointer;
+      padding: 5px; z-index: 1100; transition: all 0.3s;
+    }
+    .mobile-menu-btn span {
+      display: block; width: 24px; height: 2px; background: #fff;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 2px;
+    }
+    nav.scrolled .mobile-menu-btn span { background: var(--brown); }
+    
+    .mobile-menu-btn.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); background: var(--brown) !important; }
+    .mobile-menu-btn.active span:nth-child(2) { opacity: 0; transform: translateX(-10px); }
+    .mobile-menu-btn.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); background: var(--brown) !important; }
+
+    .mobile-overlay {
+      position: fixed; inset: 0; background: rgba(250, 246, 240, 0.98);
+      z-index: 1050; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 32px;
+      opacity: 0; visibility: hidden; transition: all 0.4s ease;
+      backdrop-filter: blur(10px);
+    }
+    .mobile-overlay.active { opacity: 1; visibility: visible; }
+    .mobile-overlay a {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.8rem; font-weight: 600; color: var(--brown);
+      text-decoration: none; transition: transform 0.3s;
+    }
+    .mobile-overlay a:active { transform: scale(0.95); }
+
+
+    @media (max-width: 768px) {
+      nav { justify-content: flex-start !important; gap: 15px; }
+      .nav-brand { font-size: 1.25rem; }
+      .nav-brand img { height: 30px; width: 30px; }
+      .nav-links { display: none; }
+      .mobile-menu-btn { display: flex !important; }
+      section { padding: 88px 5%; }
+    }
+
+
+
+    /* ══════════════════════════════════
+       SECTION UTILITIES
+    ══════════════════════════════════ */
+    section { padding: 108px 5%; position: relative; }
+
+    .section-tag {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 16px;
+    }
+    .section-tag::before, .section-tag::after {
+      content: ''; display: block;
+      width: 24px; height: 1.5px; background: var(--gold); opacity: 0.5;
+    }
+
     .section-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(2.2rem, 5vw, 3.5rem); color: #fff; margin-bottom: 20px;
+      font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+      color: var(--brown); line-height: 1.15; margin-bottom: 18px;
     }
-    .section-sub { font-size: 1.05rem; color: var(--muted); max-width: 580px; line-height: 1.7; margin: 0 auto; }
-    .section-header { text-align: center; margin-bottom: 64px; }
+    .section-title em { font-style: italic; color: var(--gold); }
+
+    .section-sub {
+      font-size: 1rem; color: var(--muted);
+      max-width: 540px; line-height: 1.78; margin: 0 auto;
+    }
+
+    .section-header { text-align: center; margin-bottom: 72px; }
+
     .divider {
-      width: 60px; height: 3px;
-      background: var(--gold);
+      width: 48px; height: 2.5px;
+      background: linear-gradient(90deg, var(--gold-dk), var(--gold-lt));
       margin: 20px auto; border-radius: 2px;
     }
 
-    /* ── BUTTONS ── */
+    /* ══════════════════════════════════
+       BUTTONS
+    ══════════════════════════════════ */
     .btn-primary {
       background: var(--gold); color: #fff;
-      padding: 16px 36px; border-radius: 8px; font-size: 0.95rem;
-      font-weight: 600; text-decoration: none; transition: all 0.3s;
+      padding: 15px 34px; border-radius: 10px;
+      font-size: 0.88rem; font-weight: 600; letter-spacing: 0.05em;
+      text-decoration: none;
+      transition: all 0.28s cubic-bezier(0.4,0,0.2,1);
       display: inline-flex; align-items: center; gap: 10px;
+      box-shadow: 0 4px 20px rgba(200,148,10,0.28);
+      position: relative; overflow: hidden;
     }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(212,168,82,0.4); }
+    .btn-primary::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.14), transparent);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .btn-primary:hover {
+      background: var(--gold-dk); transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(200,148,10,0.38);
+    }
+    .btn-primary:hover::after { opacity: 1; }
+
     .btn-outline {
-      border: 1.5px solid var(--gold); color: var(--gold);
-      padding: 16px 36px; border-radius: 8px; font-size: 0.95rem;
-      font-weight: 600; text-decoration: none; transition: all 0.3s;
+      border: 1.5px solid rgba(200,148,10,0.5); color: var(--gold);
+      padding: 15px 34px; border-radius: 10px;
+      font-size: 0.88rem; font-weight: 600; letter-spacing: 0.05em;
+      text-decoration: none;
+      transition: all 0.28s;
       display: inline-flex; align-items: center; gap: 10px;
     }
-    .btn-outline:hover { background: rgba(212,168,82,0.05); }
+    .btn-outline:hover {
+      background: var(--gold-glow); border-color: var(--gold);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(200,148,10,0.12);
+    }
 
-    /* ── CARDS ── */
+    /* ══════════════════════════════════
+       CARDS
+    ══════════════════════════════════ */
     .glass-card {
-      background: var(--glass);
-      border: 1px solid var(--border);
-      backdrop-filter: blur(10px);
+      background: var(--card); border: 1px solid var(--border);
       border-radius: 20px; padding: 40px;
-      transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
+      transition: all 0.4s cubic-bezier(0.2,0,0,1);
+      position: relative; overflow: hidden;
     }
-    .glass-card:hover { 
-      background: rgba(255,255,255,0.05); 
-      border-color: rgba(212,168,82,0.3);
+    .glass-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .glass-card:hover {
+      border-color: rgba(200,148,10,0.22);
       transform: translateY(-8px);
+      box-shadow: 0 24px 56px var(--shadow), 0 0 0 1px rgba(200,148,10,0.05);
+    }
+    .glass-card:hover::before { opacity: 1; }
+
+    /* ══════════════════════════════════
+       SCROLL REVEAL
+    ══════════════════════════════════ */
+    .reveal {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity 0.6s cubic-bezier(0.4,0,0.2,1),
+                  transform 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ══════════════════════════════════
+       FOOTER
+    ══════════════════════════════════ */
+    footer {
+      background: #0c0805;
+      padding: 88px 5% 40px;
+      color: #a1958b;
+      position: relative; overflow: hidden;
+    }
+    footer::before {
+      content: ''; position: absolute; top: 0; left: 5%; right: 5%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(200,148,10,0.4), transparent);
+    }
+    footer::after {
+      content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+      width: 60%; height: 160px;
+      background: radial-gradient(ellipse, rgba(200,148,10,0.04) 0%, transparent 70%);
+      pointer-events: none;
     }
 
-    /* ── FOOTER ── */
-    footer {
-      background: #05080f;
-      padding: 80px 5% 40px;
-      color: var(--muted);
-      border-top: 1px solid var(--border);
+    .footer-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr;
+      gap: 64px; margin-bottom: 64px; position: relative; z-index: 1;
     }
-    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 60px; margin-bottom: 60px; }
+
     .footer-brand {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.8rem; color: #fff; margin-bottom: 20px;
+      font-size: 1.75rem; color: #fff; margin-bottom: 6px;
     }
     .footer-brand span { color: var(--gold); }
-    footer p { font-size: 0.9rem; line-height: 1.8; }
-    .footer-heading { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 24px; font-weight: 700; }
+
+    .footer-accent {
+      display: block; width: 40px; height: 2px;
+      background: var(--gold); border-radius: 2px; margin: 14px 0 18px;
+    }
+
+    footer p { font-size: 0.88rem; line-height: 1.85; color: #a1958b; max-width: 300px; }
+
+    .footer-heading {
+      font-size: 0.68rem; text-transform: uppercase;
+      letter-spacing: 0.2em; color: var(--gold);
+      margin-bottom: 24px; font-weight: 700;
+    }
+
     footer ul { list-style: none; }
     footer ul li { margin-bottom: 12px; }
-    footer ul li a { color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
-    footer ul li a:hover { color: var(--gold); }
+    footer ul li a {
+      color: #a1958b; text-decoration: none; font-size: 0.9rem;
+      transition: all 0.22s; display: inline-flex; align-items: center; gap: 7px;
+    }
+    footer ul li a:hover { color: var(--gold); padding-left: 5px; }
+
     .footer-bottom {
-      border-top: 1px solid var(--border);
+      border-top: 1px solid rgba(255,255,255,0.05);
       padding-top: 32px;
       display: flex; justify-content: space-between; align-items: center;
-      font-size: 0.85rem;
+      font-size: 0.82rem; position: relative; z-index: 1;
     }
-    .social-links { display: flex; gap: 16px; }
+
+    .social-links { display: flex; gap: 10px; }
     .social-links a {
-      width: 42px; height: 42px; border-radius: 50%;
-      border: 1px solid var(--border);
+      width: 40px; height: 40px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
       display: flex; align-items: center; justify-content: center;
-      color: var(--muted); text-decoration: none; font-size: 1rem;
-      transition: all 0.3s;
+      color: #a1958b; text-decoration: none; font-size: 0.95rem;
+      transition: all 0.28s;
     }
-    .social-links a:hover { background: var(--gold); border-color: var(--gold); color: #fff; transform: translateY(-3px); }
+    .social-links a:hover {
+      background: var(--gold); border-color: var(--gold); color: #fff;
+      transform: translateY(-4px); box-shadow: 0 8px 20px rgba(200,148,10,0.35);
+    }
 
-    .mobile-menu-btn {
-      display: none; background: none; border: none; font-size: 1.8rem; color: #fff; cursor: pointer;
-    }
-    #mobileNav {
-      position: fixed; top: 75px; left: 0; right: 0; background: var(--bg);
-      border-bottom: 1px solid var(--border); padding: 30px 5%;
-      display: flex; flex-direction: column; gap: 20px;
-      transform: translateY(-150%); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
-      z-index: 150; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-    #mobileNav.open { transform: translateY(0); }
-    #mobileNav a { text-decoration: none; color: #fff; font-weight: 500; font-size: 1.2rem; }
-
+    /* ══════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════ */
     @media (max-width: 992px) {
-      .footer-grid { grid-template-columns: 1fr; gap: 40px; }
-      .nav-links { display: none; }
-      .mobile-menu-btn { display: block; }
+      .footer-grid { grid-template-columns: 1fr; gap: 44px; }
+      footer p { max-width: 100%; }
+    }
+    @media (max-width: 768px) {
+      .footer-bottom { flex-direction: column; gap: 20px; text-align: center; }
     }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-<!-- NAVIGATION -->
+<!-- ═══════════════════
+     NAVIGATION
+═══════════════════ -->
 <nav id="navbar">
   <a class="nav-brand" href="{% url 'home' %}">
-    <img src="{% static 'images/logo.png' %}" style="height:40px;margin-right:10px;vertical-align:middle;border-radius:50%"> 
-    Mastan's <span>Catering</span>
+    <img src="{% static 'images/logo.png' %}" alt="Mastan's Catering">
+    Mastan's&nbsp;<span>Catering</span>
   </a>
+
   <div class="nav-links">
-    <a href="{% url 'home' %}" class="{% block nav_home %}{% endblock %}">Home</a>
-    <a href="{% url 'menu' %}" class="{% block nav_menu %}{% endblock %}">Menu</a>
-    <a href="{% url 'gallery' %}" class="{% block nav_gallery %}{% endblock %}">Gallery</a>
-    <a href="{% url 'contact' %}" class="{% block nav_contact %}{% endblock %}">Contact</a>
-    <a href="{% url 'booking' %}#event" class="nav-cta">Book Event</a>
-    <a href="{% url 'booking' %}#staff" class="nav-cta" style="background:transparent; border:1.5px solid var(--gold); color:var(--gold) !important">Staff Portal</a>
+    <a href="{% url 'home' %}"    class="{% block nav_home %}{% endblock %}">Home</a>
+    <a href="{% url 'home' %}#s-menu"    class="{% block nav_menu %}{% endblock %}">Menu</a>
+    <a href="{% url 'home' %}#s-gallery" class="{% block nav_gallery %}{% endblock %}">Gallery</a>
+    <a href="{% url 'home' %}#s-contact" class="{% block nav_contact %}{% endblock %}">Contact</a>
   </div>
-  <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
-    <i class="fas fa-bars"></i>
-  </button>
+
+  <div class="mobile-menu-btn" id="mobileMenuBtn">
+    <span></span><span></span><span></span>
+  </div>
 </nav>
 
-<div id="mobileNav">
-  <a href="{% url 'home' %}">Home</a>
-  <a href="{% url 'menu' %}">Menu</a>
-  <a href="{% url 'gallery' %}">Gallery</a>
-  <a href="{% url 'contact' %}">Contact</a>
-  <a href="{% url 'booking' %}#event" style="color: var(--gold);">Book Event</a>
-  <a href="{% url 'booking' %}#staff" style="color: var(--gold);">Staff Application</a>
+<div class="mobile-overlay" id="mobileOverlay">
+  <a href="{% url 'home' %}" onclick="toggleMenu()">Home</a>
+  <a href="{% url 'home' %}#s-menu" onclick="toggleMenu()">Menu</a>
+  <a href="{% url 'home' %}#s-gallery" onclick="toggleMenu()">Gallery</a>
+  <a href="{% url 'home' %}#s-contact" onclick="toggleMenu()">Contact</a>
+  <a href="{% url 'booking' %}" onclick="toggleMenu()">Book Event</a>
 </div>
 
+
+<!-- ═══════════════════
+     PAGE CONTENT
+═══════════════════ -->
 {% block content %}{% endblock %}
 
-<!-- FOOTER -->
+<!-- ═══════════════════
+     FOOTER
+═══════════════════ -->
 <footer>
   <div class="footer-grid">
     <div>
       <div class="footer-brand">🍽️ Mastan's <span>Catering</span></div>
+      <span class="footer-accent"></span>
       <p>Luxury catering services for weddings, corporate events, and exclusive celebrations. We bring culinary mastery to every table with passion and precision.</p>
     </div>
     <div>
       <div class="footer-heading">Experience</div>
       <ul>
-        <li><a href="{% url 'menu' %}">Curated Menu</a></li>
-        <li><a href="{% url 'gallery' %}">Event Gallery</a></li>
-        <li><a href="{% url 'booking' %}">Plan Your Event</a></li>
-        <li><a href="{% url 'contact' %}">Contact Us</a></li>
+        <li><a href="{% url 'home' %}#s-menu">    <i class="fas fa-chevron-right" style="font-size:.55rem;opacity:.35"></i> Curated Menu</a></li>
+        <li><a href="{% url 'home' %}#s-gallery"> <i class="fas fa-chevron-right" style="font-size:.55rem;opacity:.35"></i> Event Gallery</a></li>
+        <li><a href="{% url 'booking' %}"> <i class="fas fa-chevron-right" style="font-size:.55rem;opacity:.35"></i> Plan Your Event</a></li>
+        <li><a href="{% url 'home' %}#s-contact"> <i class="fas fa-chevron-right" style="font-size:.55rem;opacity:.35"></i> Contact Us</a></li>
       </ul>
     </div>
     <div>
       <div class="footer-heading">Connect</div>
       <ul>
-        <li><a href="tel:+919876543210">📞 +91 98765 43210</a></li>
-        <li><a href="mailto:hello@mastanscatering.com">✉️ hello@mastanscatering.com</a></li>
-        <li><a href="#">📍 Kozhikode, Kerala</a></li>
-        <li><a href="#">⏰ Available 24/7 for Bookings</a></li>
+        <li><a href="tel:+919876543210">                    📞 +91 98765 43210</a></li>
+        <li><a href="mailto:hello@mastanscatering.com">     ✉️ hello@mastanscatering.com</a></li>
+        <li><a href="#">                                    📍 Kozhikode, Kerala</a></li>
+        <li><a href="#">                                    ⏰ Available 24/7 for Bookings</a></li>
       </ul>
     </div>
   </div>
+
   <div class="footer-bottom">
     <span>© 2026 Mastan's Catering & Services. Premium Excellence.</span>
     <div class="social-links">
-      <a href="#"><i class="fab fa-instagram"></i></a>
-      <a href="#"><i class="fab fa-facebook-f"></i></a>
-      <a href="#"><i class="fab fa-whatsapp"></i></a>
+      <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+      <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+      <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
     </div>
   </div>
 </footer>
 
 <script>
-  // Scroll effect on nav
+  /* ── Nav scroll effect ── */
+  const navbar = document.getElementById('navbar');
   window.addEventListener('scroll', () => {
-    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
-  });
+    navbar.classList.toggle('scrolled', window.scrollY > 28);
+  }, { passive: true });
 
-  // Mobile Menu Toggle
-  function toggleMobileMenu() {
-    document.getElementById('mobileNav').classList.toggle('open');
+  /* ── Mobile menu ── */
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const mobileOverlay = document.getElementById('mobileOverlay');
+
+  function toggleMenu() {
+    mobileMenuBtn.classList.toggle('active');
+    mobileOverlay.classList.toggle('active');
+    document.body.style.overflow = mobileOverlay.classList.contains('active') ? 'hidden' : 'auto';
   }
 
-  // Animate elements on scroll
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
+  mobileMenuBtn.addEventListener('click', toggleMenu);
+
+
+  /* ── Scroll reveal ── */
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
       if (e.isIntersecting) {
-        e.target.style.opacity = '1';
-        e.target.style.transform = 'translateY(0)';
+        setTimeout(() => e.target.classList.add('visible'), i * 90);
+        revealObserver.unobserve(e.target);
       }
     });
   }, { threshold: 0.1 });
 
-  document.querySelectorAll('.service-card, .menu-card, .testimonial-card').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
-    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-    observer.observe(el);
+  document.querySelectorAll('.service-card, .menu-card, .testimonial-card, .glass-card').forEach(el => {
+    el.classList.add('reveal');
+    revealObserver.observe(el);
   });
 </script>
 {% block extra_js %}{% endblock %}

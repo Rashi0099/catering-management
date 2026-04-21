@@ -75,21 +75,32 @@
           .prm-checkbox:checked + .prm-box::after { content: '\f00c'; font-family: 'Font Awesome 5 Free'; font-weight: 900; color: #12161c; font-size: 0.75rem; }
         </style>
 
-        <div style="margin-bottom:15px; position:relative; margin-top:10px;">
-          <i class="fas fa-search" style="position:absolute; left:12px; top:12px; color:var(--muted);"></i>
-          <input type="text" id="staff-att-search" placeholder="Search staff attendance by name..." class="prm-input" style="padding-left:36px; padding-top:10px; padding-bottom:10px; font-size:0.9rem;" onkeyup="filterStaffAtt()">
+        <div style="display:flex; gap:10px; margin-bottom:15px; margin-top:10px;">
+          <div style="flex:1; position:relative;">
+            <i class="fas fa-search" style="position:absolute; left:12px; top:12px; color:var(--muted);"></i>
+            <input type="text" id="staff-att-search" placeholder="Search staff attendance..." class="prm-input" style="padding-left:36px; padding-top:10px; padding-bottom:10px; font-size:0.9rem;" onkeyup="filterStaffAtt()">
+          </div>
+          <div>
+            <select id="staff-att-status-filter" class="prm-input" style="padding-top:10px; padding-bottom:10px; font-size:0.9rem; cursor:pointer; min-width:110px;" onchange="filterStaffAtt()">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+            </select>
+          </div>
         </div>
         <script>
         function filterStaffAtt() {
             let input = document.getElementById("staff-att-search").value.toLowerCase();
+            let statusFilter = document.getElementById("staff-att-status-filter").value;
             let cards = document.querySelectorAll(".prm-att-card");
             cards.forEach(card => {
-                let text = card.textContent.toLowerCase();
-                if (text.indexOf(input) > -1) {
-                    card.style.display = "flex";
-                } else {
-                    card.style.display = "none";
-                }
+                let name = card.textContent.toLowerCase();
+                let statusSelect = card.querySelector('select[name^="attendance_status_"]');
+                let currentStatus = statusSelect ? statusSelect.value : "pending";
+                let matchSearch = name.indexOf(input) > -1;
+                let matchStatus = statusFilter === "all" || currentStatus === statusFilter;
+                card.style.display = (matchSearch && matchStatus) ? "flex" : "none";
             });
         }
         </script>
@@ -130,7 +141,8 @@
                 <div>
                   <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
                   <select name="attendance_status_{{ item.staff.id }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
-                    <option value="present" {% if not item.attendance or item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+                    <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
+                    <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
                     <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
                   </select>
                 </div>
