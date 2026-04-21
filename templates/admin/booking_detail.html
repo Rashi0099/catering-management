@@ -272,17 +272,35 @@
           .prm-checkbox:checked + .prm-box { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 12px rgba(212,168,82,0.4); }
           .prm-checkbox:checked + .prm-box::after { content: '\f00c'; font-family: 'Font Awesome 5 Free'; font-weight: 900; color: #12161c; font-size: 0.75rem; }
         </style>
-        <div style="margin-bottom:15px; position:relative;">
-          <i class="fas fa-search" style="position:absolute; left:12px; top:12px; color:var(--muted);"></i>
-          <input type="text" id="admin-att-search" placeholder="Search staff attendance by name..." class="prm-input" style="padding-left:36px; padding-top:10px; padding-bottom:10px; font-size:0.9rem;" onkeyup="filterAdminAtt()">
+        <div style="display:flex; gap:12px; margin-bottom:15px;">
+          <div style="flex: 0 0 70%; position:relative;">
+            <i class="fas fa-search" style="position:absolute; left:12px; top:12px; color:var(--muted);"></i>
+            <input type="text" id="admin-att-search" placeholder="Search by name..." class="prm-input" style="padding-left:36px; padding-top:10px; padding-bottom:10px; font-size:0.9rem;" onkeyup="filterAdminAtt()">
+          </div>
+          <div style="flex: 1;">
+            <select id="admin-att-status-filter" class="prm-input" style="padding-top:10px; padding-bottom:10px; font-size:0.9rem; cursor:pointer;" onchange="filterAdminAtt()">
+              <option value="all">All</option>
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+            </select>
+          </div>
         </div>
+
         <script>
         function filterAdminAtt() {
-            let input = document.getElementById("admin-att-search").value.toLowerCase();
+            let searchInput = document.getElementById("admin-att-search").value.toLowerCase();
+            let statusFilter = document.getElementById("admin-att-status-filter").value.toLowerCase();
             let cards = document.querySelectorAll(".prm-att-card");
+            
             cards.forEach(card => {
-                let text = card.textContent.toLowerCase();
-                if (text.indexOf(input) > -1) {
+                let name = card.querySelector('div[style*="font-weight:800"]').textContent.toLowerCase();
+                let statusSelect = card.querySelector('select[name^="attendance_status_"]');
+                let currentStatus = statusSelect.value.toLowerCase();
+                
+                let matchesSearch = name.indexOf(searchInput) > -1;
+                let matchesStatus = statusFilter === "all" || currentStatus === statusFilter;
+                
+                if (matchesSearch && matchesStatus) {
                     card.style.display = "flex";
                 } else {
                     card.style.display = "none";
