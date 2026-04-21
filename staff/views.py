@@ -272,7 +272,10 @@ def staff_bookings(request):
         bookings = bookings.filter(status=status_filter)
     if search:
         bookings = bookings.filter(
-            Q(name__icontains=search) | Q(phone__icontains=search)
+            Q(name__icontains=search) |
+            Q(phone__icontains=search) |
+            Q(venue__icontains=search) |
+            Q(location_name__icontains=search)
         )
 
     bookings = bookings.select_related('created_by').order_by('event_date')
@@ -292,6 +295,16 @@ def staff_create_booking(request):
     me = request.user
     if request.method == 'POST':
         try:
+            # Fix 4: Warn if event date is in the past
+            from datetime import date as date_type
+            event_date_str = request.POST.get('event_date', '')
+            if event_date_str:
+                try:
+                    event_date_val = date_type.fromisoformat(event_date_str)
+                    if event_date_val < date_type.today():
+                        messages.warning(request, f'⚠️ Note: The event date {event_date_val.strftime("%d %b %Y")} is in the past.')
+                except ValueError:
+                    pass
             booking = Booking.objects.create(
                 name        = request.POST['name'],
                 email       = request.POST['email'],

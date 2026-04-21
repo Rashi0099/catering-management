@@ -6,10 +6,14 @@
   <div style="max-width:500px">
     <div style="font-size:4rem;margin-bottom:24px">🎉</div>
     <h1 style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;color:var(--brown);margin-bottom:16px">
-      Booking Received!
+      {% if type == 'staff' %}Application Submitted!{% else %}Booking Received!{% endif %}
     </h1>
     <p style="color:var(--muted);line-height:1.7;margin-bottom:32px">
-      Thank you for reaching out to Mastan's Catering & Services! Our team will review your request and get back to you within <strong>24 hours</strong> with a personalised quote.
+      {% if type == 'staff' %}
+        Thank you for your interest in joining Mastan's Catering & Services! Our operations team will review your profile and contact you if you are shortlisted for an interview.
+      {% else %}
+        Thank you for reaching out to Mastan's Catering & Services! Our team will review your request and get back to you within <strong>24 hours</strong> with a personalised quote.
+      {% endif %}
     </p>
     <div style="background:var(--warm);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:32px">
       <div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px">Questions? Reach us at</div>

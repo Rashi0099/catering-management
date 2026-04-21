@@ -44,7 +44,7 @@ def admin_logout(request):
 
 from django.core.cache import cache
 
-from core.utils import auto_complete_past_bookings
+from core.utils import auto_complete_past_bookings, get_pending_count
 
 @admin_required
 def dashboard(request):
@@ -122,7 +122,13 @@ def bookings_list(request):
         bookings = bookings.filter(session=session_filter)
         
     if search:
-        bookings = bookings.filter(Q(name__icontains=search) | Q(phone__icontains=search))
+        bookings = bookings.filter(
+            Q(name__icontains=search) |
+            Q(phone__icontains=search) |
+            Q(venue__icontains=search) |
+            Q(location_name__icontains=search) |
+            Q(event_type__icontains=search)
+        )
 
     bookings = bookings.order_by('-created_at')
     paginator = Paginator(bookings, 20)
@@ -147,10 +153,15 @@ def booking_detail(request, pk):
         action = request.POST.get('action')
         if action == 'update_booking':
             old_status = booking.status
+            old_quoted_price = booking.quoted_price
             booking.status       = request.POST.get('status', booking.status)
             booking.admin_notes  = request.POST.get('admin_notes', '')
             booking.quoted_price = request.POST.get('quoted_price') or None
             booking.save()
+            
+            # Fix 3: If quoted_price changed, recalculate payment totals immediately
+            if booking.quoted_price != old_quoted_price:
+                BookingPayment._recalc_booking_totals_for(booking)
             # Assign staff
             staff_ids = request.POST.getlist('assigned_to')
             booking.assigned_to.set(staff_ids)
@@ -307,6 +318,7 @@ def download_attendance(request, pk):
 
 @admin_required
 def handle_application(request, pk, app_id, action):
+    from django.core.cache import cache
     if request.method != 'POST':
         return redirect('admin_booking_detail', pk=pk)
     application = get_object_or_404(EventApplication, pk=app_id, booking_id=pk)
@@ -317,6 +329,8 @@ def handle_application(request, pk, app_id, action):
             application.status = 'approved'
             application.save()
             application.booking.assigned_to.add(application.staff)
+            # Fix 1: Clear staff dashboard cache so they see the update immediately
+            cache.delete(f'staff_dash_stats_v2_{application.staff_id}')
             messages.success(request, f'{application.staff.full_name} approved and assigned to event.')
     elif action == 'reject_app':
         if application.status != 'pending':
@@ -324,6 +338,7 @@ def handle_application(request, pk, app_id, action):
         else:
             application.status = 'rejected'
             application.save()
+            cache.delete(f'staff_dash_stats_v2_{application.staff_id}')
             messages.success(request, 'Application rejected.')
     elif action == 'approve_cancel':
         if application.status != 'cancel_requested':
@@ -332,14 +347,16 @@ def handle_application(request, pk, app_id, action):
             application.status = 'cancelled'
             application.save()
             application.booking.assigned_to.remove(application.staff)
+            cache.delete(f'staff_dash_stats_v2_{application.staff_id}')
             messages.success(request, f'Cancel request approved. {application.staff.full_name} removed from event.')
     elif action == 'reject_cancel':
         if application.status != 'cancel_requested':
             messages.error(request, 'No cancel request to reject.')
         else:
-            application.status = 'approved'  # Revert to approved since cancel is denied
-            application.cancel_rejected = True  # Flag shown on staff portal
+            application.status = 'approved'
+            application.cancel_rejected = True
             application.save()
+            cache.delete(f'staff_dash_stats_v2_{application.staff_id}')
             messages.success(request, 'Cancel request rejected.')
 
     referer = request.META.get('HTTP_REFERER')
@@ -353,6 +370,16 @@ def handle_application(request, pk, app_id, action):
 def admin_create_booking(request):
     if request.method == 'POST':
         try:
+            # Fix 4: Warn if event date is in the past
+            from datetime import date as date_type
+            event_date_str = request.POST.get('event_date', '')
+            if event_date_str:
+                try:
+                    event_date_val = date_type.fromisoformat(event_date_str)
+                    if event_date_val < date_type.today():
+                        messages.warning(request, f'⚠️ Note: The event date {event_date_val.strftime("%d %b %Y")} is in the past.')
+                except ValueError:
+                    pass
             booking = Booking.objects.create(
                 name        = request.POST['name'],
                 email       = request.POST.get('email', ''),
@@ -749,9 +776,10 @@ def staff_add(request):
                 coat_size=coat_size,
                 place=place,
                 education=education,
-                aadhar_card_no=aadhar_card_no
+                aadhar_card_no=aadhar_card_no,
+                must_change_password=True,  # Force password change on first login
             )
-            messages.success(request, f'Staff added! Default password is "password123". ID: {member.staff_id}')
+            messages.success(request, f'✅ Staff added! ID: {member.staff_id} — Share login credentials privately. They must change their password on first login.')
             return redirect('admin_staff')
         except Exception as e:
             messages.error(request, f'Error adding staff: {str(e)}')
@@ -801,11 +829,12 @@ def staff_edit(request, pk):
 
 @admin_required
 def staff_detail(request, pk):
-    member = get_object_or_404(Staff, pk=pk)
+    member = get_object_or_404(Staff.objects.prefetch_related('bookings', 'payouts'), pk=pk)
     today  = timezone.now().date()
 
-    bookings   = member.bookings.all().order_by('-event_date')
-    payouts    = member.payouts.order_by('-created_at')
+    # Performance Fix 7: Optimization for staff_detail (limit and prefetch already handled by related_name queries)
+    bookings   = member.bookings.all().order_by('-event_date')[:10]
+    payouts    = member.payouts.all().order_by('-created_at')
     revenue    = member.total_revenue_generated()
     total_paid = member.total_paid_out()
     pending    = member.pending_payout()
@@ -827,21 +856,23 @@ def staff_detail(request, pk):
 
     context = {
         'member': member,
-        'bookings': bookings[:10],
+        'bookings': bookings,
         'payouts': payouts,
         'revenue': revenue,
         'total_paid': total_paid,
         'pending': pending,
         'today': today,
         'page': 'staff',
-        'pending_count': Booking.objects.filter(status='pending').count(),
-        'all_bookings': member.bookings.all(),
+        'pending_count': get_pending_count(),
     }
     return render(request, 'admin/staff_detail.html', context)
 
 
 @admin_required
 def mark_payout_paid(request, pk):
+    if request.method != 'POST':
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Method not allowed. Use POST.")
     payout = get_object_or_404(StaffPayout, pk=pk)
     payout.status  = 'paid'
     payout.paid_on = timezone.now().date()
@@ -921,6 +952,9 @@ def menu_edit(request, pk):
 
 @admin_required
 def menu_delete(request, pk):
+    if request.method != 'POST':
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Method not allowed. Use POST.")
     item = get_object_or_404(MenuItem, pk=pk)
     item.delete()
     messages.success(request, f'"{item.name}" removed.')
@@ -929,6 +963,9 @@ def menu_delete(request, pk):
 
 @admin_required
 def menu_category_delete(request, pk):
+    if request.method != 'POST':
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Method not allowed. Use POST.")
     cat = get_object_or_404(MenuCategory, pk=pk)
     cat_name = cat.name
     cat.delete()
@@ -1011,6 +1048,9 @@ def gallery_edit(request, pk):
 
 @admin_required
 def gallery_delete(request, pk):
+    if request.method != 'POST':
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Method not allowed. Use POST.")
     img = get_object_or_404(GalleryImage, pk=pk)
     img.delete()
     messages.success(request, 'Gallery image deleted.')
@@ -1019,6 +1059,9 @@ def gallery_delete(request, pk):
 
 @admin_required
 def gallery_category_delete(request, pk):
+    if request.method != 'POST':
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Method not allowed. Use POST.")
     from gallery.models import GalleryCategory
     cat = get_object_or_404(GalleryCategory, pk=pk)
     cat_name = cat.name
@@ -1049,6 +1092,9 @@ def staff_promotions(request):
 
 @admin_required
 def handle_promotion(request, pk, action):
+    if request.method != 'POST':
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Method not allowed. Use POST.")
     from staff.models import PromotionRequest
     promotion = get_object_or_404(PromotionRequest, pk=pk)
     if action == 'approve':
@@ -1110,16 +1156,24 @@ def admin_report_add(request):
     from bookings.models import ManualReport
     if request.method == 'POST':
         try:
+            bill_amount = float(request.POST.get('bill_amount') or 0.00)
+            amount_received = float(request.POST.get('amount_received') or 0.00)
+            
+            # Fix 8: Auto-calculate pending_amount
+            pending_amount = request.POST.get('pending_amount', '').strip()
+            if not pending_amount:
+                pending_amount = bill_amount - amount_received
+
             ManualReport.objects.create(
                 event_date = request.POST['event_date'],
                 site_name = request.POST.get('site_name', ''),
                 event_name = request.POST.get('event_name', ''),
                 boys_count = int(request.POST.get('boys_count') or 0),
                 bill_incharge = request.POST.get('bill_incharge', ''),
-                bill_amount = request.POST.get('bill_amount') or 0.00,
-                amount_received = request.POST.get('amount_received') or 0.00,
+                bill_amount = bill_amount,
+                amount_received = amount_received,
                 payment_received_on = request.POST.get('payment_received_on') or None,
-                pending_amount = request.POST.get('pending_amount', ''),
+                pending_amount = pending_amount,
                 profit = request.POST.get('profit') or 0.00,
                 is_settled = request.POST.get('is_settled') == 'on'
             )
@@ -1135,6 +1189,9 @@ def admin_report_add(request):
 
 @admin_required
 def admin_report_delete(request, pk):
+    if request.method != 'POST':
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Method not allowed. Use POST.")
     from bookings.models import ManualReport
     report = get_object_or_404(ManualReport, pk=pk)
     report.delete()
@@ -1148,15 +1205,23 @@ def admin_report_edit(request, pk):
     report = get_object_or_404(ManualReport, pk=pk)
     if request.method == 'POST':
         try:
+            bill_amount = float(request.POST.get('bill_amount') or 0.00)
+            amount_received = float(request.POST.get('amount_received') or 0.00)
+            
+            # Fix 8: Auto-calculate pending_amount
+            pending_amount = request.POST.get('pending_amount', '').strip()
+            if not pending_amount:
+                pending_amount = bill_amount - amount_received
+
             report.event_date = request.POST['event_date']
             report.site_name = request.POST.get('site_name', '')
             report.event_name = request.POST.get('event_name', '')
             report.boys_count = int(request.POST.get('boys_count') or 0)
             report.bill_incharge = request.POST.get('bill_incharge', '')
-            report.bill_amount = request.POST.get('bill_amount') or 0.00
-            report.amount_received = request.POST.get('amount_received') or 0.00
+            report.bill_amount = bill_amount
+            report.amount_received = amount_received
             report.payment_received_on = request.POST.get('payment_received_on') or None
-            report.pending_amount = request.POST.get('pending_amount', '')
+            report.pending_amount = pending_amount
             report.profit = request.POST.get('profit') or 0.00
             report.is_settled = request.POST.get('is_settled') == 'on'
             report.save()
@@ -1237,7 +1302,10 @@ def download_invoice_pdf(request):
     if request.method == 'POST':
         import json
         try:
-            data = json.loads(request.body)
+            if 'invoice_data' in request.POST:
+                data = json.loads(request.POST.get('invoice_data'))
+            else:
+                data = json.loads(request.body)
             from .pdf_utils import build_invoice_pdf
             buffer = build_invoice_pdf(data)
             

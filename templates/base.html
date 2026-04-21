@@ -8,7 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <title>{% block title %}Mastan's Catering & Services{% endblock %}</title>
+  <title>{% block title %}Mastan Catering Service &amp; Event Supporters{% endblock %}</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
@@ -16,7 +16,7 @@
   <!-- PWA -->
   <link rel="icon" type="image/png" href="{% static 'icons/icon-192x192.png' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
-  <link rel="manifest" href="{% url 'manifest.json' %}?start_url=/&name=Mastan's%20Catering&short_name=Mastan">
+  <link rel="manifest" href="{% url 'manifest.json' %}?start_url=/&name=Mastan%20Catering&short_name=Mastan">
 
   <style>
     /* ══════════════════════════════════
@@ -89,7 +89,7 @@
       border: 1.5px solid rgba(200,148,10,0.4);
       box-shadow: 0 0 0 3px rgba(200,148,10,0.08);
     }
-    .nav-brand span { color: var(--gold); }
+    .brand-full { color: var(--gold); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.25; text-transform: uppercase; max-width: 200px; }
 
     /* Links */
     .nav-links { display: flex; align-items: center; gap: 2px; }
@@ -148,12 +148,49 @@
 
 
     @media (max-width: 768px) {
-      nav { justify-content: flex-start !important; gap: 15px; }
-      .nav-brand { font-size: 1.25rem; }
-      .nav-brand img { height: 30px; width: 30px; }
-      .nav-links { display: none; }
-      .mobile-menu-btn { display: flex !important; }
-      section { padding: 88px 5%; }
+      nav { 
+        flex-direction: column; 
+        justify-content: flex-start !important; 
+        gap: 12px; 
+        padding: 16px 5% 10px; 
+      }
+      .nav-brand { font-size: 1.35rem; }
+      .nav-brand img { height: 32px; width: 32px; }
+      
+      .nav-links { 
+        display: flex; 
+        width: 100%; 
+        justify-content: center; 
+        gap: 8px; 
+        overflow-x: auto; 
+        padding-bottom: 2px; 
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Hide scrollbar for clean look */
+      .nav-links::-webkit-scrollbar { display: none; }
+      .nav-links { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      .nav-links a { 
+        font-size: 0.72rem; 
+        padding: 6px 14px; 
+        white-space: nowrap; 
+        background: rgba(255,255,255,0.15); 
+        border-radius: 20px; 
+        border: 1px solid rgba(255,255,255,0.1); 
+      }
+      nav.scrolled .nav-links a { 
+        background: rgba(61,28,2,0.06); 
+        border: 1px solid rgba(61,28,2,0.08); 
+      }
+      .nav-links a.active::after { display: none; } /* Hide underline on mobile */
+      .nav-links a.active {
+        background: var(--gold) !important;
+        color: #fff !important;
+        border-color: var(--gold) !important;
+      }
+      
+      .mobile-menu-btn { display: none !important; }
+      section { padding: 120px 5%; } /* Extra padding for taller nav */
     }
 
 
@@ -354,8 +391,8 @@
 ═══════════════════ -->
 <nav id="navbar">
   <a class="nav-brand" href="{% url 'home' %}">
-    <img src="{% static 'images/logo.png' %}" alt="Mastan's Catering">
-    Mastan's&nbsp;<span>Catering</span>
+    <img src="{% static 'images/logo.png' %}" alt="Mastan Catering Service &amp; Event Supporters">
+    <span class="brand-full">Mastan Catering Service &amp; Event Supporters</span>
   </a>
 
   <div class="nav-links">
@@ -390,7 +427,7 @@
 <footer>
   <div class="footer-grid">
     <div>
-      <div class="footer-brand">🍽️ Mastan's <span>Catering</span></div>
+      <div class="footer-brand">🍽️ Mastan Catering Service <span>&amp; Event Supporters</span></div>
       <span class="footer-accent"></span>
       <p>Luxury catering services for weddings, corporate events, and exclusive celebrations. We bring culinary mastery to every table with passion and precision.</p>
     </div>
@@ -415,7 +452,7 @@
   </div>
 
   <div class="footer-bottom">
-    <span>© 2026 Mastan's Catering & Services. Premium Excellence.</span>
+    <span>© 2026 Mastan Catering Service &amp; Event Supporters. All rights reserved.</span>
     <div class="social-links">
       <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
       <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
@@ -460,5 +497,14 @@
   });
 </script>
 {% block extra_js %}{% endblock %}
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register("{% url 'sw.js' %}")
+        .then(reg => console.log('SW Registered!', reg.scope))
+        .catch(err => console.error('SW Failed!', err));
+    });
+  }
+</script>
 </body>
 </html>

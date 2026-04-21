@@ -1,6 +1,11 @@
 import re
+import threading
 from django.utils import timezone
 from django.core.cache import cache
+from django.core.mail import send_mail
+from django.core.files import File
+from io import BytesIO
+from PIL import Image
 from bookings.models import Booking
 
 
@@ -9,6 +14,10 @@ def auto_complete_past_bookings():
     Finds all 'confirmed' bookings with an event_date in the past
     and automatically marks them as 'completed'.
     Rate-limited to run once every 10 minutes.
+
+    Uses individual .save() calls (not bulk update) so that completion
+    side-effects fire correctly: staff.total_events_completed recalculation
+    and Level-C promotion checks in admin_views.booking_detail.
     """
     lock_key = 'auto_complete_lock'
     if cache.get(lock_key):
@@ -16,13 +25,37 @@ def auto_complete_past_bookings():
 
     today = timezone.now().date()
     past_confirmed = Booking.objects.filter(status='confirmed', event_date__lt=today)
+
     if past_confirmed.exists():
-        past_confirmed.update(status='completed')
+        # Process up to 10 at a time to avoid long-running requests
+        for booking in past_confirmed[:10]:
+            booking.status = 'completed'
+            booking.save(update_fields=['status', 'updated_at'])
+
+            # Recalculate completed count and check Level-C promotion for each assigned staff
+            for s in booking.assigned_to.all():
+                s.total_events_completed = s.bookings.filter(status='completed').count()
+                s.save(update_fields=['total_events_completed'])
+
+                if s.level == 'C':
+                    from staff.models import PromotionRequest
+                    day_count   = s.bookings.filter(status='completed', session='day').count()
+                    night_count = s.bookings.filter(status='completed', session='night').count()
+                    long_count  = s.bookings.filter(status='completed', is_long_work=True).count()
+                    if day_count >= 10 and night_count >= 5 and long_count >= 5:
+                        if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
+                            PromotionRequest.objects.create(
+                                staff=s,
+                                current_level='C',
+                                requested_level='B'
+                            )
+
         # Invalidate dashboard cache so counts update immediately
         cache.delete('admin_dashboard_stats')
-    
+
     # Set lock for 10 minutes
     cache.set(lock_key, True, 600)
+
 
 
 def get_pending_count():
@@ -59,22 +92,60 @@ def validate_phone(phone):
     return None
 
 
-def notify_admins(title, body, link='/admin-panel/'):
-    """Send an FCM Multicast Web Push to all Admin Staff."""
+def send_fcm_notification(staff, title, body, link=None):
+    """
+    Unified utility to send push notifications and handle stale token cleanup.
+    """
     try:
         from firebase_admin import messaging
-        from staff.models import FCMDevice
-        tokens = list(FCMDevice.objects.filter(staff__level='admin').values_list('token', flat=True))
+        tokens = list(staff.fcm_devices.values_list('token', flat=True))
         if not tokens:
-            return
+            return None
+        
         message = messaging.MulticastMessage(
             notification=messaging.Notification(title=title, body=body),
             webpush=messaging.WebpushConfig(
                 notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
-                fcm_options=messaging.WebpushFCMOptions(link=link)
+                fcm_options=messaging.WebpushFCMOptions(link=link or '/staff/')
             ),
             tokens=tokens,
         )
-        messaging.send_each_for_multicast(message)
+        
+        response = messaging.send_each_for_multicast(message)
+        
+        # Cleanup expired tokens
+        if response.failure_count > 0:
+            stale_tokens = []
+            for idx, resp in enumerate(response.responses):
+                if not resp.success:
+                    stale_tokens.append(tokens[idx])
+            
+            if stale_tokens:
+                staff.fcm_devices.filter(token__in=stale_tokens).delete()
+        
+        return response
     except Exception as e:
-        print(f"Error sending Admin FCM multicast: {e}")
+        print(f"FCM Notification Error: {e}")
+        return None
+
+
+def notify_admins(title, body, link='/admin-panel/'):
+    """Send an FCM Multicast Web Push to all Admin Staff."""
+    from staff.models import Staff
+    admins = Staff.objects.filter(level='admin')
+    for admin in admins:
+        send_fcm_notification(admin, title, body, link=link)
+
+
+def send_mail_background(subject, message, from_email, recipient_list, **kwargs):
+    """Sends email asynchronously to prevent UI blocking."""
+    thread = threading.Thread(
+        target=send_mail,
+        args=(subject, message, from_email, recipient_list),
+        kwargs=kwargs
+    )
+    thread.start()
+
+
+
+

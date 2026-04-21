@@ -111,7 +111,7 @@
   function addItemRow()  { items.push({name:'',hsn:'',qty:1,price:0}); renderInputTable(); }
   function removeItem(i) { items.splice(i,1); renderInputTable(); }
 
-  async function downloadPDF() {
+  function downloadPDF() {
     const btn = document.getElementById('dl-btn');
     const oldHtml = btn.innerHTML;
     btn.disabled = true;
@@ -125,32 +125,32 @@
       items:   items
     };
 
-    try {
-      const response = await fetch('{% url "admin_download_invoice_pdf" %}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify(data)
-      });
+    // Use native form POST to force actual mobile bowser native download (bypasses Safari Blob-handling issues)
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "admin_download_invoice_pdf" %}';
 
-      if (!response.ok) throw new Error('PDF Generation Failed');
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = '{{ csrf_token }}';
+    form.appendChild(csrf);
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Invoice_${data.inv_no || 'manual'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      alert("Error generating PDF: " + err.message);
-    } finally {
+    const payload = document.createElement('input');
+    payload.type = 'hidden';
+    payload.name = 'invoice_data';
+    payload.value = JSON.stringify(data);
+    form.appendChild(payload);
+
+    document.body.appendChild(form);
+    form.submit();
+    
+    // Clean up
+    setTimeout(() => {
       btn.disabled = false;
       btn.innerHTML = oldHtml;
-    }
+      document.body.removeChild(form);
+    }, 1500);
   }
 
   function initDefaults() {

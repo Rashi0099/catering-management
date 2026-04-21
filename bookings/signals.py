@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_init
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
@@ -9,13 +9,21 @@ from .models import EventApplication, Booking, EventReport
 from core.utils import notify_admins
 
 
+# ── Track original status so we only fire on real changes ────────────────────
+@receiver(post_init, sender=EventApplication)
+def track_application_original_status(sender, instance, **kwargs):
+    """Store original status right after the object is loaded from DB."""
+    instance._original_status = getattr(instance, 'status', 'pending')
+
+
 @receiver(post_save, sender=EventApplication)
 def notify_staff_application_status(sender, instance, created, **kwargs):
-    """Notify Staff via Web Push when their application status changes (Approved/Rejected/Cancelled)."""
+    """Notify Staff via Web Push ONLY when their application status actually changes."""
     if not created:
-        # Check if status has changed
-        # Note: In a production environment, we'd use a dirty field tracker, 
-        # but here we'll just check status against known actions.
+        # Only fire if status changed from what it was when loaded from DB
+        original = getattr(instance, '_original_status', None)
+        if original == instance.status:
+            return  # Status did not change — skip notification entirely
         try:
             title = "Shift Update"
             body = f"Your application for {instance.booking.name} is now {instance.get_status_display()}."
@@ -49,23 +57,9 @@ def notify_staff_application_status(sender, instance, created, **kwargs):
                 )
                 return # Don't send push to user for their own request
 
-            tokens = list(FCMDevice.objects.filter(staff=instance.staff).values_list('token', flat=True))
-            if tokens:
-                message = messaging.MulticastMessage(
-                    notification=messaging.Notification(
-                        title=title,
-                        body=body,
-                    ),
-                    webpush=messaging.WebpushConfig(
-                        notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
-                        fcm_options=messaging.WebpushFCMOptions(link='/staff/dashboard/')
-                    ),
-                    tokens=tokens,
-                )
-                try:
-                    messaging.send_each_for_multicast(message)
-                except Exception as e:
-                    print(f"Error sending FCM multicast: {e}")
+            from core.utils import send_fcm_notification
+            send_fcm_notification(instance.staff, title, body, link='/staff/dashboard/')
+
         except Exception as e:
             print(f"Notification error: {e}")
 
@@ -77,8 +71,11 @@ def notify_admin_cancellation_request(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=EventReport)
 def notify_admin_on_report_submit(sender, instance, created, **kwargs):
-    """Notify admin when a captain submits an event report."""
-    if instance.status == 'submitted':
+    """Notify admin ONLY when a report transitions TO 'submitted' (not on every draft save)."""
+    # Only notify on explicit status field update to 'submitted', not on draft resaves
+    update_fields = kwargs.get('update_fields') or []
+    status_just_saved = not update_fields or 'status' in update_fields
+    if instance.status == 'submitted' and status_just_saved and not created:
         notify_admins(
             title="📊 Captain Report Submitted",
             body=f"{instance.submitted_by.first_name} submitted a report for {instance.booking.name}.",

@@ -250,7 +250,7 @@
       <div class="panel-hdr">
         <div class="panel-title"><i class="fas fa-clipboard-check" style="color:var(--gold);"></i> Event Attendance</div>
         <div>
-          <a href="{% url 'admin_download_attendance' booking.pk %}" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
+          <a href="{% url 'admin_download_attendance' booking.pk %}" download="Attendance_Booking_{{ booking.pk }}.pdf" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
         </div>
       </div>
       {% if assigned_staff_with_att %}

@@ -25,19 +25,20 @@
     #nav-progress.done { width: 100% !important; transition: width 0.2s ease !important; opacity: 1; }
     #nav-progress.fade { opacity: 0; transition: opacity 0.4s ease; }
 
-    /* Skeleton Loading */
+    /* Skeleton Loading & Page Transitions */
     .skeleton-loader { display: none; padding: 20px; }
     .skeleton-item { background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); height: 120px; }
     .skeleton-line { height: 12px; background: rgba(255,255,255,0.04); border-radius: 4px; margin-bottom: 12px; }
     .skeleton-title { height: 24px; width: 50%; background: rgba(255,255,255,0.06); margin-bottom: 20px; border-radius: 6px; }
     .skeleton-pulse { animation: skeleton-fade 0.8s infinite ease-in-out alternate; transform: translate3d(0,0,0); }
-    @keyframes skeleton-fade {
-      0% { opacity: 0.4; }
-      100% { opacity: 1; }
-    }
+    @keyframes skeleton-fade { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    .content-inner { animation: smoothPageLoad 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes smoothPageLoad { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
 
     body.nav-loading-active .content-inner { display: none !important; }
-    body.nav-loading-active .skeleton-loader { display: block !important; }
+    body.nav-loading-active .skeleton-loader { display: block !important; animation: fadeInSoft 0.3s ease forwards; }
+    @keyframes fadeInSoft { 0% { opacity: 0; } 100% { opacity: 1; } }
     body.nav-loading-active { pointer-events: none; }
     
     /* Global confirm modal styles */
@@ -153,7 +154,8 @@
     /* Form */
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 0.74rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
-    input, select, textarea { width: 100%; padding: 10px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.87rem; transition: border-color 0.2s; }
+    input, select, textarea { width: 100%; max-width: 100%; box-sizing: border-box; padding: 10px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.87rem; transition: border-color 0.2s; }
+    input[type="date"], input[type="time"] { -webkit-appearance: none; min-height: 42px; display: block; width: 100%; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--teal); }
     textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -201,20 +203,20 @@
       .main { margin-left: 0; padding-bottom: 75px; }
       
       .bottom-nav {
-        display: flex; justify-content: space-around; align-items: center;
+        display: flex; justify-content: space-around;
         position: fixed; bottom: 0; left: 0; right: 0; height: 75px; 
         background: rgba(16, 22, 37, 0.85); border-top: 1px solid rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
         z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
-        padding-bottom: env(safe-area-inset-bottom, 10px); 
       }
       .bottom-nav a {
-        display: flex; flex-direction: column; align-items: center;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
         color: var(--muted); text-decoration: none; font-size: 0.65rem; gap: 6px;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); width: 33.33%; padding-top: 5px; font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); width: 33.33%; height: 100%; font-weight: 600;
         text-transform: uppercase; letter-spacing: 1px;
+        padding-bottom: env(safe-area-inset-bottom, 10px); 
       }
-      .bottom-nav a i { font-size: 1.3rem; margin-bottom: 2px; transition: transform 0.3s, color 0.3s; }
+      .bottom-nav a i { font-size: 1.3rem; transition: transform 0.3s, color 0.3s; }
       .bottom-nav a.active { color: #ffffff; }
       .bottom-nav a.active i { color: #ffffff; transform: translateY(-4px) scale(1.1); filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2)); }
       
@@ -276,6 +278,9 @@
       <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
     </div>
     <div class="topbar-right">
+      <button id="pwa-install-btn" onclick="installPWA()" class="btn btn-teal btn-sm" style="display:none; gap:6px;" title="Install as Desktop App">
+        <i class="fas fa-download"></i> Install App
+      </button>
       {% if request.resolver_match.url_name == 'staff_profile' %}
       <a href="{% url 'staff_logout' %}" onclick="return confirmLogout(event)" style="color:var(--red); font-size:1.1rem; padding:8px; opacity:0.8;" title="Sign Out">
         <i class="fas fa-sign-out-alt"></i>
@@ -409,6 +414,34 @@
     document.getElementById('sidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('active');
     document.body.style.overflow = document.getElementById('sidebar').classList.contains('open') ? 'hidden' : 'auto';
+  }
+
+  // PWA Install Prompt
+  let _deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _deferredInstall = e;
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.style.display = 'inline-flex';
+  });
+  window.addEventListener('appinstalled', () => {
+    _deferredInstall = null;
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.style.display = 'none';
+  });
+  function installPWA() {
+    if (!_deferredInstall) return;
+    _deferredInstall.prompt();
+    _deferredInstall.userChoice.then(() => { _deferredInstall = null; });
+  }
+
+  // Service Worker Registration
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register("{% url 'sw.js' %}")
+        .then(reg => console.log('Staff SW Registered!', reg.scope))
+        .catch(err => console.error('Staff SW Failed!', err));
+    });
   }
 </script>
 {% block extra_js %}{% endblock %}

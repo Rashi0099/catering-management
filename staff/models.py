@@ -129,6 +129,8 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.full_name} ({self.staff_id})"
 
+
+
     @property
     def first_name(self):
         return self.full_name.split()[0]
@@ -170,6 +172,27 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         from django.db.models import Sum
         result = self.payouts.filter(status='pending').aggregate(total=Sum('amount'))
         return result['total'] or 0
+
+    # Fix 11: Staff financial metrics
+    def events_this_month(self):
+        return self.bookings.filter(
+            status='completed',
+            event_date__month=timezone.now().month,
+            event_date__year=timezone.now().year
+        ).count()
+
+    def earnings_this_month(self):
+        from django.db.models import Sum
+        result = self.payouts.filter(
+            status='paid',
+            paid_on__month=timezone.now().month,
+            paid_on__year=timezone.now().year
+        ).aggregate(total=Sum('amount'))
+        return result['total'] or 0
+
+    def pending_payout_count(self):
+        return self.payouts.filter(status='pending').count()
+
 
 
 class StaffAttendance(models.Model):
@@ -304,10 +327,7 @@ class PromotionRequest(models.Model):
 
     def _notify_status_change(self):
         try:
-            from firebase_admin import messaging
-            tokens = list(self.staff.fcm_devices.values_list('token', flat=True))
-            if not tokens:
-                return
+            from core.utils import send_fcm_notification
             
             if self.status == 'approved':
                 title = "🎉 Promotion Approved!"
@@ -318,15 +338,7 @@ class PromotionRequest(models.Model):
             else:
                 return
                 
-            message = messaging.MulticastMessage(
-                notification=messaging.Notification(title=title, body=body),
-                webpush=messaging.WebpushConfig(
-                    notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
-                    fcm_options=messaging.WebpushFCMOptions(link='/staff/profile/')
-                ),
-                tokens=tokens,
-            )
-            messaging.send_each_for_multicast(message)
+            send_fcm_notification(self.staff, title, body, link='/staff/profile/')
         except Exception as e:
             print(f"Promotion Push Error: {e}")
 

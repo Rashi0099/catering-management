@@ -1,6 +1,6 @@
 import random
 import requests
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.http import JsonResponse
 from django.core.mail import send_mail
 from django.conf import settings
@@ -33,7 +33,7 @@ def booking_form(request):
                         )
                     except Exception:
                         pass
-                    return redirect('booking_success')
+                    return redirect(reverse('booking_success') + '?type=event')
                 except Exception as e:
                     error = 'Something went wrong processing your event booking. Please try again.'
             else:
@@ -46,11 +46,13 @@ def booking_form(request):
                     application = staff_form.save(commit=False)
                     application.status = 'pending'  # pending admin approval directly
                     application.save()
-                    return redirect('booking_success')
+                    return redirect(reverse('booking_success') + '?type=staff')
                 except Exception as e:
                     error = 'Something went wrong processing your staff application. Please try again.'
             else:
                 error = 'Please correct the errors in the Staff Application form.'
+
+
 
     testimonials = Testimonial.objects.filter(is_featured=True)[:3]
     return render(request, 'bookings/booking.html', {
@@ -61,5 +63,6 @@ def booking_form(request):
     })
 
 def booking_success(request):
-    """Displays a success message page after successful form submission."""
-    return render(request, 'bookings/success.html')
+    """Displays a success message page with context-specific text."""
+    success_type = request.GET.get('type', 'event')
+    return render(request, 'bookings/success.html', {'type': success_type})

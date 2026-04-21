@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Mastan's Catering & Services — Premium Catering in Kozhikode{% endblock %}
+{% block title %}Mastan Catering Service and Event Supporters — Premium Catering in Kozhikode{% endblock %}
 {% block nav_home %}active{% endblock %}
 
 {% block extra_css %}
@@ -98,25 +98,31 @@ body { overflow-x: hidden; }
   margin-top: 42px; opacity: 0; animation: fadeUp 1s 1.2s ease forwards;
 }
 .hc-card {
-  background: rgba(255,255,255,0.06); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.14); border-radius: 14px;
+  background: rgba(255, 255, 255, 0.15); /* Brighter glass base */
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.35); /* Stronger border */
+  border-radius: 14px;
   padding: 18px 24px; display: flex; align-items: center; gap: 16px;
-  color: #fff; text-decoration: none; text-align: left;
+  color: #fff !important; text-decoration: none; text-align: left;
   transition: all 0.35s ease; flex: 1; max-width: 290px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .hc-card:hover {
-  background: rgba(255,255,255,0.12); transform: translateY(-4px);
-  border-color: rgba(200,148,10,0.4);
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-4px);
+  border-color: rgba(200, 148, 10, 0.6); /* Gold glow border on hover */
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 .hc-icon {
-  width: 44px; height: 44px; background: rgba(200,148,10,0.2);
+  width: 46px; height: 46px; background: rgba(200, 148, 10, 0.3); /* Brighter icon background */
   border-radius: 10px; display: flex; align-items: center; justify-content: center;
-  color: var(--gold-lt); font-size: 1.1rem; flex-shrink: 0;
+  color: var(--gold-lt); font-size: 1.3rem; flex-shrink: 0;
+  border: 1px solid rgba(200, 148, 10, 0.5); /* Icon border for emphasis */
 }
-.hc-body { display: flex; flex-direction: column; flex: 1; }
-.hc-body strong { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 2px; }
-.hc-body span { font-size: 0.72rem; opacity: 0.65; letter-spacing: 0.02em; }
-.hc-arrow { font-size: 0.85rem; opacity: 0.4; transition: opacity 0.3s; }
+.hc-body { display: flex; flex-direction: column; flex: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.hc-body strong { font-size: 0.98rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 2px; }
+.hc-body span { font-size: 0.75rem; opacity: 0.9; letter-spacing: 0.02em; font-weight: 500; }
+.hc-arrow { font-size: 0.9rem; opacity: 0.7; transition: opacity 0.3s; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .hc-card:hover .hc-arrow { opacity: 1; color: var(--gold-lt); }
 
 @media (max-width: 600px) {
@@ -354,6 +360,20 @@ body { overflow-x: hidden; }
   transition: all 0.35s ease; margin-top: 6px;
 }
 .btn-send:hover { background: var(--brown-lt); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(61,28,2,0.2); }
+/* Validation */
+.req { color: var(--gold); margin-left: 2px; }
+.verr { display: none; font-size: 0.72rem; color: #e74c3c; margin-top: -4px; }
+.ff input.invalid, .ff textarea.invalid { border-color: #e74c3c; background: rgba(231,76,60,0.03); }
+.ff input.valid, .ff textarea.valid { border-color: #27ae60; }
+.cf-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 20px; border-radius: 6px; margin-bottom: 22px;
+  font-size: 0.9rem; font-weight: 500; line-height: 1.4;
+}
+.cf-ok { background: rgba(39,174,96,0.1); border: 1px solid rgba(39,174,96,0.35); color: #1e8449; }
+.cf-ok i { color: #27ae60; font-size: 1.1rem; }
+.cf-err { background: rgba(231,76,60,0.09); border: 1px solid rgba(231,76,60,0.3); color: #c0392b; }
+.cf-err i { color: #e74c3c; font-size: 1.1rem; }
 @media (max-width: 768px) {
   .contact-grid { grid-template-columns: 1fr; gap: 44px; }
   .frow { grid-template-columns: 1fr; }
@@ -409,7 +429,7 @@ body { overflow-x: hidden; }
   <div class="h-bg" id="heroBg"></div>
   <div class="h-overlay"></div>
   <div class="h-content">
-    <div class="h-eyebrow">Premium Catering · Kozhikode</div>
+    <div class="h-eyebrow">Mastan Catering Service and Event Supporters</div>
     <h1 class="h-title">Elegance<br>On Every <em>Plate</em>.</h1>
     <div class="h-line"></div>
     <p class="h-sub">Luxury catering crafted for weddings, corporate events &amp; grand celebrations — served with grace.</p>
@@ -557,18 +577,43 @@ body { overflow-x: hidden; }
     <div class="cform rr">
       <h3>Send a Message</h3>
       {% if contact_success %}
-        <div style="background:rgba(200,148,10,0.08);border:1px solid rgba(200,148,10,0.3);padding:20px;border-radius:4px;color:var(--brown);margin-bottom:24px;font-size:0.95rem;">
-          ✓ Message sent! We'll get back to you shortly.
+        <div class="cf-banner cf-ok">
+          <i class="fas fa-check-circle"></i>
+          Message sent! We’ll get back to you shortly.
+        </div>
+      {% elif contact_error %}
+        <div class="cf-banner cf-err">
+          <i class="fas fa-exclamation-circle"></i>
+          Something went wrong. Make sure your name & message are filled.
         </div>
       {% endif %}
-      <form method="post" action="{% url 'contact' %}">
+      <form method="post" action="{% url 'contact' %}" id="homeContactForm" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="source" value="home">
         <div class="frow">
-          <div class="ff"><label>Name</label><input type="text" name="name" placeholder="Muhammed Ali" required></div>
-          <div class="ff"><label>Phone</label><input type="tel" name="phone" placeholder="+91 9876543210"></div>
+          <div class="ff">
+            <label>Your Name <span class="req">*</span></label>
+            <input type="text" name="name" id="cf-name" placeholder="Muhammed Ali" autocomplete="name">
+            <span class="verr" id="cf-name-err">Name is required</span>
+          </div>
+          <div class="ff">
+            <label>Phone</label>
+            <input type="tel" name="phone" id="cf-phone" placeholder="+91 9876543210" autocomplete="tel">
+          </div>
         </div>
-        <div class="ff"><label>Message</label><textarea name="message" rows="5" placeholder="Tell us about your event..."></textarea></div>
-        <button type="submit" class="btn-send"><i class="fas fa-paper-plane"></i> Send Message</button>
+        <div class="ff">
+          <label>Email</label>
+          <input type="email" name="email" id="cf-email" placeholder="example@gmail.com" autocomplete="email">
+          <span class="verr" id="cf-email-err">Enter a valid email address</span>
+        </div>
+        <div class="ff">
+          <label>Message <span class="req">*</span></label>
+          <textarea name="message" id="cf-msg" rows="5" placeholder="Tell us about your event..."></textarea>
+          <span class="verr" id="cf-msg-err">Please write a brief message</span>
+        </div>
+        <button type="submit" class="btn-send" id="cf-submit">
+          <i class="fas fa-paper-plane"></i> Send Message
+        </button>
       </form>
     </div>
   </div>
@@ -615,16 +660,41 @@ body { overflow-x: hidden; }
     document.getElementById('s-menu')?.scrollIntoView({ behavior:'smooth' });
   });
 
-  /* Parallax */
+  /* Gentle Professional Parallax */
   const heroBg = document.getElementById('heroBg');
   const pBg    = document.getElementById('pBg');
   window.addEventListener('scroll', () => {
     const sy = window.scrollY;
-    if (heroBg) heroBg.style.transform = `scale(1.1) translateY(${sy * 0.28}px)`;
+    if (heroBg) heroBg.style.transform = `scale(1.1) translateY(${sy * 0.22}px)`;
     if (pBg) {
       const rect = pBg.parentElement.getBoundingClientRect();
-      pBg.style.transform = `translateY(${-rect.top * 0.22}px)`;
+      pBg.style.transform = `translateY(${-rect.top * 0.15}px)`;
     }
+  }, { passive: true });
+
+  /* ScrollSpy for Dynamic Yellow Underline Navigation */
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+  window.addEventListener('scroll', () => {
+    let current = 's-hero';
+    
+    sections.forEach(sec => {
+      // Trigger when section top crosses the upper quarter of the screen
+      if (window.scrollY >= (sec.offsetTop - 250)) {
+        current = sec.getAttribute('id');
+      }
+    });
+
+    navLinks.forEach(link => {
+      link.classList.remove('active');
+      const href = link.getAttribute('href');
+      // If we are at the hero section, activate the home link (which lacks a hash usually)
+      if (current === 's-hero' && (href === '/' || href.includes('home') && !href.includes('#'))) {
+        link.classList.add('active');
+      } else if (href.includes('#' + current)) {
+        link.classList.add('active');
+      }
+    });
   }, { passive: true });
 
   /* Scroll reveal */
@@ -637,6 +707,43 @@ body { overflow-x: hidden; }
     });
   }, { threshold: 0.1 });
   document.querySelectorAll('.rv, .rl, .rr, .rv-img').forEach(el => ro.observe(el));
+
+  /* ── Contact Form Validation ── */
+  const homeForm = document.getElementById('homeContactForm');
+  if (homeForm) {
+    const nameEl  = document.getElementById('cf-name');
+    const emailEl = document.getElementById('cf-email');
+    const msgEl   = document.getElementById('cf-msg');
+
+    function showErr(el, errId, show) {
+      el.classList.toggle('invalid', show);
+      el.classList.toggle('valid', !show && el.value.trim() !== '');
+      document.getElementById(errId).style.display = show ? 'block' : 'none';
+    }
+
+    function validateEmail(v) {
+      return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    }
+
+    nameEl.addEventListener('blur', () => showErr(nameEl, 'cf-name-err', !nameEl.value.trim()));
+    emailEl.addEventListener('blur', () => showErr(emailEl, 'cf-email-err', !validateEmail(emailEl.value.trim())));
+    msgEl.addEventListener('blur', () => showErr(msgEl, 'cf-msg-err', !msgEl.value.trim()));
+
+    homeForm.addEventListener('submit', e => {
+      let ok = true;
+      if (!nameEl.value.trim()) { showErr(nameEl, 'cf-name-err', true); ok = false; }
+      if (!validateEmail(emailEl.value.trim())) { showErr(emailEl, 'cf-email-err', true); ok = false; }
+      if (!msgEl.value.trim()) { showErr(msgEl, 'cf-msg-err', true); ok = false; }
+      if (!ok) {
+        e.preventDefault();
+        homeForm.querySelector('.verr[style*="block"]')
+          ?.closest('.ff')?.querySelector('input,textarea')?.focus();
+      } else {
+        const btn = document.getElementById('cf-submit');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}
