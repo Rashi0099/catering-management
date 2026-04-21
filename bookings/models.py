@@ -96,6 +96,41 @@ class Booking(models.Model):
     def __str__(self):
         return f"{self.name} — {self.get_event_type_display()} on {self.event_date}"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_is_published = getattr(self, 'is_published', False)
+
+    def save(self, *args, **kwargs):
+        newly_published = getattr(self, 'is_published', False) and not self._original_is_published
+        super().save(*args, **kwargs)
+        if newly_published:
+            self._notify_staff_published()
+        self._original_is_published = getattr(self, 'is_published', False)
+
+    def _notify_staff_published(self):
+        try:
+            from firebase_admin import messaging
+            from staff.models import FCMDevice, Staff
+            qs = Staff.objects.filter(is_active=True)
+            if self.publish_locality != 'all':
+                qs = qs.filter(main_locality=self.publish_locality)
+            
+            tokens = list(FCMDevice.objects.filter(staff__in=qs).values_list('token', flat=True))
+            if tokens:
+                title = "📅 New Event Published!"
+                body = f"A new {self.get_event_type_display()} event is scheduled for {self.event_date}. Apply now!"
+                message = messaging.MulticastMessage(
+                    notification=messaging.Notification(title=title, body=body),
+                    webpush=messaging.WebpushConfig(
+                        notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
+                        fcm_options=messaging.WebpushFCMOptions(link='/staff/events/')
+                    ),
+                    tokens=tokens,
+                )
+                messaging.send_each_for_multicast(message)
+        except Exception as e:
+            print(f"FCM Publication Notify error: {e}")
+
     @property
     def balance_due(self):
         if self.quoted_price:
