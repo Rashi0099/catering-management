@@ -12,14 +12,4 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: payload.notification.icon || '/static/icons/icon-192x192_white.png',
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+// Automatic push notification handling provided by Firebase SDK.

@@ -21,28 +21,33 @@
   function requestFCMToken() {
     Notification.requestPermission().then((permission) => {
       if (permission === 'granted') {
-        messaging.getToken({ vapidKey: "BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI" })
-          .then((currentToken) => {
-            if (currentToken) {
-                // Send the token to the server
-                fetch('/staff/save-fcm-token/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({token: currentToken})
-                }).then(response => {
-                    console.log('FCM Token successfully synced to server');
-                }).catch(err => {
-                    console.error('Failed to sync FCM Token:', err);
-                });
-            } else {
-              console.log('No FCM registration token available. Request permission to generate one.');
-            }
-          }).catch((err) => {
-            console.log('An error occurred while retrieving token. ', err);
-          });
+        navigator.serviceWorker.ready.then((registration) => {
+          messaging.getToken({ 
+            vapidKey: "BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI",
+            serviceWorkerRegistration: registration
+          })
+            .then((currentToken) => {
+              if (currentToken) {
+                  // Send the token to the server
+                  fetch('/staff/save-fcm-token/', {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-CSRFToken': getCookie('csrftoken')
+                      },
+                      body: JSON.stringify({token: currentToken})
+                  }).then(response => {
+                      console.log('FCM Token successfully synced to server');
+                  }).catch(err => {
+                      console.error('Failed to sync FCM Token:', err);
+                  });
+              } else {
+                console.log('No FCM registration token available. Request permission to generate one.');
+              }
+            }).catch((err) => {
+              console.log('An error occurred while retrieving token. ', err);
+            });
+        });
       } else {
         console.log('Unable to get permission to notify.');
       }
@@ -99,16 +104,25 @@
   // Handle incoming messages when the app is in focus
   messaging.onMessage((payload) => {
     console.log('Message received. ', payload);
-    // Determine if we are on a page where we want to show an alert or just log
-    // We could use Toastify or native alert
+    
+    // Web custom toast if exists
     if (typeof showToast === "function") {
         showToast("📢 " + payload.notification.title + ": " + payload.notification.body);
-    } else {
-        // Fallback generic js alert for now, or just browser native notification
-        new Notification(payload.notification.title, {
-            body: payload.notification.body,
-            icon: payload.notification.icon || '/static/icons/icon-192x192_white.png'
+    }
+    
+    // Explicitly show OS notification since PWA foreground may not auto-display it
+    const title = payload.notification.title;
+    const options = {
+        body: payload.notification.body,
+        icon: payload.notification.icon || '/static/icons/icon-192x192_white.png'
+    };
+    
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.ready.then((reg) => {
+            reg.showNotification(title, options);
         });
+    } else {
+        new Notification(title, options);
     }
   });
 

@@ -1,4 +1,6 @@
-const CACHE_NAME = 'mastans-catering-v8';
+importScripts('/firebase-messaging-sw.js');
+
+const CACHE_NAME = 'mastans-catering-v9';
 const STATIC_ASSETS = [
     '/',
     '/staff/login/',
