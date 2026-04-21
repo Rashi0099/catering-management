@@ -18,5 +18,6 @@ urlpatterns = [
     path('profile/', views.staff_profile, name='staff_profile'),
     path('profile/upload-photo/', views.upload_profile_photo, name='upload_profile_photo'),
     path('terms/', views.staff_terms, name='staff_terms'),
+    path('save-fcm-token/', views.save_fcm_token, name='save_fcm_token'),
 ]
 

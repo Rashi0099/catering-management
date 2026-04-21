@@ -1,5 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -9,11 +12,32 @@ from django.db.models import Sum, Count, Q
 from django.db import transaction
 from django.core.cache import cache
 
-from .models import Staff, StaffPayout, StaffAttendance, StaffNotice
+from .models import Staff, StaffPayout, StaffAttendance, StaffNotice, FCMDevice
 from bookings.models import Booking, BookingPayment, EventApplication
 
 
+
+# ── Firebase ────────────────────────────────────────────────────────────────
+@login_required
+def save_fcm_token(request):
+    """Saves the Firebase Cloud Messaging token for the authenticated staff."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            token = data.get('token')
+            if token and hasattr(request.user, 'staff'):
+                FCMDevice.objects.update_or_create(
+                    staff=request.user.staff,
+                    token=token,
+                    defaults={'device_name': request.META.get('HTTP_USER_AGENT', 'Unknown')}
+                )
+                return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'invalid method'}, status=405)
+
 # ── Authentication ───────────────────────────────────────────────────────────
+
 
 @login_required(login_url='/staff/login/')
 def staff_change_password(request):

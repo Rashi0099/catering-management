@@ -11,8 +11,6 @@
   <meta name="apple-mobile-web-app-title" content="Mastan Staff">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
   <title>{% block title %}Staff Portal — Mastan's Catering & Services{% endblock %}</title>
-  {% load webpush_notifications %}
-  {% webpush_header %}
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
@@ -415,5 +413,6 @@
 </script>
 {% block extra_js %}{% endblock %}
   {% include 'confirm_modal.html' %}
+  {% include 'fcm_init.html' %}
 </body>
 </html>

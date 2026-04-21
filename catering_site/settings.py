@@ -193,3 +193,15 @@ WEBPUSH_SETTINGS = {
     "APP_NAME": "Mastan",
     "APP_ICON_URL": "/static/images/logo.png"
 }
+
+# ── Firebase Notifications ───────────────────────────────────────────────────
+import firebase_admin
+from firebase_admin import credentials
+
+cred_path = BASE_DIR / 'firebase-adminsdk.json'
+if cred_path.exists() and not firebase_admin._apps:
+    try:
+        cred = credentials.Certificate(str(cred_path))
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        print(f"Error initializing Firebase Admin: {e}")

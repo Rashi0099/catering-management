@@ -2,12 +2,11 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
-try:
-    from webpush import send_user_notification
-except ImportError:
-    send_user_notification = None
+from firebase_admin import messaging
 
+from staff.models import FCMDevice
 from .models import EventApplication, Booking
+
 
 @receiver(post_save, sender=EventApplication)
 def notify_staff_application_status(sender, instance, created, **kwargs):
@@ -43,15 +42,26 @@ def notify_staff_application_status(sender, instance, created, **kwargs):
                 )
                 return # Don't send push to user for their own request
 
-            payload = {
-                "head": title,
-                "body": body,
-                "icon": "/static/images/logo.png",
-                "url": "/staff/dashboard/"
-            }
-            send_user_notification(user=instance.staff, payload=payload, ttl=3600)
-        except ImportError:
-            pass
+            tokens = list(FCMDevice.objects.filter(staff=instance.staff).values_list('token', flat=True))
+            if tokens:
+                message = messaging.MulticastMessage(
+                    notification=messaging.Notification(
+                        title=title,
+                        body=body,
+                    ),
+                    webpush=messaging.WebpushConfig(
+                        notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
+                        fcm_options=messaging.WebpushFCMOptions(link='/staff/dashboard/')
+                    ),
+                    tokens=tokens,
+                )
+                try:
+                    messaging.send_each_for_multicast(message)
+                except Exception as e:
+                    print(f"Error sending FCM multicast: {e}")
+        except Exception as e:
+            print(f"Notification error: {e}")
+
 
 @receiver(post_save, sender=EventApplication)
 def notify_admin_cancellation_request(sender, instance, created, **kwargs):

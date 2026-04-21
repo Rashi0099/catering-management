@@ -3,13 +3,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
-try:
-    from webpush import send_user_notification, send_group_notification
-except ImportError:
-    send_user_notification = None
-    send_group_notification = None
+from firebase_admin import messaging
 
-from .models import StaffApplication, PromotionRequest, StaffNotice, Staff
+from .models import StaffApplication, PromotionRequest, StaffNotice, Staff, FCMDevice
 
 @receiver(post_save, sender=StaffApplication)
 def notify_admin_new_application(sender, instance, created, **kwargs):
@@ -47,23 +43,23 @@ def notify_admin_promotion_request(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=StaffNotice)
 def broadcast_notice_to_staff(sender, instance, created, **kwargs):
-    """Send Web Push to all active staff when a new notice is published."""
+    """Send FCM Web Push to all active staff when a new notice is published."""
     if created and instance.is_active:
-        try:
-            payload = {
-                "head": "📢 New Staff Notice",
-                "body": instance.message[:100] + ("..." if len(instance.message) > 100 else ""),
-                "icon": "/static/images/logo.png",
-                "url": "/staff/"
-            }
-            # Send to all active staff members
-            # Note: webpush group notification requires 'group_name'
-            # We'll send to individuals to be safe since we don't have groups pre-defined
-            active_staff = Staff.objects.filter(is_active=True)
-            for staff in active_staff:
-                try:
-                    send_user_notification(user=staff, payload=payload, ttl=3600)
-                except Exception:
-                    continue
-        except ImportError:
-            pass
+        tokens = list(FCMDevice.objects.filter(staff__is_active=True).values_list('token', flat=True))
+        if tokens:
+            body_text = instance.message[:100] + ("..." if len(instance.message) > 100 else "")
+            message = messaging.MulticastMessage(
+                notification=messaging.Notification(
+                    title="📢 New Staff Notice",
+                    body=body_text,
+                ),
+                webpush=messaging.WebpushConfig(
+                    notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
+                    fcm_options=messaging.WebpushFCMOptions(link='/staff/')
+                ),
+                tokens=tokens,
+            )
+            try:
+                messaging.send_each_for_multicast(message)
+            except Exception as e:
+                print(f"Error sending FCM multicast: {e}")

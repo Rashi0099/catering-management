@@ -1,0 +1,92 @@
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+<script>
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7qnoyAyG2nU3DZOLGy2kkDkQB3FEwvqQ",
+    authDomain: "mastan-761bc.firebaseapp.com",
+    projectId: "mastan-761bc",
+    storageBucket: "mastan-761bc.firebasestorage.app",
+    messagingSenderId: "227009036928",
+    appId: "1:227009036928:web:fedebf08a23e04442e1c65",
+  };
+  
+  if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+  }
+
+  const messaging = firebase.messaging();
+
+  // Function to register token
+  function requestFCMToken() {
+    Notification.requestPermission().then((permission) => {
+      if (permission === 'granted') {
+        messaging.getToken({ vapidKey: "BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI" })
+          .then((currentToken) => {
+            if (currentToken) {
+                // Send the token to the server
+                fetch('/staff/save-fcm-token/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({token: currentToken})
+                }).then(response => {
+                    console.log('FCM Token successfully synced to server');
+                }).catch(err => {
+                    console.error('Failed to sync FCM Token:', err);
+                });
+            } else {
+              console.log('No FCM registration token available. Request permission to generate one.');
+            }
+          }).catch((err) => {
+            console.log('An error occurred while retrieving token. ', err);
+          });
+      } else {
+        console.log('Unable to get permission to notify.');
+      }
+    });
+  }
+
+  // Helper to get CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+  }
+
+  // Only request if logged in and in secure context or localhost
+  if (window.isSecureContext) {
+      // Fire request automatically when script loads
+      document.addEventListener("DOMContentLoaded", () => {
+          requestFCMToken();
+      });
+  }
+
+  // Handle incoming messages when the app is in focus
+  messaging.onMessage((payload) => {
+    console.log('Message received. ', payload);
+    // Determine if we are on a page where we want to show an alert or just log
+    // We could use Toastify or native alert
+    if (typeof showToast === "function") {
+        showToast("📢 " + payload.notification.title + ": " + payload.notification.body);
+    } else {
+        // Fallback generic js alert for now, or just browser native notification
+        new Notification(payload.notification.title, {
+            body: payload.notification.body,
+            icon: payload.notification.icon || '/static/icons/icon-192x192_white.png'
+        });
+    }
+  });
+
+</script>
