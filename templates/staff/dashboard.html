@@ -120,13 +120,50 @@
 
 <style>
   .stats-row-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  /* Desktop View */
+  .dashboard-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tab-switcher { display: none; }
+  .tab-panel { display: block !important; }
+
+  /* Mobile View */
   @media (max-width: 768px) {
     .stats-row-3 { grid-template-columns: 1fr !important; }
+    .dashboard-panels { display: block; }
+    .tab-switcher {
+      display: flex; background: var(--surface); border-radius: 12px;
+      border: 1px solid var(--border); margin-bottom: 20px; overflow: hidden;
+    }
+    .tab-btn {
+      flex: 1; padding: 14px 10px; font-size: 0.85rem; font-weight: 600; color: var(--muted);
+      cursor: pointer; background: transparent; border: none; transition: all 0.3s;
+      position: relative; outline: none; border-bottom: 2px solid transparent;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .tab-btn.active { color: var(--teal); background: rgba(56, 201, 176, 0.05); border-bottom: 2px solid var(--teal); }
+    .tab-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--red); color: white; border-radius: 50%;
+      min-width: 18px; height: 18px; font-size: 0.65rem; font-weight: bold;
+      position: absolute; top: 6px; right: 12px; padding: 0 4px;
+    }
+    .tab-panel { display: none !important; }
+    .tab-panel.active { display: block !important; }
   }
 </style>
-<div class="grid2">
+
+<div class="tab-switcher">
+  <button class="tab-btn active" onclick="switchDashboardTab('confirmed', this)">Confirmed Events</button>
+  <button class="tab-btn" onclick="switchDashboardTab('available', this)">
+    Available Shifts
+    {% if available_bookings|length > 0 %}
+      <span class="tab-badge">{{ available_bookings|length }}</span>
+    {% endif %}
+  </button>
+</div>
+
+<div class="dashboard-panels">
   <!-- Confirmed Events -->
-  <div class="panel" id="panel-upcoming">
+  <div class="panel tab-panel active" id="tab-confirmed">
     <div class="panel-hdr">
       <div class="panel-title"><i class="fas fa-calendar-check" style="color:var(--teal); margin-right:8px;"></i> Confirmed Events</div>
       <a href="{% url 'staff_bookings' %}" class="panel-link">All →</a>
@@ -170,7 +207,7 @@
   </div>
 
   <!-- Available Events to Claim -->
-  <div class="panel" id="panel-available">
+  <div class="panel tab-panel" id="tab-available">
     <div class="panel-hdr">
       <div class="panel-title" style="display: flex; align-items: center;">
         Available Shifts 
@@ -241,6 +278,17 @@
     {% endfor %}
   </div>
 </div>
+
+<script>
+function switchDashboardTab(tabId, btnElement) {
+  // Only matters on mobile, but JS runs anyway
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+  
+  btnElement.classList.add('active');
+  document.getElementById('tab-' + tabId).classList.add('active');
+}
+</script>
 
 
 
