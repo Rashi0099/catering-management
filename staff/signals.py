@@ -5,7 +5,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 from firebase_admin import messaging
 
-from .models import StaffApplication, PromotionRequest, StaffNotice, Staff, FCMDevice
+from .models import Staff, FCMDevice, StaffNotice, StaffApplication, PromotionRequest
+from core.utils import notify_admins
 
 @receiver(post_save, sender=StaffApplication)
 def notify_admin_new_application(sender, instance, created, **kwargs):
@@ -63,3 +64,21 @@ def broadcast_notice_to_staff(sender, instance, created, **kwargs):
                 messaging.send_each_for_multicast(message)
             except Exception as e:
                 print(f"Error sending FCM multicast: {e}")
+
+@receiver(post_save, sender=StaffApplication)
+def notify_admin_on_staff_application(sender, instance, created, **kwargs):
+    if created:
+        notify_admins(
+            title="👤 New Staff Application",
+            body=f"{instance.full_name} applied to join the team from {instance.place}.",
+            link="/admin-panel/staff/applications/"
+        )
+
+@receiver(post_save, sender=PromotionRequest)
+def notify_admin_on_promotion_request(sender, instance, created, **kwargs):
+    if created:
+        notify_admins(
+            title="⭐ Promotion Request",
+            body=f"{instance.staff.first_name} wants to upgrade from {instance.get_current_level_display()} to {instance.get_requested_level_display()}.",
+            link="/admin-panel/staff/promotions/"
+        )

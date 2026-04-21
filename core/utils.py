@@ -58,3 +58,23 @@ def validate_phone(phone):
         return cleaned
     return None
 
+
+def notify_admins(title, body, link='/admin-panel/'):
+    """Send an FCM Multicast Web Push to all Admin Staff."""
+    try:
+        from firebase_admin import messaging
+        from staff.models import FCMDevice
+        tokens = list(FCMDevice.objects.filter(staff__level='admin').values_list('token', flat=True))
+        if not tokens:
+            return
+        message = messaging.MulticastMessage(
+            notification=messaging.Notification(title=title, body=body),
+            webpush=messaging.WebpushConfig(
+                notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
+                fcm_options=messaging.WebpushFCMOptions(link=link)
+            ),
+            tokens=tokens,
+        )
+        messaging.send_each_for_multicast(message)
+    except Exception as e:
+        print(f"Error sending Admin FCM multicast: {e}")

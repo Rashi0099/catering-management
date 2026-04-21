@@ -5,7 +5,8 @@ from django.conf import settings
 from firebase_admin import messaging
 
 from staff.models import FCMDevice
-from .models import EventApplication, Booking
+from .models import EventApplication, Booking, EventReport
+from core.utils import notify_admins
 
 
 @receiver(post_save, sender=EventApplication)
@@ -40,6 +41,12 @@ def notify_staff_application_status(sender, instance, created, **kwargs):
                     subject, msg, settings.EMAIL_HOST_USER, 
                     [settings.EMAIL_HOST_USER], fail_silently=True
                 )
+                
+                notify_admins(
+                    title=f"🚩 Cancel Request: {instance.applicant_name}",
+                    body=f"{instance.applicant_name} wants to cancel their shift for {instance.booking.name}",
+                    link=f"/admin/bookings/eventapplication/{instance.pk}/change/"
+                )
                 return # Don't send push to user for their own request
 
             tokens = list(FCMDevice.objects.filter(staff=instance.staff).values_list('token', flat=True))
@@ -67,3 +74,13 @@ def notify_staff_application_status(sender, instance, created, **kwargs):
 def notify_admin_cancellation_request(sender, instance, created, **kwargs):
     """Handled within the status check above to avoid redundant signals, but keeping as placeholder."""
     pass
+
+@receiver(post_save, sender=EventReport)
+def notify_admin_on_report_submit(sender, instance, created, **kwargs):
+    """Notify admin when a captain submits an event report."""
+    if instance.status == 'submitted':
+        notify_admins(
+            title="📊 Captain Report Submitted",
+            body=f"{instance.submitted_by.first_name} submitted a report for {instance.booking.name}.",
+            link="/admin-panel/reports/events/"
+        )
