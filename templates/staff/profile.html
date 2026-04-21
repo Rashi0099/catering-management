@@ -75,6 +75,24 @@
   color: var(--teal);
   font-size: 0.9rem;
   margin-top: 8px;
+/* Photo Viewer Modal */
+#photo-viewer-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+#photo-viewer-overlay.active { display: flex; }
+#full-photo {
+  max-width: 95vw;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  cursor: default;
+  transition: transform 0.3s ease;
 }
 </style>
 
@@ -109,7 +127,7 @@
     <div id="avatar-wrap" class="lightbox-trigger"
          style="width:90px; height:90px; border-radius:50%; overflow:hidden; position:relative;
                 border:2px solid var(--gold); flex-shrink:0; cursor:pointer;"
-         onclick="document.getElementById('photo-input').click()" title="Click to change photo">
+         onclick="{% if me.photo %}openPhotoViewer('{{ me.photo.url }}'){% else %}document.getElementById('photo-input').click(){% endif %}" title="Click to view photo">
       {% if me.photo %}
         <img id="avatar-img" src="{{ me.photo.url }}" alt="Profile Photo"
              style="width:100%; height:100%; object-fit:cover; display:block;">
@@ -121,11 +139,11 @@
           {{ me.full_name|first|upper }}
         </div>
       {% endif %}
-      <!-- Hover overlay -->
-      <div id="avatar-overlay"
+      <!-- Hover overlay — Click to Change -->
+      <div id="avatar-overlay" onclick="event.stopPropagation(); document.getElementById('photo-input').click();"
            style="position:absolute;inset:0;background:rgba(0,0,0,0.45);border-radius:50%;
                   display:flex;flex-direction:column;align-items:center;justify-content:center;
-                  opacity:0;transition:opacity 0.2s;">
+                  opacity:0;transition:opacity 0.2s;" title="Change photo">
         <i class="fas fa-camera" style="color:#fff;font-size:1.3rem;"></i>
         <span style="color:#fff;font-size:0.6rem;margin-top:4px;font-weight:600;">CHANGE</span>
       </div>
@@ -221,6 +239,21 @@ function closeCropModal() {
   document.getElementById('photo-input').value = '';
   if (cropper) { cropper.destroy(); cropper = null; }
   document.getElementById('crop-saving-spinner').style.display = 'none';
+}
+
+/* ── Photo Viewer Logic ──────────────────────────── */
+function openPhotoViewer(url) {
+  const overlay = document.getElementById('photo-viewer-overlay');
+  const img = document.getElementById('full-photo');
+  img.src = url;
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePhotoViewer() {
+  const overlay = document.getElementById('photo-viewer-overlay');
+  overlay.classList.remove('active');
+  document.body.style.overflow = '';
 }
 
 function saveCroppedPhoto() {
@@ -584,4 +617,13 @@ document.getElementById('crop-modal-overlay').addEventListener('click', function
     });
   });
 </script>
+
+<div id="photo-viewer-overlay" onclick="closePhotoViewer()">
+  <img id="full-photo" src="" alt="Full Profile Photo" onclick="event.stopPropagation()">
+  <div style="position:absolute; top:25px; right:25px; color:#fff; font-size:2rem; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.1); border-radius:50%;" onclick="closePhotoViewer()">
+    <i class="fas fa-times"></i>
+  </div>
+</div>
+
 {% endblock %}
+
