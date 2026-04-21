@@ -99,13 +99,31 @@ class Booking(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._original_is_published = getattr(self, 'is_published', False)
+        self._original_venue = getattr(self, 'venue', '')
+        self._original_event_time = getattr(self, 'event_time', None)
+        self._original_guest_count = getattr(self, 'guest_count', 0)
 
     def save(self, *args, **kwargs):
         newly_published = getattr(self, 'is_published', False) and not self._original_is_published
+        
+        details_updated = False
+        if self.pk and getattr(self, 'is_published', False) and not newly_published:
+            if (self.venue != self._original_venue) or \
+               (self.event_time != self._original_event_time) or \
+               (self.guest_count != self._original_guest_count):
+                details_updated = True
+
         super().save(*args, **kwargs)
+        
         if newly_published:
             self._notify_staff_published()
+        elif details_updated:
+            self._notify_staff_update()
+            
         self._original_is_published = getattr(self, 'is_published', False)
+        self._original_venue = getattr(self, 'venue', '')
+        self._original_event_time = getattr(self, 'event_time', None)
+        self._original_guest_count = getattr(self, 'guest_count', 0)
 
     def _notify_staff_published(self):
         try:
@@ -130,6 +148,31 @@ class Booking(models.Model):
                 messaging.send_each_for_multicast(message)
         except Exception as e:
             print(f"FCM Publication Notify error: {e}")
+
+    def _notify_staff_update(self):
+        try:
+            from firebase_admin import messaging
+            from staff.models import FCMDevice
+            
+            assigned_ids = self.applications.filter(status='approved').values_list('staff_id', flat=True)
+            tokens = list(FCMDevice.objects.filter(staff_id__in=assigned_ids).values_list('token', flat=True))
+            if not tokens:
+                tokens = list(FCMDevice.objects.filter(staff__in=self.assigned_to.all()).values_list('token', flat=True))
+                
+            if tokens:
+                title = "⚠️ Event Update"
+                body = f"Details for {self.name} have changed. Check the new timings or venue!"
+                message = messaging.MulticastMessage(
+                    notification=messaging.Notification(title=title, body=body),
+                    webpush=messaging.WebpushConfig(
+                        notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
+                        fcm_options=messaging.WebpushFCMOptions(link='/staff/dashboard/')
+                    ),
+                    tokens=tokens,
+                )
+                messaging.send_each_for_multicast(message)
+        except Exception as e:
+            print(f"FCM Update Notify error: {e}")
 
     @property
     def balance_due(self):

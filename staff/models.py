@@ -286,6 +286,49 @@ class PromotionRequest(models.Model):
     def __str__(self):
         return f"{self.staff.full_name}: {self.current_level} -> {self.requested_level} ({self.get_status_display()})"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_status = getattr(self, 'status', 'pending')
+
+    def save(self, *args, **kwargs):
+        status_changed = False
+        if self.pk:
+            if getattr(self, 'status', 'pending') != self._original_status:
+                status_changed = True
+
+        super().save(*args, **kwargs)
+        
+        if status_changed:
+            self._notify_status_change()
+        self._original_status = getattr(self, 'status', 'pending')
+
+    def _notify_status_change(self):
+        try:
+            from firebase_admin import messaging
+            tokens = list(self.staff.fcm_devices.values_list('token', flat=True))
+            if not tokens:
+                return
+            
+            if self.status == 'approved':
+                title = "🎉 Promotion Approved!"
+                body = f"Congratulations! You've been promoted to {self.get_requested_level_display()}."
+            elif self.status == 'rejected':
+                title = "❌ Promotion Update"
+                body = "Your recent promotion request has not been approved at this time."
+            else:
+                return
+                
+            message = messaging.MulticastMessage(
+                notification=messaging.Notification(title=title, body=body),
+                webpush=messaging.WebpushConfig(
+                    notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
+                    fcm_options=messaging.WebpushFCMOptions(link='/staff/profile/')
+                ),
+                tokens=tokens,
+            )
+            messaging.send_each_for_multicast(message)
+        except Exception as e:
+            print(f"Promotion Push Error: {e}")
 
 class StaffNotice(models.Model):
     """Notice board messages from admin to all staff"""
