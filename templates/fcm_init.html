@@ -66,11 +66,34 @@
   }
 
   // Only request if logged in and in secure context or localhost
-  if (window.isSecureContext) {
-      // Fire request automatically when script loads
-      document.addEventListener("DOMContentLoaded", () => {
-          requestFCMToken();
-      });
+  if (window.isSecureContext && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+          if (document.readyState === "loading") {
+              document.addEventListener("DOMContentLoaded", requestFCMToken);
+          } else {
+              requestFCMToken();
+          }
+      } else if (Notification.permission === 'default') {
+          const showFCMButton = () => {
+             const btn = document.createElement('button');
+             btn.innerHTML = '🔔 Enable Notifications';
+             btn.style.cssText = 'position:fixed; bottom:20px; right:20px; z-index:99999; background:#d4a852; color:#0d0f14; font-family:"DM Sans",sans-serif; font-weight:600; font-size:0.85rem; border:none; padding:12px 20px; border-radius:30px; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.4); display:flex; align-items:center; gap:8px; transition:all 0.2s;';
+             btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
+             btn.onmouseout = () => btn.style.transform = 'translateY(0)';
+             btn.onclick = () => {
+                 requestFCMToken();
+                 btn.style.opacity = '0';
+                 setTimeout(() => btn.remove(), 300);
+             };
+             document.body.appendChild(btn);
+          };
+
+          if (document.readyState === "loading") {
+              document.addEventListener("DOMContentLoaded", showFCMButton);
+          } else {
+              showFCMButton();
+          }
+      }
   }
 
   // Handle incoming messages when the app is in focus
