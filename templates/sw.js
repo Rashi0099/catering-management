@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mastans-catering-v6';
+const CACHE_NAME = 'mastans-catering-v7';
 const ASSETS = [
     '/',
     '/static/icons/icon-192x192.png',
