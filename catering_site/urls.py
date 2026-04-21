@@ -13,7 +13,6 @@ urlpatterns = [
     path('menu/',          include('menu.urls')),
     path('bookings/',      include('bookings.urls')),
     path('gallery/',       include('gallery.urls')),
-    path('webpush/',       include('webpush.urls')),
     path('firebase-messaging-sw.js', TemplateView.as_view(
         template_name="firebase-messaging-sw.js", 
         content_type="application/javascript"

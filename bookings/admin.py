@@ -31,7 +31,6 @@ class BookingAdmin(admin.ModelAdmin):
         # Trigger Web Push Notification if newly published
         if obj.is_published and not was_published:
             try:
-                from webpush import send_user_notification
                 from django.contrib.auth import get_user_model
                 
                 location = obj.location_name or obj.venue or 'TBA'
