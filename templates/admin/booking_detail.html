@@ -153,18 +153,29 @@
       {% endif %}
     </div>
   </div>
-  <div class="ribbon-card" style="border-left:2px solid var(--green);">
-    <div class="rb-label">STAFF REQUIRED</div>
-    <div class="rb-val" style="font-size:1.1rem; flex-wrap:wrap; gap:12px; align-items:center;">
-      <span style="color:{% if total_filled >= booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c %}var(--green){% else %}var(--text){% endif %}; font-weight:700; border-right:1px solid rgba(255,255,255,0.1); padding-right:12px;">
-        {{ total_filled }} / {{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }}
-        <span style="font-size:0.75rem; color:var(--muted); letter-spacing:0.5px; font-weight:400;">TOTAL</span>
-      </span>
-      <div style="display:flex; align-items:center; gap:14px; font-size:0.95rem; font-weight:600;">
-        <span style="color:var(--gold);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ filled_counts.captain }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_captain }}</span>
-        <span style="color:var(--text);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">A</span>{{ filled_counts.A }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_a }}</span>
-        <span style="color:var(--blue);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">B</span>{{ filled_counts.B }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_b }}</span>
-        <span style="color:var(--green);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ filled_counts.C }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_c }}</span>
+  <div class="ribbon-card" style="border-left:2px solid var(--green); padding:0; overflow:hidden; background:rgba(10, 25, 47, 0.4); border-radius:12px; border:1px solid #1a2c4e;">
+    <div style="padding:12px 16px; border-bottom:1px solid #1a2c4e; background:rgba(10, 25, 47, 0.6); display:flex; justify-content:space-between; align-items:center;">
+      <div class="rb-label" style="margin-bottom:0; color:#7a849a;">STAFF REQUIRED</div>
+      <div style="font-size:0.85rem; font-weight:700; color:{% if total_filled >= booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c %}var(--green){% else %}#fff{% endif %}; letter-spacing:0.5px;">
+        {{ total_filled }} / {{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }} <span style="font-size:0.65rem; color:var(--muted); margin-left:4px;">TOTAL</span>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); text-align:center;">
+      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
+        <div style="font-size:0.65rem; color:var(--gold); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">Capt</div>
+        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.captain }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_captain }}</div>
+      </div>
+      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
+        <div style="font-size:0.65rem; color:var(--text); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">A-Lvl</div>
+        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.A }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_a }}</div>
+      </div>
+      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
+        <div style="font-size:0.65rem; color:var(--blue); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">B-Lvl</div>
+        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.B }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_b }}</div>
+      </div>
+      <div style="padding:12px 8px;">
+        <div style="font-size:0.65rem; color:var(--green); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">C-Lvl</div>
+        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.C }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_c }}</div>
       </div>
     </div>
   </div>
