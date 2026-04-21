@@ -305,7 +305,7 @@
       
       .stats-grid { grid-template-columns: 1fr; margin-bottom: 20px; }
       .cols-2, .cols-3, .cols-4, .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
-      .topbar { padding: 16px 20px; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+      .topbar { padding: 16px 20px; padding-top: calc(16px + env(safe-area-inset-top)); flex-wrap: wrap; gap: 12px; align-items: flex-start; }
       .topbar-title { width: 100%; }
       .topbar-right { width: 100%; justify-content: space-between; align-items: center; }
       .content { padding: 20px; }
