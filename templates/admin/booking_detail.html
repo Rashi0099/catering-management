@@ -156,12 +156,15 @@
   <div class="ribbon-card" style="border-left:2px solid var(--green);">
     <div class="rb-label">STAFF REQUIRED</div>
     <div class="rb-val" style="font-size:1.1rem; flex-wrap:wrap; gap:12px; align-items:center;">
-      <span style="color:var(--text); font-weight:700; border-right:1px solid rgba(255,255,255,0.1); padding-right:12px;">{{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }} <span style="font-size:0.75rem; color:var(--muted); letter-spacing:0.5px;">TOTAL</span></span>
+      <span style="color:{% if total_filled >= booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c %}var(--green){% else %}var(--text){% endif %}; font-weight:700; border-right:1px solid rgba(255,255,255,0.1); padding-right:12px;">
+        {{ total_filled }} / {{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }}
+        <span style="font-size:0.75rem; color:var(--muted); letter-spacing:0.5px; font-weight:400;">TOTAL</span>
+      </span>
       <div style="display:flex; align-items:center; gap:14px; font-size:0.95rem; font-weight:600;">
-        <span style="color:var(--gold);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ booking.quota_captain }}</span>
-        <span style="color:var(--text);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">A</span>{{ booking.quota_a }}</span>
-        <span style="color:var(--blue);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">B</span>{{ booking.quota_b }}</span>
-        <span style="color:var(--green);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ booking.quota_c }}</span>
+        <span style="color:var(--gold);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ filled_counts.captain }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_captain }}</span>
+        <span style="color:var(--text);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">A</span>{{ filled_counts.A }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_a }}</span>
+        <span style="color:var(--blue);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">B</span>{{ filled_counts.B }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_b }}</span>
+        <span style="color:var(--green);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ filled_counts.C }}<span style="color:var(--muted); font-weight:400; font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_c }}</span>
       </div>
     </div>
   </div>

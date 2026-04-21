@@ -245,9 +245,17 @@ def booking_detail(request, pk):
     
     assigned_staff_with_att = []
     coat_counts = {'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0}
+    filled_counts = {'captain': 0, 'A': 0, 'B': 0, 'C': 0}
+
     for s in booking.assigned_to.all():
         if s.coat_size and s.coat_size in coat_counts:
             coat_counts[s.coat_size] += 1
+        
+        # Calculate filled counts by level
+        if s.level == 'captain': filled_counts['captain'] += 1
+        elif s.level == 'A': filled_counts['A'] += 1
+        elif s.level == 'B': filled_counts['B'] += 1
+        elif s.level == 'C': filled_counts['C'] += 1
 
         app = applications_map.get(s.id)
         phone = app.applicant_phone if app and app.applicant_phone else s.phone
@@ -265,6 +273,8 @@ def booking_detail(request, pk):
         'all_staff': all_staff,
         'grouped_staff': grouped_staff,
         'coat_counts': coat_counts,
+        'filled_counts': filled_counts,
+        'total_filled': len(assigned_staff_with_att),
         'attendance_map': attendance_map,
         'assigned_staff_with_att': assigned_staff_with_att,
         'payments': payments,
