@@ -2,284 +2,167 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#faf6f0"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>{% block title %}Mastan's Catering & Services Catering{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
-  {% load static %}
+  <!-- PWA Headers -->
+  <link rel="manifest" href="{% url 'manifest.json' %}?start_url=/&name=Mastan's%20Catering&short_name=Mastan">
+  <meta name="theme-color" content="#faf6f0">
   <style>
     :root {
-      --cream:   #faf6f0;
-      --warm:    #f5ede0;
-      --gold:    #c8972b;
-      --gold-dk: #9b7320;
-      --brown:   #3d2b1f;
-      --text:    #2c1f14;
-      --muted:   #8a7060;
-      --border:  #e8ddd0;
-      --white:   #ffffff;
+      --bg:      #0a0f18;
+      --surface: #111827;
+      --card:    #1f2937;
+      --gold:    #d4a852;
+      --gold-dk: #b88a3e;
+      --text:    #f3f4f6;
+      --muted:   #9ca3af;
+      --border:  rgba(255,255,255,0.08);
+      --glass:   rgba(255,255,255,0.03);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Outfit', sans-serif; background: var(--cream); color: var(--text); }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); }
 
     /* ── NAV ── */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-      background: rgba(250,246,240,0.95);
-      backdrop-filter: blur(12px);
+      background: rgba(10,15,24,0.85);
+      backdrop-filter: blur(15px);
       border-bottom: 1px solid var(--border);
       padding: 0 5%;
       display: flex; align-items: center; justify-content: space-between;
-      height: 70px;
-      transition: box-shadow 0.3s;
+      height: 75px;
+      transition: all 0.3s;
     }
-    nav.scrolled { box-shadow: 0 4px 30px rgba(60,40,20,0.08); }
+    nav.scrolled { background: rgba(5,8,15,0.95); box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
     .nav-brand {
       font-family: 'Cormorant Garamond', serif;
       font-size: 1.6rem; font-weight: 600;
-      color: var(--brown); text-decoration: none;
+      color: #fff; text-decoration: none;
       display: flex; align-items: center; gap: 10px;
     }
     .nav-brand span { color: var(--gold); }
     .nav-links { display: flex; align-items: center; gap: 32px; }
     .nav-links a {
       font-size: 0.88rem; font-weight: 500; color: var(--muted);
-      text-decoration: none; letter-spacing: 0.03em;
+      text-decoration: none; letter-spacing: 0.05em;
       transition: color 0.2s; position: relative;
     }
-    .nav-links a::after {
-      content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1.5px;
-      background: var(--gold); transition: width 0.3s;
-    }
-    .nav-links a:hover, .nav-links a.active { color: var(--brown); }
-    .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+    .nav-links a:hover, .nav-links a.active { color: var(--gold); }
     .nav-cta {
-      background: var(--brown); color: var(--cream) !important;
-      padding: 9px 22px; border-radius: 50px;
+      background: var(--gold); color: #fff !important;
+      padding: 10px 24px; border-radius: 8px;
     }
-    .nav-cta::after { display: none !important; }
-    .nav-cta:hover { background: var(--gold) !important; color: #fff !important; }
-
-    /* ── HERO ── */
-    .hero {
-      min-height: 100vh;
-      background: linear-gradient(160deg, #fdf9f3 0%, #f5ede0 60%, #ede0cc 100%);
-      display: flex; align-items: center;
-      padding: 100px 5% 60px;
-      position: relative; overflow: hidden;
-    }
-    .hero::before {
-      content: '';
-      position: absolute; top: -20%; right: -10%;
-      width: 600px; height: 600px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(200,151,43,0.12), transparent 70%);
-    }
-    .hero-content { max-width: 600px; position: relative; z-index: 1; }
-    .hero-tag {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(200,151,43,0.12); border: 1px solid rgba(200,151,43,0.3);
-      color: var(--gold-dk); padding: 6px 16px; border-radius: 50px;
-      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em;
-      text-transform: uppercase; margin-bottom: 24px;
-    }
-    .hero h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(2.8rem, 6vw, 4.5rem);
-      line-height: 1.1; color: var(--brown);
-      margin-bottom: 20px;
-    }
-    .hero h1 em { font-style: italic; color: var(--gold); }
-    .hero p {
-      font-size: 1.05rem; color: var(--muted); line-height: 1.7;
-      margin-bottom: 36px; font-weight: 300;
-    }
-    .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
-    .btn-primary {
-      background: var(--brown); color: var(--cream);
-      padding: 14px 32px; border-radius: 50px; font-size: 0.92rem;
-      font-weight: 600; text-decoration: none; transition: all 0.25s;
-      display: inline-flex; align-items: center; gap: 8px;
-    }
-    .btn-primary:hover { background: var(--gold); transform: translateY(-1px); }
-    .btn-outline {
-      border: 1.5px solid var(--brown); color: var(--brown);
-      padding: 14px 32px; border-radius: 50px; font-size: 0.92rem;
-      font-weight: 500; text-decoration: none; transition: all 0.25s;
-      display: inline-flex; align-items: center; gap: 8px;
-    }
-    .btn-outline:hover { background: var(--brown); color: var(--cream); }
-    .hero-stats {
-      margin-top: 54px; display: flex; gap: 40px;
-    }
-    .hero-stat .num {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.2rem; font-weight: 600; color: var(--brown); line-height: 1;
-    }
-    .hero-stat .lbl { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    .nav-cta:hover { background: var(--gold-dk); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(212,168,82,0.3); }
 
     /* ── SECTIONS ── */
-    section { padding: 90px 5%; }
+    section { padding: 100px 5%; position: relative; }
     .section-tag {
       display: inline-block;
-      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em;
       text-transform: uppercase; color: var(--gold);
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
     .section-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(2rem, 4vw, 3rem); color: var(--brown); margin-bottom: 16px;
+      font-size: clamp(2.2rem, 5vw, 3.5rem); color: #fff; margin-bottom: 20px;
     }
-    .section-sub { font-size: 1rem; color: var(--muted); max-width: 520px; line-height: 1.7; }
-    .section-header { text-align: center; margin-bottom: 56px; }
-    .section-header .section-sub { margin: 0 auto; }
+    .section-sub { font-size: 1.05rem; color: var(--muted); max-width: 580px; line-height: 1.7; margin: 0 auto; }
+    .section-header { text-align: center; margin-bottom: 64px; }
     .divider {
-      width: 50px; height: 2px;
-      background: linear-gradient(90deg, var(--gold), transparent);
-      margin: 16px auto;
+      width: 60px; height: 3px;
+      background: var(--gold);
+      margin: 20px auto; border-radius: 2px;
     }
 
-    /* ── SERVICES ── */
-    .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
-    .service-card {
-      background: var(--white); border: 1px solid var(--border);
-      border-radius: 16px; padding: 32px;
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
-    .service-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(60,40,20,0.1); }
-    .service-icon {
-      font-size: 2.2rem; margin-bottom: 16px; display: block;
-    }
-    .service-card h3 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.3rem; color: var(--brown); margin-bottom: 10px;
-    }
-    .service-card p { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
-
-    /* ── FEATURED MENU ── */
-    .menu-bg { background: var(--warm); }
-    .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-    .menu-card {
-      background: var(--white); border-radius: 14px; overflow: hidden;
-      border: 1px solid var(--border);
-      transition: transform 0.25s, box-shadow 0.25s;
-    }
-    .menu-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(60,40,20,0.1); }
-    .menu-card-img {
-      height: 180px; background: linear-gradient(135deg, var(--warm), var(--border));
-      display: flex; align-items: center; justify-content: center; font-size: 4rem;
-    }
-    .menu-card-body { padding: 18px 20px; }
-    .menu-card-body h4 { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; color: var(--brown); margin-bottom: 6px; }
-    .menu-card-body p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
-    .menu-card-footer { display: flex; justify-content: space-between; align-items: center; }
-    .price { font-weight: 600; color: var(--gold-dk); font-size: 1rem; }
-    .veg-dot {
-      width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid;
-      display: flex; align-items: center; justify-content: center; font-size: 0.5rem;
-    }
-    .veg-dot.veg { border-color: #2e7d32; color: #2e7d32; }
-    .veg-dot.non-veg { border-color: #c62828; color: #c62828; }
-
-    /* ── TESTIMONIALS ── */
-    .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
-    .testimonial-card {
-      background: var(--white); border: 1px solid var(--border);
-      border-radius: 16px; padding: 28px;
-    }
-    .stars { color: var(--gold); font-size: 0.9rem; margin-bottom: 14px; }
-    .testimonial-card blockquote {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.1rem; font-style: italic; color: var(--brown);
-      line-height: 1.6; margin-bottom: 18px;
-    }
-    .testimonial-author { font-size: 0.85rem; font-weight: 600; color: var(--text); }
-    .testimonial-event { font-size: 0.77rem; color: var(--muted); }
-
-    /* ── CTA BAND ── */
-    .cta-band {
-      background: var(--brown);
-      padding: 80px 5%;
-      text-align: center;
-    }
-    .cta-band h2 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(2rem, 4vw, 3rem); color: var(--cream); margin-bottom: 16px;
-    }
-    .cta-band p { color: rgba(250,246,240,0.7); margin-bottom: 32px; max-width: 500px; margin: 0 auto 32px; }
-    .btn-light {
+    /* ── BUTTONS ── */
+    .btn-primary {
       background: var(--gold); color: #fff;
-      padding: 14px 36px; border-radius: 50px;
-      font-size: 0.95rem; font-weight: 600;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
-      transition: filter 0.2s;
+      padding: 16px 36px; border-radius: 8px; font-size: 0.95rem;
+      font-weight: 600; text-decoration: none; transition: all 0.3s;
+      display: inline-flex; align-items: center; gap: 10px;
     }
-    .btn-light:hover { filter: brightness(1.1); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(212,168,82,0.4); }
+    .btn-outline {
+      border: 1.5px solid var(--gold); color: var(--gold);
+      padding: 16px 36px; border-radius: 8px; font-size: 0.95rem;
+      font-weight: 600; text-decoration: none; transition: all 0.3s;
+      display: inline-flex; align-items: center; gap: 10px;
+    }
+    .btn-outline:hover { background: rgba(212,168,82,0.05); }
+
+    /* ── CARDS ── */
+    .glass-card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      border-radius: 20px; padding: 40px;
+      transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .glass-card:hover { 
+      background: rgba(255,255,255,0.05); 
+      border-color: rgba(212,168,82,0.3);
+      transform: translateY(-8px);
+    }
 
     /* ── FOOTER ── */
     footer {
-      background: #1e1410;
-      padding: 60px 5% 30px;
-      color: rgba(250,246,240,0.6);
+      background: #05080f;
+      padding: 80px 5% 40px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
     }
-    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 60px; margin-bottom: 60px; }
     .footer-brand {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.5rem; color: var(--cream); margin-bottom: 12px;
+      font-size: 1.8rem; color: #fff; margin-bottom: 20px;
     }
     .footer-brand span { color: var(--gold); }
-    footer p { font-size: 0.85rem; line-height: 1.7; }
-    .footer-heading { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 16px; font-weight: 600; }
+    footer p { font-size: 0.9rem; line-height: 1.8; }
+    .footer-heading { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 24px; font-weight: 700; }
     footer ul { list-style: none; }
-    footer ul li { margin-bottom: 10px; }
-    footer ul li a { color: rgba(250,246,240,0.6); text-decoration: none; font-size: 0.87rem; transition: color 0.2s; }
-    footer ul li a:hover { color: var(--cream); }
+    footer ul li { margin-bottom: 12px; }
+    footer ul li a { color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+    footer ul li a:hover { color: var(--gold); }
     .footer-bottom {
-      border-top: 1px solid rgba(255,255,255,0.08);
-      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      padding-top: 32px;
       display: flex; justify-content: space-between; align-items: center;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
     }
-    .social-links { display: flex; gap: 14px; }
+    .social-links { display: flex; gap: 16px; }
     .social-links a {
-      width: 36px; height: 36px; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.15);
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 1px solid var(--border);
       display: flex; align-items: center; justify-content: center;
-      color: rgba(250,246,240,0.6); text-decoration: none; font-size: 0.85rem;
-      transition: all 0.2s;
+      color: var(--muted); text-decoration: none; font-size: 1rem;
+      transition: all 0.3s;
     }
-    .social-links a:hover { background: var(--gold); border-color: var(--gold); color: #fff; }
-
-    /* ── RESPONSIVE UTILITIES ── */
-    .responsive-grid { display: grid; gap: 24px; }
-    .cols-2 { grid-template-columns: 1fr 1fr; }
-    .cols-3 { grid-template-columns: repeat(3, 1fr); }
-    .cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .social-links a:hover { background: var(--gold); border-color: var(--gold); color: #fff; transform: translateY(-3px); }
 
     .mobile-menu-btn {
-      display: none; background: none; border: none; font-size: 1.5rem; color: var(--brown); cursor: pointer;
+      display: none; background: none; border: none; font-size: 1.8rem; color: #fff; cursor: pointer;
     }
-
-    .mobile-nav {
-      position: fixed; top: 70px; left: 0; right: 0; background: var(--cream);
-      border-bottom: 1px solid var(--border); padding: 20px 5%;
-      display: flex; flex-direction: column; gap: 15px;
-      transform: translateY(-150%); transition: transform 0.3s ease-in-out;
-      z-index: 150; box-shadow: 0 10px 20px rgba(60,40,20,0.1);
+    #mobileNav {
+      position: fixed; top: 75px; left: 0; right: 0; background: var(--bg);
+      border-bottom: 1px solid var(--border); padding: 30px 5%;
+      display: flex; flex-direction: column; gap: 20px;
+      transform: translateY(-150%); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+      z-index: 150; box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     }
-    .mobile-nav.open { transform: translateY(0); }
-    .mobile-nav a { text-decoration: none; color: var(--brown); font-weight: 500; font-size: 1.1rem; }
+    #mobileNav.open { transform: translateY(0); }
+    #mobileNav a { text-decoration: none; color: #fff; font-weight: 500; font-size: 1.2rem; }
 
-    .container { max-width: 1200px; margin: 0 auto; }
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
+      .footer-grid { grid-template-columns: 1fr; gap: 40px; }
       .nav-links { display: none; }
       .mobile-menu-btn { display: block; }
-      .footer-grid { grid-template-columns: 1fr; }
-      .hero-stats { gap: 24px; flex-direction: column; align-items: flex-start; }
-      .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr !important; }
-      .hero h1 { font-size: 2.2rem; }
-      .section-title { font-size: 1.8rem; }
-      section { padding: 60px 5%; }
     }
   </style>
   {% block extra_css %}{% endblock %}
@@ -288,28 +171,29 @@
 
 <!-- NAVIGATION -->
 <nav id="navbar">
-  <a class="nav-brand" href=""><img src="{% static 'images/logo.png' %}" style="height:35px;margin-right:8px;vertical-align:middle;border-radius:50%"> Mastan's <span>Catering & Services</span></a>
+  <a class="nav-brand" href="{% url 'home' %}">
+    <img src="{% static 'images/logo.png' %}" style="height:40px;margin-right:10px;vertical-align:middle;border-radius:50%"> 
+    Mastan's <span>Catering</span>
+  </a>
   <div class="nav-links">
     <a href="{% url 'home' %}" class="{% block nav_home %}{% endblock %}">Home</a>
     <a href="{% url 'menu' %}" class="{% block nav_menu %}{% endblock %}">Menu</a>
     <a href="{% url 'gallery' %}" class="{% block nav_gallery %}{% endblock %}">Gallery</a>
-    <a href="{% url 'about' %}" class="{% block nav_about %}{% endblock %}">About</a>
     <a href="{% url 'contact' %}" class="{% block nav_contact %}{% endblock %}">Contact</a>
-    <a href="{% url 'booking' %}#event" class="nav-cta">Event Booking</a>
-    <a href="{% url 'booking' %}#staff" class="nav-cta" style="background:var(--gold);">Staff Application</a>
+    <a href="{% url 'booking' %}#event" class="nav-cta">Book Event</a>
+    <a href="{% url 'booking' %}#staff" class="nav-cta" style="background:transparent; border:1.5px solid var(--gold); color:var(--gold) !important">Staff Portal</a>
   </div>
   <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
     <i class="fas fa-bars"></i>
   </button>
 </nav>
 
-<div class="mobile-nav" id="mobileNav">
+<div id="mobileNav">
   <a href="{% url 'home' %}">Home</a>
   <a href="{% url 'menu' %}">Menu</a>
   <a href="{% url 'gallery' %}">Gallery</a>
-  <a href="{% url 'about' %}">About</a>
   <a href="{% url 'contact' %}">Contact</a>
-  <a href="{% url 'booking' %}#event" style="color: var(--gold);">Event Booking</a>
+  <a href="{% url 'booking' %}#event" style="color: var(--gold);">Book Event</a>
   <a href="{% url 'booking' %}#staff" style="color: var(--gold);">Staff Application</a>
 </div>
 
@@ -319,34 +203,33 @@
 <footer>
   <div class="footer-grid">
     <div>
-      <div class="footer-brand">🍽️ Mastan's <span>Catering & Services</span></div>
-      <p>Premium catering services for weddings, corporate events, and all celebrations. We bring culinary excellence to your table.</p>
+      <div class="footer-brand">🍽️ Mastan's <span>Catering</span></div>
+      <p>Luxury catering services for weddings, corporate events, and exclusive celebrations. We bring culinary mastery to every table with passion and precision.</p>
     </div>
     <div>
-      <div class="footer-heading">Quick Links</div>
+      <div class="footer-heading">Experience</div>
       <ul>
-        <li><a href="{% url 'menu' %}">Our Menu</a></li>
-        <li><a href="{% url 'gallery' %}">Gallery</a></li>
-        <li><a href="{% url 'booking' %}">Book an Event</a></li>
-        <li><a href="{% url 'about' %}">About Us</a></li>
-        <li><a href="{% url 'contact' %}">Contact</a></li>
+        <li><a href="{% url 'menu' %}">Curated Menu</a></li>
+        <li><a href="{% url 'gallery' %}">Event Gallery</a></li>
+        <li><a href="{% url 'booking' %}">Plan Your Event</a></li>
+        <li><a href="{% url 'contact' %}">Contact Us</a></li>
       </ul>
     </div>
     <div>
-      <div class="footer-heading">Contact</div>
+      <div class="footer-heading">Connect</div>
       <ul>
         <li><a href="tel:+919876543210">📞 +91 98765 43210</a></li>
         <li><a href="mailto:hello@mastanscatering.com">✉️ hello@mastanscatering.com</a></li>
         <li><a href="#">📍 Kozhikode, Kerala</a></li>
-        <li><a href="#">⏰ Mon–Sun: 9am – 9pm</a></li>
+        <li><a href="#">⏰ Available 24/7 for Bookings</a></li>
       </ul>
     </div>
   </div>
   <div class="footer-bottom">
-    <span>© 2024 Mastan's Catering & Services. All rights reserved.</span>
+    <span>© 2026 Mastan's Catering & Services. Premium Excellence.</span>
     <div class="social-links">
       <a href="#"><i class="fab fa-instagram"></i></a>
-      <a href="#"><i class="fab fa-facebook"></i></a>
+      <a href="#"><i class="fab fa-facebook-f"></i></a>
       <a href="#"><i class="fab fa-whatsapp"></i></a>
     </div>
   </div>

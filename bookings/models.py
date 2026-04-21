@@ -6,7 +6,6 @@ class Booking(models.Model):
     STATUS_CHOICES = [
         ('pending',     'Pending'),
         ('confirmed',   'Confirmed'),
-        ('in_progress', 'In Progress'),
         ('completed',   'Completed'),
         ('cancelled',   'Cancelled'),
     ]
@@ -63,6 +62,7 @@ class Booking(models.Model):
     quota_a       = models.PositiveIntegerField(default=0, help_text="Number of A-Level staff needed")
     quota_b       = models.PositiveIntegerField(default=0, help_text="Number of B-Level staff needed")
     quota_c       = models.PositiveIntegerField(default=0, help_text="Number of C-Level staff needed")
+    is_long_work  = models.BooleanField(default=False, help_text="Checked if the venue is >20km from the main office")
     is_published  = models.BooleanField(default=False, help_text="If True, staff can see and apply for this event")
     allow_direct_join = models.BooleanField(default=False, help_text="If True, staff can join instantly without admin approval.")
     publish_locality = models.CharField(max_length=50, choices=[
@@ -164,16 +164,33 @@ class BookingPayment(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        self._recalc_booking_totals()
+
+    def delete(self, *args, **kwargs):
+        booking = self.booking  # Hold reference before deletion
+        super().delete(*args, **kwargs)
+        self._recalc_booking_totals_for(booking)
+
+    def _recalc_booking_totals(self):
+        self._recalc_booking_totals_for(self.booking)
+
+    @staticmethod
+    def _recalc_booking_totals_for(booking):
         from django.db.models import Sum
-        total = self.booking.payments.aggregate(t=Sum('amount'))['t'] or 0
-        self.booking.amount_received = total
-        if self.booking.quoted_price:
-            self.booking.amount_pending = self.booking.quoted_price - total
-            if total >= self.booking.quoted_price:
-                self.booking.payment_status = 'paid'
+        total = booking.payments.aggregate(t=Sum('amount'))['t'] or 0
+        booking.amount_received = total
+        if booking.quoted_price:
+            booking.amount_pending = booking.quoted_price - total
+            if total >= booking.quoted_price:
+                booking.payment_status = 'paid'
             elif total > 0:
-                self.booking.payment_status = 'partial'
-        self.booking.save(update_fields=['amount_received', 'amount_pending', 'payment_status'])
+                booking.payment_status = 'partial'
+            else:
+                booking.payment_status = 'unpaid'
+        else:
+            booking.amount_pending = 0
+            booking.payment_status = 'unpaid' if total == 0 else 'partial'
+        booking.save(update_fields=['amount_received', 'amount_pending', 'payment_status'])
 
 
 class Testimonial(models.Model):

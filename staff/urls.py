@@ -16,5 +16,7 @@ urlpatterns = [
     path('bookings/<int:pk>/complete-task/', views.staff_complete_task, name='staff_complete_task'),
     path('payouts/', views.staff_payouts, name='staff_payouts'),
     path('profile/', views.staff_profile, name='staff_profile'),
+    path('profile/upload-photo/', views.upload_profile_photo, name='upload_profile_photo'),
     path('terms/', views.staff_terms, name='staff_terms'),
 ]
+

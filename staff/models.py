@@ -6,23 +6,35 @@ from django.utils import timezone
 
 
 def generate_staff_id():
-    """Generates unique staff ID like MS-0001 sequentially"""
+    """Generates unique staff ID like MS-0001 sequentially with numeric logic"""
     from staff.models import Staff
     from django.db.utils import ProgrammingError, OperationalError
+    
     try:
-        last_staff = Staff.objects.filter(staff_id__startswith='MS-').order_by('staff_id').last()
-        if last_staff:
+        # Fetch all MS- IDs and find the numeric maximum
+        ms_ids = Staff.objects.filter(staff_id__startswith='MS-').values_list('staff_id', flat=True)
+        max_num = 0
+        for sid in ms_ids:
             try:
-                num = int(last_staff.staff_id.split('-')[1])
-                new_num = num + 1
-            except Exception:
-                new_num = 1
-        else:
-            new_num = 1
-    except (ProgrammingError, OperationalError):
-        new_num = 1
+                # Extract number from 'MS-XXXX'
+                num = int(sid.split('-')[1])
+                if num > max_num:
+                    max_num = num
+            except (IndexError, ValueError):
+                continue
         
-    return f"MS-{new_num:04d}"
+        new_num = max_num + 1
+        
+        # Collision check loop
+        while True:
+            generated_id = f"MS-{new_num:04d}"
+            if not Staff.objects.filter(staff_id=generated_id).exists():
+                return generated_id
+            new_num += 1
+            
+    except (ProgrammingError, OperationalError):
+        # Fallback for fresh DBs or migration issues
+        return f"MS-{random.randint(1000, 9999)}"
 
 
 class StaffManager(BaseUserManager):
@@ -100,6 +112,8 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     # Status
     is_active  = models.BooleanField(default=True, db_index=True)
     is_staff   = models.BooleanField(default=False)   # can access Django admin
+    must_change_password = models.BooleanField(default=False,
+        help_text="Force this staff member to change their password on next login.")
     joined_at  = models.DateField(auto_now_add=True)
 
     objects = StaffManager()

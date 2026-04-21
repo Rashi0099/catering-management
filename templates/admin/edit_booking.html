@@ -119,6 +119,16 @@
             <input type="url" name="location_link" value="{{ booking.location_link }}" placeholder="https://maps.app.goo.gl/..."/>
           </div>
         </div>
+        
+        <div class="form-group" style="padding-top: 15px; border-top:1px solid rgba(212,168,82,0.2); margin-top:5px; margin-bottom: 20px;">
+          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+            <input type="checkbox" name="is_long_work" {% if booking.is_long_work %}checked{% endif %} style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold); margin-top:2px;">
+            <div>
+              <strong style="color:var(--text);">Mark as "Long Work" Distance</strong><br>
+              <span style="font-size:0.85rem;color:var(--muted);font-weight:normal;">Check this if the venue is >20km from the main office. This directly triggers dynamic staff promotion logic.</span>
+            </div>
+          </label>
+        </div>
         <div class="form-group">
           <label>Dietary Requirements &amp; Special Requests</label>
           <textarea name="dietary_requirements" rows="2" placeholder="e.g. 20 veg meals, 5 vegan...">{{ booking.dietary_requirements }}</textarea>

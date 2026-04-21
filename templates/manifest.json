@@ -1,7 +1,7 @@
 {
-  "name": "Mastan's Catering",
-  "short_name": "Mastan",
-  "start_url": "/admin-panel/",
+  "name": "{{ name }}",
+  "short_name": "{{ short_name }}",
+  "start_url": "{{ start_url }}",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#d4a852",

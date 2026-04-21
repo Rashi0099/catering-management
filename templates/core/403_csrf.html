@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>403 — Security Error</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0a0f18;
+    color: #e0e0e0;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .card {
+    background: #111827;
+    border: 1px solid rgba(212,168,82,0.2);
+    border-radius: 16px;
+    padding: 48px 40px;
+    max-width: 480px;
+    text-align: center;
+  }
+  .icon { font-size: 3rem; margin-bottom: 20px; }
+  h1 { color: #d4a852; font-size: 1.6rem; margin-bottom: 12px; }
+  p { color: #9ca3af; line-height: 1.6; margin-bottom: 24px; }
+  a {
+    display: inline-block;
+    background: #d4a852;
+    color: #0a0f18;
+    padding: 10px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔒</div>
+    <h1>Security Verification Failed</h1>
+    <p>
+      Your session token has expired or your request was blocked for security reasons.
+      This usually happens if you've been inactive for a long time or used the back button
+      to resubmit a form.
+    </p>
+    <p>Please go back and try again.</p>
+    <a href="javascript:history.back()">← Go Back</a>
+  </div>
+</body>
+</html>

@@ -5,6 +5,10 @@ from menu.models import MenuItem
 from bookings.models import Testimonial
 
 
+def csrf_failure(request, reason=''):
+    """Custom CSRF failure page — shown when the CSRF check fails."""
+    return render(request, 'core/403_csrf.html', {'reason': reason}, status=403)
+
 def home(request):
     """Renders the homepage displaying featured menu items and testimonials."""
     featured_items = MenuItem.objects.filter(is_featured=True, is_available=True)[:6]
@@ -15,9 +19,7 @@ def home(request):
     })
 
 
-def about(request):
-    """Renders the static About Us page."""
-    return render(request, 'core/about.html')
+
 
 
 def contact(request):
@@ -40,3 +42,14 @@ def contact(request):
             pass
         contact_success = True
     return render(request, 'core/contact.html', {'contact_success': contact_success})
+
+def manifest(request):
+    """Dynamically serves manifest.json based on query parameters."""
+    start_url = request.GET.get('start_url', '/')
+    name = request.GET.get('name', "Mastan's Catering")
+    short_name = request.GET.get('short_name', "Mastan")
+    return render(request, 'manifest.json', {
+        'start_url': start_url,
+        'name': name,
+        'short_name': short_name,
+    }, content_type='application/json')

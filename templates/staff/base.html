@@ -3,35 +3,78 @@
 <head>
   {% load static %}
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0b0f19"/>
+  <link rel="manifest" href="{% url 'manifest.json' %}?start_url=/staff/&name=Mastan%20Staff&short_name=Mastan%20Staff">
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Mastan Staff">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
   <title>{% block title %}Staff Portal — Mastan's Catering & Services{% endblock %}</title>
   {% load webpush_notifications %}
   {% webpush_header %}
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
+    /* ── NAVIGATION PROGRESS BAR ── */
+    #nav-progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0;
+      background: linear-gradient(90deg, var(--teal), var(--gold));
+      z-index: 99999; transition: width 0.3s ease, opacity 0.3s ease; border-radius: 0 2px 2px 0;
+      box-shadow: 0 2px 10px rgba(56, 201, 176, 0.3);
+    }
+    #nav-progress.loading { width: 92%; transition: width 10s cubic-bezier(0.08, 0.8, 0, 1); }
+    #nav-progress.done { width: 100% !important; transition: width 0.2s ease !important; opacity: 1; }
+    #nav-progress.fade { opacity: 0; transition: opacity 0.4s ease; }
+
+    /* Skeleton Loading */
+    .skeleton-loader { display: none; padding: 20px; }
+    .skeleton-item { background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); height: 120px; }
+    .skeleton-line { height: 12px; background: rgba(255,255,255,0.04); border-radius: 4px; margin-bottom: 12px; }
+    .skeleton-title { height: 24px; width: 50%; background: rgba(255,255,255,0.06); margin-bottom: 20px; border-radius: 6px; }
+    .skeleton-pulse { animation: skeleton-fade 0.8s infinite ease-in-out alternate; transform: translate3d(0,0,0); }
+    @keyframes skeleton-fade {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    body.nav-loading-active .content-inner { display: none !important; }
+    body.nav-loading-active .skeleton-loader { display: block !important; }
+    body.nav-loading-active { pointer-events: none; }
+    
+    /* Global confirm modal styles */
     :root {
-      --bg:      #0f1117;
-      --surface: #171c26;
-      --card:    #1e2535;
-      --border:  #2a3347;
+      --bg:      #0b0f19;          
+      --surface: #101625;          
+      --card:    #161d2d;          
+      --border:  rgba(66, 153, 225, 0.15); 
       --teal:    #38c9b0;
       --teal-dk: #24a090;
-      --gold:    #d4a852;
-      --text:    #e2e8f0;
-      --muted:   #6b7fa3;
+      --gold:    #e0ab4a;          
+      --text:    #f8fafc;
+      --muted:   #8a9aba;
       --green:   #34d399;
       --red:     #f87171;
       --orange:  #fb923c;
       --blue:    #60a5fa;
       --sw: 220px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); -webkit-tap-highlight-color: transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+    body { 
+      font-family: 'DM Sans', sans-serif; 
+      background: var(--bg); color: var(--text); 
+      min-height: 100vh; display: flex;
+      user-select: none; /* Prevent accidental text selection */
+      -webkit-user-select: none;
+    }
+    input, textarea, [contenteditable="true"] { 
+      user-select: text; /* Allow selection in inputs */
+      -webkit-user-select: text; 
+    }
 
     /* Sidebar */
     .sidebar { width: var(--sw); height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; }
@@ -56,7 +99,13 @@
 
     /* Main */
     .main { margin-left: var(--sw); flex: 1; display: flex; flex-direction: column; }
-    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px; background: var(--surface);
+      border-bottom: 1px solid var(--border); position: sticky;
+      top: 0; z-index: 50; backdrop-filter: blur(12px);
+      padding-top: calc(18px + env(safe-area-inset-top)); /* Safe area for Notch */
+    }
     .topbar-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
     .topbar-right { display: flex; gap: 12px; align-items: center; }
 
@@ -155,17 +204,21 @@
       
       .bottom-nav {
         display: flex; justify-content: space-around; align-items: center;
-        position: fixed; bottom: 0; left: 0; right: 0; height: 65px;
-        background: var(--surface); border-top: 1px solid var(--border);
-        z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+        position: fixed; bottom: 0; left: 0; right: 0; height: 75px; 
+        background: rgba(16, 22, 37, 0.85); border-top: 1px solid rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+        padding-bottom: env(safe-area-inset-bottom, 10px); 
       }
       .bottom-nav a {
         display: flex; flex-direction: column; align-items: center;
-        color: var(--muted); text-decoration: none; font-size: 0.65rem; gap: 4px;
-        transition: color 0.2s; width: 33.33%; padding-top: 5px; font-weight: 500;
+        color: var(--muted); text-decoration: none; font-size: 0.65rem; gap: 6px;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); width: 33.33%; padding-top: 5px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 1px;
       }
-      .bottom-nav a i { font-size: 1.15rem; margin-bottom: 2px; }
-      .bottom-nav a.active { color: var(--teal); }
+      .bottom-nav a i { font-size: 1.3rem; margin-bottom: 2px; transition: transform 0.3s, color 0.3s; }
+      .bottom-nav a.active { color: #ffffff; }
+      .bottom-nav a.active i { color: #ffffff; transform: translateY(-4px) scale(1.1); filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2)); }
       
       .stats-row { grid-template-columns: 1fr; margin-bottom: 20px; }
       .cols-2, .cols-3, .cols-4, .grid2, .form-row { grid-template-columns: 1fr !important; }
@@ -179,6 +232,7 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+<div id="nav-progress"></div>
 
 <!-- SIDEBAR OVERLAY -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -224,13 +278,38 @@
       <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
     </div>
     <div class="topbar-right">
+      {% if request.resolver_match.url_name == 'staff_profile' %}
+      <a href="{% url 'staff_logout' %}" onclick="return confirmLogout(event)" style="color:var(--red); font-size:1.1rem; padding:8px; opacity:0.8;" title="Sign Out">
+        <i class="fas fa-sign-out-alt"></i>
+      </a>
+      {% endif %}
     </div>
   </div>
   <div class="content">
-    {% for msg in messages %}
-    <div class="alert alert-{{ msg.tags }}"><i class="fas fa-{% if msg.tags == 'success' %}check{% else %}exclamation{% endif %}-circle"></i> {{ msg }}</div>
-    {% endfor %}
-    {% block content %}{% endblock %}
+    <div id="skeleton-loader" class="skeleton-loader">
+      <div class="skeleton-item skeleton-pulse">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-line" style="width: 80%;"></div>
+        <div class="skeleton-line" style="width: 60%;"></div>
+      </div>
+      <div class="skeleton-item skeleton-pulse">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-line" style="width: 90%;"></div>
+        <div class="skeleton-line" style="width: 70%;"></div>
+      </div>
+      <div class="skeleton-item skeleton-pulse">
+        <div class="skeleton-title" style="width: 40%"></div>
+        <div class="skeleton-line" style="width: 85%;"></div>
+        <div class="skeleton-line" style="width: 50%;"></div>
+      </div>
+    </div>
+    
+    <div class="content-inner">
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }}"><i class="fas fa-{% if msg.tags == 'success' %}check{% else %}exclamation{% endif %}-circle"></i> {{ msg }}</div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </div>
   </div>
 </main>
 
@@ -246,7 +325,79 @@
   </a>
 </nav>
 
+<!-- Global Lightbox Overlay -->
+<div id="global-lightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9000; align-items:center; justify-content:center; cursor:zoom-out;" onclick="this.style.display='none'">
+  <img id="lightbox-img" src="" style="max-width:95%; max-height:95%; border-radius:8px; border:2px solid var(--gold); box-shadow:0 0 50px rgba(0,0,0,0.5);">
+  <div style="position:absolute; top:20px; right:20px; color:#fff; font-size:1.5rem;"><i class="fas fa-times"></i></div>
+</div>
+
 <script>
+  // ── SMOOTH NAVIGATION PROGRESS BAR ──
+  const navBar = document.getElementById('nav-progress');
+  let navTimer;
+  function startNav() {
+    clearTimeout(navTimer);
+    navBar.className = '';
+    navBar.style.width = '0';
+    document.body.classList.add('nav-loading-active');
+    
+    // Close sidebar immediately on nav start
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar && sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
+      if(overlay) overlay.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    // Use requestAnimationFrame twice to ensure width:0 is rendered before adding .loading
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        navBar.classList.add('loading');
+      });
+    });
+  }
+  function finishNav() {
+    navBar.classList.remove('loading');
+    navBar.classList.add('done');
+    document.body.classList.remove('nav-loading-active');
+    navTimer = setTimeout(() => navBar.classList.add('fade'), 200);
+  }
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    if (a.target === '_blank' || a.hasAttribute('download')) return;
+    if (a.href.startsWith('#') || a.href === '' || a.protocol === 'javascript:') return;
+    if (a.href.includes('logout')) return;
+    if (a.hostname !== window.location.hostname) return;
+    startNav();
+  });
+  document.addEventListener('submit', e => {
+    if(!e.defaultPrevented) startNav();
+  });
+  window.addEventListener('pageshow', e => { if (e.persisted) finishNav(); });
+  window.addEventListener('load', finishNav);
+
+  function confirmLogout(e) {
+    if(!confirm("Are you sure you want to sign out?")) {
+        e.preventDefault();
+        return false;
+    }
+    return true;
+  }
+
+  // Lightbox logic
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('.lightbox-trigger');
+    if (trigger) {
+      const img = trigger.tagName === 'IMG' ? trigger : trigger.querySelector('img');
+      if (img && img.src) {
+        document.getElementById('lightbox-img').src = img.src;
+        document.getElementById('global-lightbox').style.display = 'flex';
+      }
+    }
+  });
+
   setTimeout(() => {
     document.querySelectorAll('.alert').forEach(el => {
       el.style.transition = 'opacity 0.4s';

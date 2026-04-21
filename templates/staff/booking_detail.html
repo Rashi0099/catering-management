@@ -60,10 +60,10 @@
         <input type="hidden" name="attendance_date" value="{{ booking.event_date|date:'Y-m-d' }}">
         
         <style>
-          .prm-att-card { background: rgba(28, 33, 44, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 22px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px; }
-          .prm-att-card:hover { transform: translateY(-5px); border-color: rgba(212,168,82,0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.25); background: rgba(28, 33, 44, 0.7); }
-          .prm-input { width: 100%; background: rgba(15, 18, 23, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease; outline: none; box-sizing: border-box; }
-          .prm-input:focus, .prm-input:hover { border-color: rgba(212,168,82,0.5); background: rgba(15, 18, 23, 0.8); }
+          .prm-att-card { background: rgba(22, 29, 45, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 22px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px; }
+          .prm-att-card:hover { transform: translateY(-5px); border-color: rgba(212,168,82,0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.25); background: rgba(22, 29, 45, 0.8); }
+          .prm-input { width: 100%; background: rgba(11, 15, 25, 0.6); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; color: var(--text); padding: 10px 14px; font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease; outline: none; box-sizing: border-box; }
+          .prm-input:focus, .prm-input:hover { border-color: rgba(212,168,82,0.5); background: rgba(11, 15, 25, 0.8); }
           input[type="time"].prm-input { color-scheme: dark; }
           .prm-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 6px; display: block; font-weight: 600; }
           
@@ -225,7 +225,7 @@
     <!-- Live Responsibilities Checklist -->
     <div class="panel" id="panel-checklist" style="margin-bottom:16px;">
       <div class="panel-hdr">
-        <div class="panel-title"><i class="fas fa-tasks" style="color:var(--gold); margin-right:6px;"></i> Live Responsibilities</div>
+        <div class="panel-title"><i class="fas fa-tasks" style="color:var(--blue); margin-right:6px;"></i> Live Responsibilities</div>
       </div>
       <div style="font-size:0.8rem; color:var(--muted); margin-bottom:15px; line-height:1.4;">
         Tap anywhere on an item to mark it as completed. Once completed, your name will be permanently recorded beside it.
@@ -246,9 +246,9 @@
         }
         .capt-task-card:hover:not(.completed) {
           background: rgba(22, 27, 36, 0.85); 
-          border-color: rgba(212, 168, 82, 0.3); 
+          border-color: rgba(96, 165, 250, 0.4); 
           transform: translateY(-2px); 
-          box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+          box-shadow: 0 8px 24px rgba(96, 165, 250, 0.15);
         }
         .capt-task-indicator { flex-shrink: 0; }
         .capt-task-circle {
@@ -275,7 +275,7 @@
           font-weight: 600; font-size: 0.95rem; color: var(--text); transition: color 0.3s;
         }
         .capt-task-meta {
-          font-size: 0.78rem; color: var(--green); margin-top: 6px; display: flex; align-items: center; gap: 5px;
+          font-size: 0.78rem; color: var(--blue); margin-top: 6px; display: flex; align-items: center; gap: 5px;
         }
         
         .capt-desc-expander {
@@ -384,7 +384,7 @@
                 
                 const anchor = card.querySelector('.capt-task-meta-anchor');
                 anchor.insertAdjacentHTML('beforeend', `
-                  <div class="capt-task-meta" style="animation: fadeUp 0.3s ease-out;">
+                  <div class="capt-task-meta" style="color:var(--blue); animation: fadeUp 0.3s ease-out;">
                     <i class="fas fa-user-check"></i> Completed by ${data.completed_by}
                   </div>
                 `);

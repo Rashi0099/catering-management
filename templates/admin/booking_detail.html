@@ -139,12 +139,13 @@
   </div>
   <div class="ribbon-card" style="border-left:2px solid var(--blue);">
     <div class="rb-label">COAT SIZES</div>
-    <div class="rb-val" style="font-size:1.1rem; flex-wrap:wrap; gap:10px;">
+    <div class="rb-val" style="font-size:1.1rem; flex-wrap:wrap; gap:8px;">
       {% if coat_counts %}
         {% for size, count in coat_counts.items %}
-          <div style="display:flex; align-items:center; gap:6px; background:rgba(212,168,82,0.1); padding:4px 8px; border-radius:6px; border:1px solid rgba(212,168,82,0.3);">
-            <span style="font-size:0.9rem; font-weight:600; color:var(--text);">{{ size }}</span>
-            <span style="background:var(--gold); color:var(--bg); border-radius:50%; width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">{{ count }}</span>
+          <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:4px 14px; border-radius:100px; border:1px solid rgba(212,168,82,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <span style="font-size:0.85rem; font-weight:800; color:var(--gold); text-transform:uppercase; letter-spacing:1px;">{{ size }}</span>
+            <span style="width:1px; height:12px; background:rgba(255,255,255,0.1); margin:0 2px;"></span>
+            <span style="font-size:1rem; font-weight:600; color:var(--text);">{{ count }}</span>
           </div>
         {% endfor %}
       {% else %}
@@ -155,11 +156,13 @@
   <div class="ribbon-card" style="border-left:2px solid var(--green);">
     <div class="rb-label">STAFF REQUIRED</div>
     <div class="rb-val" style="font-size:1.1rem; flex-wrap:wrap; gap:12px; align-items:center;">
-      <span style="color:var(--text); font-weight:700; border-right:1px solid rgba(255,255,255,0.1); padding-right:12px;">{{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }} <span style="font-size:0.75rem; color:var(--muted);">TOTAL</span></span>
-      <span style="color:var(--gold);">{{ booking.quota_captain }} <span style="font-size:0.75rem; color:var(--muted);">C</span></span>
-      <span style="color:var(--text);">{{ booking.quota_a }} <span style="font-size:0.75rem; color:var(--muted);">A</span></span>
-      <span style="color:var(--blue);">{{ booking.quota_b }} <span style="font-size:0.75rem; color:var(--muted);">B</span></span>
-      <span style="color:var(--green);">{{ booking.quota_c }} <span style="font-size:0.75rem; color:var(--muted);">C</span></span>
+      <span style="color:var(--text); font-weight:700; border-right:1px solid rgba(255,255,255,0.1); padding-right:12px;">{{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }} <span style="font-size:0.75rem; color:var(--muted); letter-spacing:0.5px;">TOTAL</span></span>
+      <div style="display:flex; align-items:center; gap:14px; font-size:0.95rem; font-weight:600;">
+        <span style="color:var(--gold);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ booking.quota_captain }}</span>
+        <span style="color:var(--text);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">A</span>{{ booking.quota_a }}</span>
+        <span style="color:var(--blue);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">B</span>{{ booking.quota_b }}</span>
+        <span style="color:var(--green);"><span style="font-size:0.75rem; color:var(--muted); margin-right:4px;">C</span>{{ booking.quota_c }}</span>
+      </div>
     </div>
   </div>
 </div>
@@ -356,11 +359,30 @@
           {% endfor %}
         </div>
         
-        <div style="margin-top:24px; text-align:right;">
-          <button type="submit" class="btn" style="background:linear-gradient(135deg, var(--gold) 0%, #aa843a 100%); color:#12161c; padding:12px 28px; font-size:1rem; font-weight:700; border-radius:12px; border:none; box-shadow:0 6px 20px rgba(212,168,82,0.3); transition:all 0.3s ease; cursor:pointer;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 25px rgba(212,168,82,0.4)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 20px rgba(212,168,82,0.3)';">
+        <div style="margin-top:24px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:16px;">
+          {% if attendance_map %}
+          <span style="font-size:0.8rem; color:var(--gold); display:flex; align-items:center; gap:6px;">
+            <i class="fas fa-check-circle"></i> Attendance already saved — you can still update
+          </span>
+          {% endif %}
+          <button type="submit" id="att-submit-btn" class="btn" style="background:linear-gradient(135deg, var(--gold) 0%, #aa843a 100%); color:#12161c; padding:12px 28px; font-size:1rem; font-weight:700; border-radius:12px; border:none; box-shadow:0 6px 20px rgba(212,168,82,0.3); transition:all 0.3s ease; cursor:pointer;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 25px rgba(212,168,82,0.4)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 20px rgba(212,168,82,0.3)';">
             <i class="fas fa-check-circle" style="margin-right:8px;"></i> Save Event Attendance
           </button>
         </div>
+        <script>
+        document.querySelector('form [name=action][value=mark_attendance]')?.closest('form')?.addEventListener('submit', function(e) {
+          var btn = document.getElementById('att-submit-btn');
+          if (btn.dataset.submitted === 'true') {
+            e.preventDefault();
+            return false;
+          }
+          btn.dataset.submitted = 'true';
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Saving...';
+          btn.style.opacity = '0.7';
+          btn.style.cursor = 'not-allowed';
+        });
+        </script>
       </form>
       {% else %}
       <div style="grid-column:1/-1; text-align:center; padding:48px 20px; background:rgba(28, 33, 44, 0.3); backdrop-filter:blur(10px); border:1px dashed rgba(255,255,255,0.08); border-radius:16px; margin-top:20px;">
@@ -386,7 +408,6 @@
           <select name="status">
             <option value="pending"     {% if booking.status == 'pending'     %}selected{% endif %}>⏳ Pending</option>
             <option value="confirmed"   {% if booking.status == 'confirmed'   %}selected{% endif %}>✅ Confirmed</option>
-            <option value="in_progress" {% if booking.status == 'in_progress' %}selected{% endif %}>🔄 In Progress</option>
             <option value="completed"   {% if booking.status == 'completed'   %}selected{% endif %}>🏁 Completed</option>
             <option value="cancelled"   {% if booking.status == 'cancelled'   %}selected{% endif %}>❌ Cancelled</option>
           </select>

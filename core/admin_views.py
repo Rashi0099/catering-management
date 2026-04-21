@@ -25,22 +25,32 @@ def admin_login(request):
         staff_id = request.POST.get('username', '').strip().upper()
         password = request.POST.get('password', '')
         user = authenticate(request, username=staff_id, password=password)
-        if user and user.is_staff:
+        if user and user.is_staff and user.is_active:
             login(request, user)
+            # Optional: Force password change logic for admins too if needed
+            if getattr(user, 'must_change_password', False):
+                messages.warning(request, '⚠️ You must change your default password.')
+                return redirect('staff_change_password')
             return redirect('admin_dashboard')
         messages.error(request, 'Invalid credentials or insufficient permissions.')
     return render(request, 'admin/login.html')
 
 
 def admin_logout(request):
-    logout(request)
+    if request.method == 'POST':
+        logout(request)
     return redirect('admin_login')
 
 
 from django.core.cache import cache
 
+from core.utils import auto_complete_past_bookings
+
 @admin_required
 def dashboard(request):
+    # Auto-complete past events
+    auto_complete_past_bookings()
+    
     today = timezone.now().date()
     this_week = today + timedelta(days=7)
 
@@ -81,7 +91,7 @@ def dashboard(request):
         'recent_bookings': recent_bookings,
         'upcoming': upcoming,
         'page': 'dashboard',
-        'pending_count': cached_stats['pending_bookings'],
+        'pending_count': cached_stats.get('pending_bookings', 0),
     }
     return render(request, 'admin/dashboard.html', context)
 
@@ -122,8 +132,7 @@ def bookings_list(request):
                'payment_filter': payment_filter, 'search': search, 
                'month_filter': month_filter, 'year_filter': year_filter,
                'type_filter': type_filter, 'session_filter': session_filter,
-               'page': 'bookings',
-               'pending_count': Booking.objects.filter(status='pending').count()}
+               'page': 'bookings'}
     return render(request, 'admin/bookings.html', context)
 
 
@@ -150,12 +159,14 @@ def booking_detail(request, pk):
             if old_status != 'completed' and booking.status == 'completed':
                 for staff_id in staff_ids:
                     s = Staff.objects.get(id=staff_id)
-                    s.total_events_completed += 1
-                    s.save()
+                    # Use .count() to stay in sync — never += 1 which can drift
+                    s.total_events_completed = s.bookings.filter(status='completed').count()
+                    s.save(update_fields=['total_events_completed'])
                     if s.level == 'C':
                         day_count = s.bookings.filter(status='completed', session='day').count()
                         night_count = s.bookings.filter(status='completed', session='night').count()
-                        if day_count >= 10 and night_count >= 10:
+                        long_work_count = s.bookings.filter(status='completed', is_long_work=True).count()
+                        if day_count >= 10 and night_count >= 5 and long_work_count >= 5:
                             from staff.models import PromotionRequest
                             if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
                                 PromotionRequest.objects.create(
@@ -261,7 +272,6 @@ def booking_detail(request, pk):
         'cancel_requests': cancel_requests,
         'today': timezone.now().date(),
         'page': 'bookings',
-        'pending_count': Booking.objects.filter(status='pending').count(),
         'captain_tasks': booking.tasks.all().order_by('id'),
     }
     return render(request, 'admin/booking_detail.html', context)
@@ -269,129 +279,17 @@ def booking_detail(request, pk):
 
 @admin_required
 def download_attendance(request, pk):
-    from io import BytesIO
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter, landscape
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    
-    booking = get_object_or_404(Booking, pk=pk)
-    attendances = booking.staff_attendance.filter(date=booking.event_date).select_related('staff')
-    assigned_staff = booking.assigned_to.all()
-    attendance_map = {att.staff_id: att for att in attendances}
-    applications_map = {app.staff_id: app for app in booking.applications.all()}
-    
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-    elements = []
-    
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        name='TitleStyle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        spaceAfter=14,
-        textColor=colors.HexColor('#1a1a1a')
-    )
-    subtitle_style = ParagraphStyle(
-        name='SubTitleStyle',
-        parent=styles['Normal'],
-        fontSize=12,
-        spaceAfter=20,
-        textColor=colors.HexColor('#666666')
-    )
-    
-    elements.append(Paragraph(f"Event Attendance Report - Booking #{booking.pk}", title_style))
-    
-    client_info = f"<b>Client:</b> {booking.name} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Date:</b> {booking.event_date.strftime('%d %b %Y')} <br/>"
-    client_info += f"<b>Event Type:</b> {booking.get_event_type_display()} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Venue:</b> {booking.venue or 'N/A'}"
-    elements.append(Paragraph(client_info, subtitle_style))
-    elements.append(Spacer(1, 10))
-    
-    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Time', 'Late', 'Shoe', 'Unif', 'Grom', 'Paid?', 'Wage (Rs)']]
-    total_wage = 0
-    
-    def get_tick():
-        return Paragraph('<font name="ZapfDingbats" color="#2e7d32">4</font>', styles['Normal'])
-    
-    for staff in assigned_staff:
-        att = attendance_map.get(staff.id)
-        raw_status = att.status if att else 'absent'
-        status = att.get_status_display() if att else 'Not Marked'
-        r_time = att.reaching_time.strftime('%I:%M %p') if att and att.reaching_time else '—'
-        
-        # Calculate individual penalties
-        late_val = get_tick() if (not att or getattr(att, 'on_time', True)) else "-30"
-        shoe_val = get_tick() if (not att or getattr(att, 'shoes', True)) else "-30"
-        unif_val = get_tick() if (not att or getattr(att, 'uniform', True)) else "-30"
-        grom_val = get_tick() if (not att or getattr(att, 'grooming', True)) else "-30"
-            
-        penalty_amount = 0
-        if late_val == "-30": penalty_amount += 30
-        if shoe_val == "-30": penalty_amount += 30
-        if unif_val == "-30": penalty_amount += 30
-        if grom_val == "-30": penalty_amount += 30
+    from django.http import HttpResponse
+    from .pdf_utils import build_attendance_pdf
 
-        wage = staff.daily_rate - penalty_amount
-        if raw_status in ['present', 'half_day']:
-            total_wage += wage
-            
-        app = applications_map.get(staff.id)
-        phone = app.applicant_phone if app and app.applicant_phone else staff.phone
-        
-        payment_text = "Yes" if att and att.payment_given else "No"
-        
-        data.append([
-            staff.staff_id,
-            staff.full_name,
-            phone,
-            staff.get_level_display(),
-            r_time,
-            late_val,
-            shoe_val,
-            unif_val,
-            grom_val,
-            payment_text,
-            f"Rs.{wage}"
-        ])
-        
-    data.append(['', '', '', '', '', '', '', '', '', 'Total Wages:', f"Rs.{total_wage}"])
-    
-    table = Table(data, colWidths=[55, 110, 80, 55, 65, 50, 50, 50, 50, 50, 70])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f4f4')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
-        ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
-        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -2), colors.white),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 10),
-        ('ALIGN', (0, -1), (-2, -1), 'RIGHT'),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f4f4f4')),
-        ('GRID', (0, 0), (-1, -2), 1, colors.HexColor('#dddddd')),
-        ('LINEABOVE', (0, -1), (-1, -1), 1, colors.HexColor('#dddddd')),
-        ('LINEBELOW', (0, -1), (-1, -1), 1, colors.HexColor('#dddddd')),
-    ]))
-    
-    elements.append(table)
-    
-    elements.append(Spacer(1, 30))
-    footer_style = ParagraphStyle(
-        name='FooterStyle',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.HexColor('#999999'),
-        alignment=2 # Right align
-    )
-    elements.append(Paragraph(f"Generated on {timezone.now().strftime('%d %b %Y, %I:%M %p')}", footer_style))
-    
-    doc.build(elements)
-    
+    booking        = get_object_or_404(Booking, pk=pk)
+    attendances    = booking.staff_attendance.filter(date=booking.event_date).select_related('staff')
+    assigned_staff = booking.assigned_to.all()
+    attendance_map  = {att.staff_id: att for att in attendances}
+    applications_map = {app.staff_id: app for app in booking.applications.all()}
+
+    buffer = build_attendance_pdf(booking, assigned_staff, attendance_map, applications_map, generated_by="Admin")
+
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="attendance_booking_{booking.pk}.pdf"'
     return response
@@ -399,25 +297,39 @@ def download_attendance(request, pk):
 
 @admin_required
 def handle_application(request, pk, app_id, action):
+    if request.method != 'POST':
+        return redirect('admin_booking_detail', pk=pk)
     application = get_object_or_404(EventApplication, pk=app_id, booking_id=pk)
     if action == 'approve_app':
-        application.status = 'approved'
-        application.save()
-        application.booking.assigned_to.add(application.staff)
-        messages.success(request, f'{application.staff.full_name} approved and assigned to event.')
+        if application.status != 'pending':
+            messages.error(request, 'Application is no longer pending.')
+        else:
+            application.status = 'approved'
+            application.save()
+            application.booking.assigned_to.add(application.staff)
+            messages.success(request, f'{application.staff.full_name} approved and assigned to event.')
     elif action == 'reject_app':
-        application.status = 'rejected'
-        application.save()
-        messages.success(request, 'Application rejected.')
+        if application.status != 'pending':
+            messages.error(request, 'Application is no longer pending.')
+        else:
+            application.status = 'rejected'
+            application.save()
+            messages.success(request, 'Application rejected.')
     elif action == 'approve_cancel':
-        application.status = 'cancelled'
-        application.save()
-        application.booking.assigned_to.remove(application.staff)
-        messages.success(request, f'Cancel request approved. {application.staff.full_name} removed from event.')
+        if application.status != 'cancel_requested':
+            messages.error(request, 'No cancel request to approve.')
+        else:
+            application.status = 'cancelled'
+            application.save()
+            application.booking.assigned_to.remove(application.staff)
+            messages.success(request, f'Cancel request approved. {application.staff.full_name} removed from event.')
     elif action == 'reject_cancel':
-        application.status = 'approved' # Revert to approved since cancel is denied
-        application.save()
-        messages.success(request, 'Cancel request rejected.')
+        if application.status != 'cancel_requested':
+            messages.error(request, 'No cancel request to reject.')
+        else:
+            application.status = 'approved'  # Revert to approved since cancel is denied
+            application.save()
+            messages.success(request, 'Cancel request rejected.')
 
     referer = request.META.get('HTTP_REFERER')
     if referer:
@@ -447,9 +359,10 @@ def admin_create_booking(request):
                 dietary_requirements = request.POST.get('dietary_requirements', ''),
                 special_requests     = request.POST.get('special_requests', ''),
                 message              = request.POST.get('message', ''),
-                status               = 'confirmed', # Manual admin entry defaults to confirmed
-                quoted_price         = request.POST.get('budget') or None,
-                allow_direct_join    = request.POST.get('allow_direct_join') == 'on'
+                status               = 'confirmed',  # Manual admin entry defaults to confirmed
+                # Note: quoted_price is NOT set from budget — set it separately in booking detail
+                allow_direct_join    = request.POST.get('allow_direct_join') == 'on',
+                is_long_work         = request.POST.get('is_long_work') == 'on'
             )
             # Admin creating booking is not necessarily assigning themselves, but we can assign later
             messages.success(request, f'Booking for {booking.name} created successfully!')
@@ -491,6 +404,7 @@ def admin_edit_booking(request, pk):
             booking.quota_c = int(request.POST.get('quota_c') or 0)
             booking.publish_locality = request.POST.get('publish_locality', 'all')
             booking.allow_direct_join = request.POST.get('allow_direct_join') == 'on'
+            booking.is_long_work = request.POST.get('is_long_work') == 'on'
             
             booking.save()
             messages.success(request, f'Booking #{booking.pk} details and quotas have been updated!')
@@ -537,14 +451,16 @@ def update_booking_status(request, pk):
             old_status = booking.status
             booking.status = new_status
             booking.save()
-            if old_status != 'completed' and new_status == 'completed':
+            # If status changes TO or FROM completed, recalculate staff totals
+            if (old_status == 'completed' or new_status == 'completed') and old_status != new_status:
                 for s in booking.assigned_to.all():
-                    s.total_events_completed += 1
-                    s.save()
+                    s.total_events_completed = s.bookings.filter(status='completed').count()
+                    s.save(update_fields=['total_events_completed'])
                     if s.level == 'C':
                         day_count = s.bookings.filter(status='completed', session='day').count()
                         night_count = s.bookings.filter(status='completed', session='night').count()
-                        if day_count >= 10 and night_count >= 10:
+                        long_work_count = s.bookings.filter(status='completed', is_long_work=True).count()
+                        if day_count >= 10 and night_count >= 5 and long_work_count >= 5:
                             from staff.models import PromotionRequest
                             if not PromotionRequest.objects.filter(staff=s, status='pending').exists():
                                 PromotionRequest.objects.create(
@@ -642,7 +558,7 @@ def handle_staff_application(request, pk, action):
             from staff.models import generate_staff_id
             new_id = generate_staff_id()
             
-            # Create Staff user with default password
+            # Create Staff user with default password — must change on first login
             Staff.objects.create_user(
                 staff_id=new_id,
                 password='password123',
@@ -660,12 +576,13 @@ def handle_staff_application(request, pk, action):
                 coat_size=application.coat_size,
                 place=application.place,
                 education=application.education,
-                aadhar_card_no=application.aadhar_card_no
+                aadhar_card_no=application.aadhar_card_no,
+                must_change_password=True,   # Force password change on first login
             )
             
             application.status = 'approved'
             application.save()
-            messages.success(request, f'Staff created! ID: {new_id} | Password: password123')
+            messages.success(request, f'✅ Staff created! ID: {new_id} | Default Password: password123 — Staff must change it on first login.')
         except Exception as e:
             messages.error(request, f'Error creating staff: {str(e)}')
     elif action == 'reject':
@@ -755,7 +672,6 @@ def staff_list(request):
     context = {
         'staff': page_obj,
         'page': 'staff',
-        'pending_count': Booking.objects.filter(status='pending').count(),
         'total_events_served': total_events_served,
         'total_staff_count': total_staff_count,
     }
@@ -765,27 +681,45 @@ def staff_list(request):
 @admin_required
 def staff_add(request):
     if request.method == 'POST':
-        full_name = request.POST['full_name']
-        level = request.POST['level']
-        daily_rate = request.POST.get('daily_rate', 0)
-        phone = request.POST.get('phone', '')
-        phone_2 = request.POST.get('phone_2', '')
+        from core.utils import validate_phone
+        full_name = request.POST.get('full_name', '').strip()
+        level = request.POST.get('level', 'C')
+        phone_raw = request.POST.get('phone', '')
+        phone_2_raw = request.POST.get('phone_2', '')
+        guardian_phone_raw = request.POST.get('guardian_phone', '')
+
+        # Phone validation
+        phone = validate_phone(phone_raw)
+        if not phone:
+            messages.error(request, f'Invalid phone number: "{phone_raw}". Please enter a valid 10-digit Indian mobile number.')
+            return render(request, 'admin/staff_add.html', {'page': 'staff', 'form_data': request.POST})
+
+        phone_2 = validate_phone(phone_2_raw) or phone_2_raw  # Alt phone is optional
+        guardian_phone = validate_phone(guardian_phone_raw)
+        if guardian_phone_raw and not guardian_phone:
+            messages.error(request, f'Invalid guardian phone: "{guardian_phone_raw}". Please enter a valid 10-digit number.')
+            return render(request, 'admin/staff_add.html', {'page': 'staff', 'form_data': request.POST})
+
+        # Defensive parsing
+        try:
+            daily_rate = float(request.POST.get('daily_rate', 0) or 0)
+        except (ValueError, TypeError):
+            daily_rate = 0
+
         email = request.POST.get('email', '')
         age = request.POST.get('age') or None
         height = request.POST.get('height', '')
         blood_group = request.POST.get('blood_group', '')
         guardian_name = request.POST.get('guardian_name', '')
-        guardian_phone = request.POST.get('guardian_phone', '')
         main_locality = request.POST.get('main_locality', '')
+        coat_size = request.POST.get('coat_size') or None
         place = request.POST.get('place', '')
         education = request.POST.get('education', '')
-        aadhar_card_no = request.POST.get('aadhar', '')
-        coat_size = request.POST.get('coat_size', '')
+        aadhar_card_no = request.POST.get('aadhar_card_no', '')
 
         try:
             from staff.models import generate_staff_id
             new_id = generate_staff_id()
-            
             member = Staff.objects.create_user(
                 staff_id=new_id,
                 password='password123',
@@ -799,7 +733,7 @@ def staff_add(request):
                 height=height,
                 blood_group=blood_group,
                 guardian_name=guardian_name,
-                guardian_phone=guardian_phone,
+                guardian_phone=guardian_phone or '',
                 main_locality=main_locality,
                 coat_size=coat_size,
                 place=place,
@@ -810,23 +744,30 @@ def staff_add(request):
             return redirect('admin_staff')
         except Exception as e:
             messages.error(request, f'Error adding staff: {str(e)}')
-            return redirect('admin_staff_add')
+            return render(request, 'admin/staff_add.html', {
+                'page': 'staff',
+                'form_data': request.POST
+            })
 
-    return render(request, 'admin/staff_add.html', {
-        'page': 'staff',
-        'pending_count': Booking.objects.filter(status='pending').count(),
-    })
+    return render(request, 'admin/staff_add.html', {'page': 'staff'})
 
 
 @admin_required
 def staff_edit(request, pk):
+    from core.utils import validate_phone
     member = get_object_or_404(Staff, pk=pk)
     if request.method == 'POST':
+        phone_raw = request.POST.get('phone', '')
+        phone = validate_phone(phone_raw)
+        if not phone:
+            messages.error(request, f'Invalid phone number: "{phone_raw}". Please enter a valid 10-digit mobile number.')
+            return render(request, 'admin/staff_edit.html', {'member': member, 'page': 'staff'})
+
         member.full_name = request.POST['full_name']
         member.level = request.POST['level']
         member.daily_rate = request.POST.get('daily_rate', 0)
-        member.phone = request.POST.get('phone', '')
-        member.phone_2 = request.POST.get('phone_2', '')
+        member.phone = phone
+        member.phone_2 = validate_phone(request.POST.get('phone_2', '')) or request.POST.get('phone_2', '')
         member.email = request.POST.get('email', '')
         member.age = request.POST.get('age') or None
         member.height = request.POST.get('height', '')
@@ -843,11 +784,7 @@ def staff_edit(request, pk):
         messages.success(request, f'Staff {member.full_name} updated successfully!')
         return redirect('admin_staff_detail', pk=member.pk)
 
-    return render(request, 'admin/staff_edit.html', {
-        'member': member,
-        'page': 'staff',
-        'pending_count': Booking.objects.filter(status='pending').count(),
-    })
+    return render(request, 'admin/staff_edit.html', {'member': member, 'page': 'staff'})
 
 
 
@@ -1281,3 +1218,22 @@ def event_report_detail(request, pk):
         'page': 'reports',
         'pending_count': Booking.objects.filter(status='pending').count(),
     })
+@admin_required
+def download_invoice_pdf(request):
+    """
+    Handle POST request with invoice JSON data and return a professional PDF.
+    """
+    if request.method == 'POST':
+        import json
+        try:
+            data = json.loads(request.body)
+            from .pdf_utils import build_invoice_pdf
+            buffer = build_invoice_pdf(data)
+            
+            response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+            inv_no = data.get('inv_no', 'invoice')
+            response['Content-Disposition'] = f'attachment; filename="Invoice_{inv_no}.pdf"'
+            return response
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return redirect('admin_manual_invoice')

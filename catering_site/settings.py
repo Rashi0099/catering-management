@@ -51,6 +51,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Brute-force rate limiter on login endpoints
+    'core.middleware.LoginRateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'catering_site.urls'
@@ -65,6 +67,7 @@ TEMPLATES = [{
             'django.template.context_processors.request',
             'django.contrib.auth.context_processors.auth',
             'django.contrib.messages.context_processors.messages',
+            'core.utils.pending_count_context',
         ],
     },
 }]
@@ -75,12 +78,30 @@ AUTH_USER_MODEL = 'staff.Staff'
 # ── Database — PostgreSQL ────────────────────────────────────────────────────
 DATABASES = {
     'default': {
-        'ENGINE':   'django.db.backends.postgresql',
-        'NAME':     env('DB_NAME',     default='catrinboys_db'),
-        'USER':     env('DB_USER',     default='postgres'),
-        'PASSWORD': env('DB_PASSWORD', default='password'),
-        'HOST':     env('DB_HOST',     default='localhost'),
-        'PORT':     env('DB_PORT',     default='5432'),
+        'ENGINE':       'django.db.backends.postgresql',
+        'NAME':         env('DB_NAME',     default='catrinboys_db'),
+        'USER':         env('DB_USER',     default='postgres'),
+        'PASSWORD':     env('DB_PASSWORD', default='password'),
+        'HOST':         env('DB_HOST',     default='localhost'),
+        'PORT':         env('DB_PORT',     default='5432'),
+        # Scalability: reuse DB connections instead of opening a new one every request
+        'CONN_MAX_AGE': 60,
+        'OPTIONS': {
+            'connect_timeout': 5,
+        },
+    }
+}
+
+# ── Cache ─────────────────────────────────────────────────────────────────────
+# Used by pending_count_context, dashboard stats cache, and login rate limiter
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'catrinboys-cache',
+        'TIMEOUT': 300,          # Default: 5 min
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000, # Prevent unbounded memory growth
+        }
     }
 }
 
@@ -110,17 +131,38 @@ LOGIN_REDIRECT_URL = '/staff/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ── Security Settings ────────────────────────────────────────────────────────
+# ── Security Headers (active in ALL environments) ────────────────────────────
+SECURE_CONTENT_TYPE_NOSNIFF = True    # Prevent MIME-sniffing attacks
+SECURE_BROWSER_XSS_FILTER   = True    # Legacy XSS filter header (IE compat)
+X_FRAME_OPTIONS             = 'DENY'  # Prevent clickjacking globally
+SECURE_REFERRER_POLICY      = 'strict-origin-when-cross-origin'
+
+# ── Security Settings (production only — requires HTTPS) ─────────────────────
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
+    SECURE_SSL_REDIRECT            = True
+    SECURE_PROXY_SSL_HEADER        = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE          = True
+    CSRF_COOKIE_SECURE             = True
+    SECURE_HSTS_SECONDS            = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_BROWSER_XSS_FILTER = True
-    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_PRELOAD            = True
+
+# ── Session Hardening ────────────────────────────────────────────────────────
+SESSION_COOKIE_HTTPONLY    = True          # JS cannot read session cookie
+SESSION_COOKIE_SAMESITE    = 'Lax'        # Block cross-site request riding
+SESSION_COOKIE_NAME        = 'catrin_sess' # Obscure default 'sessionid' name
+SESSION_COOKIE_AGE         = 60 * 60 * 8  # 8-hour inactivity timeout
+SESSION_SAVE_EVERY_REQUEST = False         # Only save if data changed (perf)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False   # Persist across browser restarts
+
+# ── CSRF Hardening ───────────────────────────────────────────────────────────
+CSRF_COOKIE_HTTPONLY = False      # Must remain False for AJAX compatibility
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_FAILURE_VIEW    = 'core.views.csrf_failure'
+
+# ── Login Rate Limiting (used by core.middleware.LoginRateLimitMiddleware) ────
+LOGIN_MAX_ATTEMPTS    = 5    # Attempts before lockout
+LOGIN_LOCKOUT_SECONDS = 300  # 5-minute lockout window
 
 # ── Password Validation ──────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
@@ -129,17 +171,19 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
+        'OPTIONS': {'min_length': 8},
     },
-    # {
-    #     'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    # },
-    # {
-    #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    # },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
+
+# ── File Upload Security ──────────────────────────────────────────────────────
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB max POST body
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB max file upload
 
 # ── Web Push Notifications ───────────────────────────────────────────────────
 WEBPUSH_SETTINGS = {
@@ -149,4 +193,3 @@ WEBPUSH_SETTINGS = {
     "APP_NAME": "Mastan",
     "APP_ICON_URL": "/static/images/logo.png"
 }
-

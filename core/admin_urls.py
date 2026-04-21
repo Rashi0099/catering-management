@@ -52,5 +52,6 @@ urlpatterns = [
     path('reports/add/',                  admin_views.admin_report_add,      name='admin_report_add'),
     path('reports/<int:pk>/edit/',        admin_views.admin_report_edit,     name='admin_report_edit'),
     path('reports/<int:pk>/delete/',      admin_views.admin_report_delete,   name='admin_report_delete'),
-    path('invoice/manual/',               admin_views.manual_invoice,        name='admin_manual_invoice'),
+    path('invoice/manual/',               admin_views.manual_invoice,         name='admin_manual_invoice'),
+    path('invoice/download/',             admin_views.download_invoice_pdf,   name='admin_download_invoice_pdf'),
 ]

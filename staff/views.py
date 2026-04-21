@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import datetime
 from django.db.models import Sum, Count, Q
 from django.db import transaction
+from django.core.cache import cache
 
 from .models import Staff, StaffPayout, StaffAttendance, StaffNotice
 from bookings.models import Booking, BookingPayment
@@ -24,17 +25,29 @@ def staff_change_password(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)  # Prevents logout after change
+            # Clear the first-login flag if it was set
+            if user.must_change_password:
+                user.must_change_password = False
+                user.save(update_fields=['must_change_password'])
             messages.success(request, 'Your password was successfully updated!')
             return redirect('staff_dashboard')
         else:
             messages.error(request, 'Please correct the error below.')
     else:
         form = PasswordChangeForm(request.user)
-    return render(request, 'staff/password_change.html', {'form': form})
+    
+    is_forced = request.user.must_change_password
+    return render(request, 'staff/password_change.html', {
+        'form': form,
+        'is_forced': is_forced,
+    })
 
 def staff_login(request):
     """Authenticates and logs in a staff member using their staff ID."""
     if request.user.is_authenticated:
+        # Already logged in — check if password change is required
+        if request.user.must_change_password:
+            return redirect('staff_change_password')
         return redirect('staff_dashboard')
     if request.method == 'POST':
         staff_id = request.POST.get('staff_id', '').strip().upper()
@@ -42,6 +55,11 @@ def staff_login(request):
         user = authenticate(request, username=staff_id, password=password)
         if user and user.is_active:
             login(request, user)
+            # Force password change for new staff on first login
+            if user.must_change_password:
+                messages.warning(request, 
+                    '⚠️ You must change your default password before continuing.')
+                return redirect('staff_change_password')
             return redirect('staff_dashboard')
         messages.error(request, 'Invalid Staff ID or password.')
     return render(request, 'staff/login.html')
@@ -57,161 +75,62 @@ def staff_logout(request):
 def staff_download_attendance(request, pk):
     """Generates and downloads a PDF report of staff attendance for a specific booking."""
     from django.http import HttpResponse
-    from django.shortcuts import get_object_or_404
     from django.utils import timezone
-    from io import BytesIO
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter, landscape
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    
+    from core.pdf_utils import build_attendance_pdf
+
     me = request.user
     if me.level != 'captain':
         messages.error(request, 'Only Captains can download PDF reports.')
         return redirect('staff_booking_detail', pk=pk)
 
     booking = get_object_or_404(Booking, pk=pk)
-    
+
     # Check access
     is_assigned = booking.assigned_to.filter(id=me.id).exists()
     if not is_assigned and not me.is_staff:
         messages.error(request, 'You do not have access to this booking.')
         return redirect('staff_bookings')
 
-    attendances = booking.staff_attendance.filter(date=booking.event_date).select_related('staff')
-    assigned_staff = booking.assigned_to.all()
-    attendance_map = {att.staff_id: att for att in attendances}
+    attendances      = booking.staff_attendance.filter(date=booking.event_date).select_related('staff')
+    assigned_staff   = booking.assigned_to.all()
+    attendance_map   = {att.staff_id: att for att in attendances}
     applications_map = {app.staff_id: app for app in booking.applications.all()}
-    
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-    elements = []
-    
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        name='TitleStyle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        spaceAfter=14,
-        textColor=colors.HexColor('#1a1a1a')
-    )
-    subtitle_style = ParagraphStyle(
-        name='SubTitleStyle',
-        parent=styles['Normal'],
-        fontSize=12,
-        spaceAfter=20,
-        textColor=colors.HexColor('#666666')
-    )
-    
-    elements.append(Paragraph(f"Event Attendance Report - Booking #{booking.pk}", title_style))
-    
-    client_info = f"<b>Client:</b> {booking.name} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Date:</b> {booking.event_date.strftime('%d %b %Y')} <br/>"
-    client_info += f"<b>Event Type:</b> {booking.get_event_type_display()} &nbsp;&nbsp;|&nbsp;&nbsp; <b>Venue:</b> {booking.venue or 'N/A'}"
-    elements.append(Paragraph(client_info, subtitle_style))
-    elements.append(Spacer(1, 10))
-    
-    data = [['Staff ID', 'Name', 'Phone', 'Role', 'Time', 'Late', 'Shoe', 'Unif', 'Grom', 'Paid?', 'Wage (Rs)']]
-    total_wage = 0
-    
-    def get_tick():
-        return Paragraph('<font name="ZapfDingbats" color="#2e7d32">4</font>', styles['Normal'])
-    
-    for staff in assigned_staff:
-        att = attendance_map.get(staff.pk)
-        raw_status = att.status if att else 'absent'
-        status = att.get_status_display() if att else 'Not Marked'
-        r_time = att.reaching_time.strftime('%I:%M %p') if att and att.reaching_time else '—'
-        
-        # Calculate individual penalties
-        late_val = get_tick() if (not att or getattr(att, 'on_time', True)) else "-30"
-        shoe_val = get_tick() if (not att or getattr(att, 'shoes', True)) else "-30"
-        unif_val = get_tick() if (not att or getattr(att, 'uniform', True)) else "-30"
-        grom_val = get_tick() if (not att or getattr(att, 'grooming', True)) else "-30"
-            
-        penalty_amount = 0
-        if late_val == "-30": penalty_amount += 30
-        if shoe_val == "-30": penalty_amount += 30
-        if unif_val == "-30": penalty_amount += 30
-        if grom_val == "-30": penalty_amount += 30
 
-        wage = staff.daily_rate - penalty_amount
-        if raw_status in ['present', 'half_day']:
-            total_wage += wage
-            
-        app = applications_map.get(staff.pk)
-        phone = app.applicant_phone if app and app.applicant_phone else staff.phone
-        payment_text = "Yes" if att and att.payment_given else "No"
-        
-        data.append([
-            staff.staff_id,
-            staff.full_name,
-            phone,
-            staff.get_level_display(),
-            r_time,
-            late_val,
-            shoe_val,
-            unif_val,
-            grom_val,
-            payment_text,
-            f"Rs.{wage}"
-        ])
-        
-    data.append(['', '', '', '', '', '', '', '', '', 'Total Wages:', f"Rs.{total_wage}"])
-    
-    table = Table(data, colWidths=[55, 110, 80, 55, 65, 50, 50, 50, 50, 50, 70])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f4f4')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#333333')),
-        ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
-        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -2), colors.white),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 10),
-        ('ALIGN', (0, -1), (-2, -1), 'RIGHT'),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f4f4f4')),
-        ('GRID', (0, 0), (-1, -2), 1, colors.HexColor('#dddddd')),
-        ('LINEABOVE', (0, -1), (-1, -1), 1, colors.HexColor('#dddddd')),
-        ('LINEBELOW', (0, -1), (-1, -1), 1, colors.HexColor('#dddddd')),
-    ]))
-    
-    elements.append(table)
-    
-    elements.append(Spacer(1, 30))
-    footer_style = ParagraphStyle(
-        name='FooterStyle',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.HexColor('#999999'),
-        alignment=2 # Right align
+    buffer = build_attendance_pdf(
+        booking, assigned_staff, attendance_map, applications_map,
+        generated_by=f"Captain: {me.full_name}"
     )
-    elements.append(Paragraph(f"Generated on {timezone.now().strftime('%d %b %Y, %I:%M %p')}", footer_style))
-    
-    doc.build(elements)
-    
+
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="attendance_booking_{booking.pk}.pdf"'
     return response
 
 
+
+
 # ── Staff Dashboard ──────────────────────────────────────────────────────────
 
 from django.core.cache import cache
+from core.utils import auto_complete_past_bookings
 
 @login_required(login_url='/staff/login/')
 def staff_dashboard(request):
     """Renders the main dashboard showing personal data, upcoming bookings, and payout summaries."""
+    # Block dashboard access if first-login password change is pending
+    if request.user.must_change_password:
+        messages.warning(request, '⚠️ Please change your default password first.')
+        return redirect('staff_change_password')
+
+    # Auto-complete past events before loading stats
+    auto_complete_past_bookings()
+    
     me = request.user
     today = timezone.now().date()
 
     my_bookings   = me.bookings.all()
     my_created    = me.bookings_created.all()
     
-    upcoming      = my_bookings.filter(event_date__gte=today, status__in=['confirmed', 'in_progress', 'cancelled']).order_by('event_date')[:5]
+    upcoming      = my_bookings.filter(event_date__gte=today, status='confirmed').order_by('event_date')[:5]
     recent        = my_created.order_by('-created_at')[:5]
     my_payouts    = me.payouts.order_by('-created_at')[:5]
 
@@ -232,6 +151,7 @@ def staff_dashboard(request):
 
         day_works = my_bookings.filter(status='completed', session='day').count()
         night_works = my_bookings.filter(status='completed', session='night').count()
+        long_works = my_bookings.filter(status='completed', is_long_work=True).count()
         
         cached_stats = {
             'pending_count': pending_count,
@@ -244,6 +164,7 @@ def staff_dashboard(request):
             'cancelled_app_booking_ids': cancelled_app_booking_ids,
             'day_works': day_works,
             'night_works': night_works,
+            'long_works': long_works,
             'total_bookings': my_bookings.count(),
             'confirmed_count': my_bookings.filter(status='confirmed').count(),
             'completed_count': my_bookings.filter(status='completed').count(),
@@ -263,7 +184,7 @@ def staff_dashboard(request):
         if b.publish_locality != 'all' and me.main_locality != b.publish_locality:
             continue
             
-        if len(available_bookings) >= 5:
+        if len(available_bookings) >= 20:
             break
             
         # Use Python list comprehension to use prefetched data and avoid N+1 DB hit
@@ -282,11 +203,11 @@ def staff_dashboard(request):
         b.is_level_full = is_full
         available_bookings.append(b)
 
-    remaining_events = None
+    rem_day, rem_night, rem_long = 0, 0, 0
     if me.level == 'C':
-        rem_day = max(0, 10 - cached_stats['day_works'])
-        rem_night = max(0, 10 - cached_stats['night_works'])
-        remaining_events = f"{rem_day} Day, {rem_night} Night"
+        rem_day = max(0, 10 - cached_stats.get('day_works', 0))
+        rem_night = max(0, 5 - cached_stats.get('night_works', 0))
+        rem_long = max(0, 5 - cached_stats.get('long_works', 0))
 
     latest_promotion = me.promotion_requests.order_by('-created_at').first()
     active_notice = StaffNotice.objects.filter(is_active=True).first()
@@ -297,8 +218,11 @@ def staff_dashboard(request):
         'upcoming': upcoming,
         'available_bookings': available_bookings,
         'recent_bookings': recent,
+        'pending_count': cached_stats.get('pending_count', 0),
         'my_payouts': my_payouts,
-        'remaining_events': remaining_events,
+        'rem_day': rem_day,
+        'rem_night': rem_night,
+        'rem_long': rem_long,
         'latest_promotion': latest_promotion,
         'active_notice': active_notice,
     })
@@ -387,16 +311,25 @@ def staff_booking_detail(request, pk):
 
     if request.method == 'POST' and request.POST.get('action') == 'add_payment':
         try:
+            amount_str = request.POST.get('amount', '').strip()
+            try:
+                amount = float(amount_str)
+                if amount <= 0:
+                    raise ValueError('Amount must be positive')
+            except (ValueError, TypeError):
+                messages.error(request, f'Invalid payment amount: "{amount_str}". Please enter a valid positive number.')
+                return redirect('staff_booking_detail', pk=pk)
+
             BookingPayment.objects.create(
                 booking     = booking,
-                amount      = request.POST['amount'],
+                amount      = amount,
                 method      = request.POST['method'],
                 reference   = request.POST.get('reference', ''),
                 received_on = request.POST['received_on'],
                 received_by = me,
                 notes       = request.POST.get('notes', ''),
             )
-            messages.success(request, f'Payment of ₹{request.POST["amount"]} recorded!')
+            messages.success(request, f'Payment of ₹{amount} recorded!')
             return redirect('staff_booking_detail', pk=pk)
         except Exception as e:
             messages.error(request, f'Error recording payment: {e}')
@@ -514,90 +447,114 @@ def staff_apply_booking(request, pk):
     if request.method == 'POST':
         from bookings.models import EventApplication
         
-        # --- SHIFT CONSTRAINT VALIDATION ---
-        # A staff member cannot have 2 pending/approved applications OR direct assignments 
-        # on the exact same date for the exact same session (Day/Day or Night/Night).
-        conflicting_apps = EventApplication.objects.filter(
-            staff=request.user,
-            booking__event_date=booking.event_date,
-            booking__session=booking.session,
-            status__in=['pending', 'approved']
-        ).exclude(booking=booking).exists()
-        
-        conflicting_assigned = request.user.bookings.filter(
-            event_date=booking.event_date,
-            session=booking.session
-        ).exclude(pk=booking.pk).exists()
-        
-        if conflicting_apps or conflicting_assigned:
-            messages.error(request, f"You already have a {booking.get_session_display()} shift on {booking.event_date.strftime('%d M')}.")
+        try:
+            with transaction.atomic():
+                # --- SHIFT CONSTRAINT VALIDATION ---
+                # A staff member cannot have 2 pending/approved applications OR direct assignments 
+                # on the exact same date for the exact same session (Day/Day or Night/Night).
+                conflicting_apps = EventApplication.objects.filter(
+                    staff=request.user,
+                    booking__event_date=booking.event_date,
+                    booking__session=booking.session,
+                    status__in=['pending', 'approved', 'cancel_requested']
+                ).exclude(booking=booking).exists()
+                
+                conflicting_assigned = request.user.bookings.filter(
+                    event_date=booking.event_date,
+                    session=booking.session,
+                    status__in=['pending', 'confirmed']
+                ).exclude(pk=booking.pk).exists()
+                
+                if conflicting_apps or conflicting_assigned:
+                    messages.error(request, f"⚠️ Collision: You already have a {booking.get_session_display()} shift on {booking.event_date.strftime('%d %b')}.")
+                    return redirect('staff_dashboard')
+                # -----------------------------------
+                
+                applicant_name = request.POST.get('applicant_name', request.user.full_name)
+                applicant_phone = request.POST.get('applicant_phone', request.user.phone)
+                
+                # Check if they already applied or are assigned
+                app = EventApplication.objects.filter(booking=booking, staff=request.user).first()
+                if app:
+                    if app.status == 'cancelled':
+                        messages.error(request, "You already cancelled this booking. Please contact Admin.")
+                    else:
+                        messages.info(request, "You have already applied for this event.")
+                elif request.user in booking.assigned_to.all():
+                    messages.info(request, "You are already assigned to this event.")
+                else:
+                    if booking.allow_direct_join:
+                        EventApplication.objects.create(
+                            booking=booking,
+                            staff=request.user,
+                            applicant_name=applicant_name,
+                            applicant_phone=applicant_phone,
+                            note=request.POST.get('note', ''),
+                            status='approved'
+                        )
+                        booking.assigned_to.add(request.user)
+                        messages.success(request, f'✅ Success! You have joined {booking.name}.')
+                    else:
+                        EventApplication.objects.create(
+                            booking=booking,
+                            staff=request.user,
+                            applicant_name=applicant_name,
+                            applicant_phone=applicant_phone,
+                            note=request.POST.get('note', ''),
+                            status='pending'
+                        )
+                        messages.success(request, f'📩 Application received for {booking.name}. Check your dashboard for updates.')
+                
+                # Invalidate dashboard cache for this user so they see the change immediately
+                cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
+                
+        except Exception as e:
+            # Catch potential IntegrityError or other DB issues
+            messages.error(request, f"❌ Error: Could not process application. ({str(e)})")
             return redirect('staff_dashboard')
-        # -----------------------------------
-        
-        applicant_name = request.POST.get('applicant_name', request.user.full_name)
-        applicant_phone = request.POST.get('applicant_phone', request.user.phone)
-        
-        # Check if they already applied or are assigned
-        app = EventApplication.objects.filter(booking=booking, staff=request.user).first()
-        if app:
-            if app.status == 'cancelled':
-                messages.error(request, "You already cancelled this booking. Please contact Admin.")
-            else:
-                messages.info(request, "You have already applied for this event.")
-        elif request.user in booking.assigned_to.all():
-            messages.info(request, "You are already assigned to this event.")
-        else:
-            if booking.allow_direct_join:
-                EventApplication.objects.create(
-                    booking=booking,
-                    staff=request.user,
-                    applicant_name=applicant_name,
-                    applicant_phone=applicant_phone,
-                    note=request.POST.get('note', ''),
-                    status='approved'
-                )
-                booking.assigned_to.add(request.user)
-                messages.success(request, f'You have successfully joined {booking.name}!')
-            else:
-                EventApplication.objects.create(
-                    booking=booking,
-                    staff=request.user,
-                    applicant_name=applicant_name,
-                    applicant_phone=applicant_phone,
-                    note=request.POST.get('note', ''),
-                    status='pending'
-                )
-                messages.success(request, f'Application submitted for {booking.name}!')
+            
         return redirect('staff_dashboard')
 
 
 @login_required(login_url='/staff/login/')
 def staff_cancel_request(request, pk):
-    """Files a cancellation request when a staff member wants to back out of an assigned event."""
+    """Files a cancellation request or withdraws a pending application."""
     if request.method == 'POST':
         booking = get_object_or_404(Booking, pk=pk)
+
+        # 0. Guard: cannot cancel a booking that is already completed or cancelled
+        if booking.status in ['completed', 'cancelled']:
+            messages.error(request, "This event is already closed and cannot be cancelled.")
+            return redirect('staff_dashboard')
+        
+        # 1. Check if cancellation is allowed (24h rule)
         if not booking.is_cancellable:
-            messages.error(request, "Cancellation is only allowed if the event is more than 24 hours away.")
+            messages.error(request, "Cancellation is no longer allowed as the event is less than 24 hours away.")
             return redirect('staff_dashboard')
             
-        if request.user in booking.assigned_to.all():
-            from bookings.models import EventApplication
-            application = booking.applications.filter(staff=request.user).first()
-            if application:
-                application.status = 'cancel_requested'
-                application.save()
-            else:
-                # Provide a way to ask for cancel even if they were assigned without applying manually
-                EventApplication.objects.create(
-                    booking=booking,
-                    staff=request.user,
-                    applicant_name=request.user.full_name,
-                    applicant_phone=request.user.phone,
-                    status='cancel_requested'
-                )
-            messages.success(request, "Cancel request sent to admin for approval.")
+        from bookings.models import EventApplication
+        application = EventApplication.objects.filter(booking=booking, staff=request.user).first()
+        
+        if not application:
+            messages.error(request, "You do not have an active application for this event.")
+            return redirect('staff_dashboard')
+
+        # 2. Process based on current status
+        if application.status in ['cancelled', 'cancel_requested']:
+            messages.error(request, "You have already cancelled or requested cancellation for this event.")
+        elif application.status == 'pending':
+            # Instant withdrawal for pending applications
+            application.status = 'cancelled'
+            application.save()
+            messages.success(request, "Your application has been withdrawn.")
+        elif application.status == 'approved' or request.user in booking.assigned_to.all():
+            # Needs admin approval if already approved/assigned
+            application.status = 'cancel_requested'
+            application.save()
+            messages.success(request, "Cancellation request sent to admin for approval.")
         else:
-            messages.error(request, "You are not assigned to this event.")
+            messages.error(request, "You cannot cancel this application in its current state.")
+            
     return redirect('staff_dashboard')
 
 
@@ -622,8 +579,85 @@ def staff_payouts(request):
 
 @login_required(login_url='/staff/login/')
 def staff_profile(request):
-    """Displays the staff member's profile information."""
-    return render(request, 'staff/profile.html', {'me': request.user})
+    """Displays the staff member's profile and handles profile photo upload/removal."""
+    me = request.user
+
+    if request.method == 'POST':
+        # Handle photo removal
+        if request.POST.get('remove_photo') == '1':
+            if me.photo:
+                import os
+                old_path = me.photo.path
+                if os.path.isfile(old_path):
+                    os.remove(old_path)
+                me.photo = None
+                me.save(update_fields=['photo'])
+                messages.success(request, 'Profile photo removed.')
+
+        # Handle photo upload
+        elif 'photo' in request.FILES:
+            photo = request.FILES['photo']
+            if photo.size > 2 * 1024 * 1024:
+                messages.error(request, '📷 Photo too large — maximum size is 2 MB.')
+            elif photo.content_type not in ('image/jpeg', 'image/jpg', 'image/png', 'image/webp'):
+                messages.error(request, '📷 Invalid file type — only JPEG, PNG, or WebP allowed.')
+            else:
+                # Delete old photo from disk if exists
+                if me.photo:
+                    import os
+                    old_path = me.photo.path
+                    if os.path.isfile(old_path):
+                        os.remove(old_path)
+                me.photo = photo
+                me.save(update_fields=['photo'])
+                messages.success(request, '✅ Profile photo updated successfully.')
+
+    return render(request, 'staff/profile.html', {'me': me})
+
+
+@login_required(login_url='/staff/login/')
+def upload_profile_photo(request):
+    """AJAX endpoint: receives base64-encoded cropped image from Cropper.js, saves as profile photo."""
+    from django.http import JsonResponse
+    import base64, io, os
+    from django.core.files.base import ContentFile
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    data_url = request.POST.get('cropped_image', '')
+    if not data_url or not data_url.startswith('data:image/'):
+        return JsonResponse({'success': False, 'error': 'No valid image data received.'}, status=400)
+
+    try:
+        # Parse "data:image/jpeg;base64,<DATA>"
+        header, encoded = data_url.split(',', 1)
+        # Determine extension
+        mime = header.split(';')[0].split(':')[1]  # e.g. image/jpeg
+        ext_map = {'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp'}
+        ext = ext_map.get(mime, 'jpg')
+
+        image_data = base64.b64decode(encoded)
+
+        # Size check: max 3 MB after decode
+        if len(image_data) > 3 * 1024 * 1024:
+            return JsonResponse({'success': False, 'error': 'Cropped image too large (max 3 MB).'}, status=400)
+
+        me = request.user
+
+        # Delete old photo file from disk
+        if me.photo:
+            old_path = me.photo.path
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+
+        filename = f"profile_{me.staff_id}.{ext}"
+        me.photo.save(filename, ContentFile(image_data), save=True)
+
+        return JsonResponse({'success': True, 'photo_url': me.photo.url})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @login_required(login_url='/staff/login/')
 def staff_terms(request):

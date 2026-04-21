@@ -1,68 +1,68 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Our Menu — Mastan's Catering & Services{% endblock %}
 {% block nav_menu %}active{% endblock %}
 
 {% block content %}
-<div style="padding:120px 5% 80px">
-  <div class="section-header" style="margin-bottom:40px">
-    <div class="section-tag">What We Serve</div>
-    <h1 class="section-title">Our Menu</h1>
+<div style="padding:140px 5% 100px; background:linear-gradient(var(--bg), var(--surface)); min-height:100vh;">
+  <div class="section-header" style="margin-bottom:60px">
+    <div class="section-tag">Chef's Gallery</div>
+    <h1 class="section-title">Curated Menu</h1>
     <div class="divider"></div>
-    <p class="section-sub">Freshly prepared with locally sourced ingredients. Every dish is crafted with love.</p>
+    <p class="section-sub">A symphony of flavors crafted with the finest local ingredients and global inspiration.</p>
   </div>
 
   <!-- Category Tabs -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:48px">
-    <a href="{% url 'menu' %}" style="padding:9px 22px;border-radius:50px;border:1.5px solid var(--border);text-decoration:none;font-size:0.85rem;font-weight:500;color:{% if not active_category %}var(--white){% else %}var(--muted){% endif %};background:{% if not active_category %}var(--brown){% else %}transparent{% endif %};transition:all 0.2s">
-      All Items
+  <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:60px">
+    <a href="{% url 'menu' %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if not active_category %}var(--gold){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if not active_category %}#fff{% else %}var(--muted){% endif %}; background:{% if not active_category %}var(--gold){% else %}var(--glass){% endif %}; transition:all 0.3s; backdrop-filter:blur(10px);">
+      All Collections
     </a>
     {% for cat in categories %}
-    <a href="{% url 'menu_category' cat.slug %}" style="padding:9px 22px;border-radius:50px;border:1.5px solid var(--border);text-decoration:none;font-size:0.85rem;font-weight:500;color:{% if active_category.slug == cat.slug %}var(--white){% else %}var(--muted){% endif %};background:{% if active_category.slug == cat.slug %}var(--brown){% else %}transparent{% endif %};transition:all 0.2s">
+    <a href="{% url 'menu_category' cat.slug %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if active_category.slug == cat.slug %}var(--gold){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if active_category.slug == cat.slug %}#fff{% else %}var(--muted){% endif %}; background:{% if active_category.slug == cat.slug %}var(--gold){% else %}var(--glass){% endif %}; transition:all 0.3s; backdrop-filter:blur(10px);">
       {{ cat.icon }} {{ cat.name }}
     </a>
     {% endfor %}
   </div>
 
-  <!-- Menu Items -->
-  <div class="menu-grid">
+  <!-- Menu Items Grid -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:30px">
     {% for item in items %}
-    <div class="menu-card">
-      <div class="menu-card-img">
+    <div class="glass-card" style="padding:24px; border-radius:24px;">
+      <div style="height:200px; border-radius:16px; overflow:hidden; margin-bottom:20px; border:1px solid var(--border);">
         {% if item.image %}
-        <img src="{{ item.image.url }}" style="width:100%;height:100%;object-fit:cover" alt="{{ item.name }}"/>
+        <img src="{{ item.image.url }}" style="width:100%; height:100%; object-fit:cover;" alt="{{ item.name }}"/>
         {% else %}
-        🍽️
+        <div style="width:100%; height:100%; background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center; font-size:3.5rem;">🍽️</div>
         {% endif %}
       </div>
-      <div class="menu-card-body">
-        <h4>{{ item.name }}</h4>
-        <p>{{ item.description }}</p>
-        <div class="menu-card-footer">
-          <span class="price">₹{{ item.price }}</span>
-          <div style="display:flex;gap:6px">
-            {% if item.is_vegetarian %}
-            <span style="font-size:0.7rem;background:rgba(46,125,50,0.1);color:#2e7d32;padding:3px 8px;border-radius:20px;border:1px solid rgba(46,125,50,0.3)">🌿 Veg</span>
-            {% endif %}
-            {% if item.is_gluten_free %}
-            <span style="font-size:0.7rem;background:rgba(91,141,238,0.1);color:#3b6bc9;padding:3px 8px;border-radius:20px;border:1px solid rgba(91,141,238,0.3)">GF</span>
-            {% endif %}
-          </div>
-        </div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+        <h4 style="font-family:'Cormorant Garamond',serif; font-size:1.45rem; color:#fff;">{{ item.name }}</h4>
+        <span style="color:var(--gold); font-weight:700; font-size:1.1rem;">₹{{ item.price }}</span>
+      </div>
+      <p style="color:var(--muted); font-size:0.9rem; line-height:1.7; margin-bottom:20px;">{{ item.description }}</p>
+      <div style="display:flex; gap:8px; border-top:1px solid var(--border); padding-top:16px;">
+        {% if item.is_vegetarian %}
+        <span style="font-size:0.7rem; background:rgba(46,125,50,0.1); color:#81c784; padding:4px 10px; border-radius:6px; border:1px solid rgba(46,125,50,0.2);">VEGETARIAN</span>
+        {% endif %}
+        {% if item.is_gluten_free %}
+        <span style="font-size:0.7rem; background:rgba(91,141,238,0.1); color:#9cc3ff; padding:4px 10px; border-radius:6px; border:1px solid rgba(91,141,238,0.2);">GLUTEN FREE</span>
+        {% endif %}
       </div>
     </div>
     {% empty %}
-    <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted)">
-      <div style="font-size:3rem;margin-bottom:16px">🍽️</div>
-      <p>Menu items coming soon. Check back later!</p>
+    <div style="grid-column:1/-1; text-align:center; padding:100px; background:var(--glass); border-radius:24px; border:1.5px dashed var(--border);">
+      <div style="font-size:4rem; margin-bottom:24px; opacity:0.3;">🍽️</div>
+      <h3 style="color:#fff; margin-bottom:10px;">Collection Coming Soon</h3>
+      <p style="color:var(--muted);">We are currently curating new culinary delights. Stay tuned.</p>
     </div>
     {% endfor %}
   </div>
-
 </div>
 
-<div class="cta-band">
-  <h2>Want a Custom Menu?</h2>
-  <p>We tailor every menu to your event, preferences, and budget. Let's create something special.</p>
-  <a href="{% url 'booking' %}" class="btn-light">Request Custom Quote</a>
+<!-- CTA -->
+<div style="background:var(--surface); padding:100px 5%; text-align:center; border-top:1px solid var(--border);">
+  <h2 style="font-family:'Cormorant Garamond',serif; font-size:2.8rem; color:#fff; margin-bottom:20px;">Looking for something bespoke?</h2>
+  <p style="color:var(--muted); max-width:600px; margin:0 auto 40px; line-height:1.8;">Our executive chefs can design a custom menu perfectly balanced for your specific event theme and dietary requirements.</p>
+  <a href="{% url 'booking' %}" class="btn-primary" style="padding:18px 45px;">Request a Custom Proposal</a>
 </div>
 {% endblock %}

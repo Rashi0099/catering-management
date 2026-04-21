@@ -6,58 +6,97 @@
 {% block content %}
 
 {% if active_notice %}
-<div class="panel" style="background: rgba(212, 168, 82, 0.1); border: 1px solid #ffffff; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-  <div style="display: flex; align-items: flex-start; gap: 12px;">
-    <div style="font-size: 1.5rem; color: var(--gold); margin-top: 2px;"><i class="fas fa-bullhorn"></i></div>
+<div class="panel" style="background: linear-gradient(135deg, rgba(12, 30, 65, 0.9), rgba(15, 35, 75, 0.7)); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 5px solid var(--teal); border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
+  <div style="display: flex; align-items: flex-start; gap: 18px;">
+    <div style="font-size: 1.6rem; color: var(--gold); background: rgba(224, 171, 74, 0.1); width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+      <i class="fas fa-bullhorn"></i>
+    </div>
     <div style="flex: 1;">
-      <h3 style="margin: 0 0 5px 0; font-size: 1.1rem; color: var(--gold); font-family: 'Playfair Display', serif;">Notice Board</h3>
-      <p style="margin: 0; color: var(--fg); font-size: 0.95rem; line-height: 1.5;">{{ active_notice.message|safe|linebreaksbr }}</p>
-      <div style="font-size: 0.75rem; color: var(--muted); margin-top: 8px;">Posted on {{ active_notice.created_at|date:"d M Y, h:i A" }}</div>
+      <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid rgba(56, 201, 176, 0.1); padding-bottom: 8px;">
+        <h3 style="margin: 0; font-size: 0.88rem; color: var(--teal); font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">Mastan's Official Notice</h3>
+        <span style="font-size: 0.65rem; color: rgba(255, 255, 255, 0.35); font-weight: 500; font-family: 'Outfit', sans-serif;">{{ active_notice.created_at|date:"d M, h:i A" }}</span>
+      </div>
+      <p style="margin: 0; color: #ffffff; font-size: 1rem; line-height: 1.6; font-family: 'DM Sans', sans-serif; font-weight: 400; opacity: 0.95;">{{ active_notice.message|safe|linebreaksbr }}</p>
     </div>
   </div>
 </div>
 {% endif %}
 
-<div class="stats-row" style="margin-bottom:20px;">
+<style>
+@keyframes pulseBlueBox {
+  0% { box-shadow: 0 0 10px rgba(56, 126, 255, 0.2); border-color: rgba(56, 126, 255, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(56, 126, 255, 0.4); border-color: rgba(56, 126, 255, 0.6); }
+  100% { box-shadow: 0 0 10px rgba(56, 126, 255, 0.2); border-color: rgba(56, 126, 255, 0.2); }
+}
+@keyframes slideInDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+.level-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 768px) {
+  .level-grid-4 { grid-template-columns: 1fr !important; }
+}
+</style>
+
+<div class="stats-row" style="margin-bottom:24px;">
   <!-- Level Progress Card -->
   <div class="panel" style="width:100%; grid-column: 1 / -1; margin-bottom: 24px;">
     <div class="panel-hdr">
-      <div class="panel-title">My Level Progress</div>
+      <div class="panel-title" style="font-size: 1.05rem;"><i class="fas fa-layer-group" style="color:var(--teal); margin-right:8px;"></i> Level Progress Tracking</div>
     </div>
-    <div class="responsive-grid cols-4" style="text-align:center;padding:10px 0;gap:10px">
-      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
-        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold)">{{ me.get_level_display }}</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Current Level</div>
+    
+    <div class="level-grid-4" style="padding:16px 0; gap:12px; width:100%; justify-items:stretch;">
+      <!-- Box 1: Current Level -->
+      <div style="width:100%; padding:24px 12px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+        <div style="font-family:'Outfit',sans-serif; font-weight:800; font-size:2rem; color:var(--gold); text-shadow:0 0 16px rgba(224,171,74,0.4); text-align:center;">{{ me.get_level_display }}</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:500; text-align:center;">Current Level</div>
       </div>
-      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
-        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--teal)">{{ me.total_events_completed }}</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Total Events Completed</div>
+      
+      <!-- Box 2: Completed Events -->
+      <div style="width:100%; padding:24px 12px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+        <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:1.8rem; color:var(--teal); text-align:center;">{{ me.total_events_completed }}</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:500; text-align:center;">Completed</div>
       </div>
-      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+
+      <!-- Box 3: Progression/Decision -->
+      <div style="width:100%; background:var(--surface); border-radius:10px; border:1px solid #0a1a4a; animation:pulseBlueBox 3s infinite ease-in-out; box-shadow:0 8px 32px rgba(0,0,0,0.35); overflow:hidden; text-align:center;">
         {% if me.level == 'C' %}
-        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--blue)">{{ remaining_events }}</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Events To Reaching B Level</div>
+        <table style="width:100% !important; display:table !important; border-collapse:collapse; font-family:'Outfit',sans-serif; table-layout:fixed; margin:0 auto;">
+          <tr>
+            <td style="width:33.33%; text-align:center; padding:18px 2px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:1.5rem; font-weight:800; color:#fff;">{{ rem_day }}</td>
+            <td style="width:33.33%; text-align:center; padding:18px 2px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:1.5rem; font-weight:800; color:#fff;">{{ rem_night }}</td>
+            <td style="width:33.33%; text-align:center; padding:18px 2px; border-bottom:1px solid #0a1a4a; font-size:1.5rem; font-weight:800; color:#fff;">{{ rem_long }}</td>
+          </tr>
+          <tr>
+            <td style="width:33.33%; text-align:center; padding:8px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:0.6rem; color:rgba(255,255,255,0.5); text-transform:uppercase; font-weight:600;">Day</td>
+            <td style="width:33.33%; text-align:center; padding:8px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:0.6rem; color:rgba(255,255,255,0.5); text-transform:uppercase; font-weight:600;">Night</td>
+            <td style="width:33.33%; text-align:center; padding:8px; border-bottom:1px solid #0a1a4a; font-size:0.6rem; color:rgba(255,255,255,0.5); text-transform:uppercase; font-weight:600;">Long</td>
+          </tr>
+          <tr>
+            <td colspan="3" style="text-align:center; padding:12px; font-size:0.7rem; color:var(--blue); text-transform:uppercase; font-weight:600;">Next: <span style="color:#fff; font-weight:900;">B LEVEL</span></td>
+          </tr>
+        </table>
         {% elif me.level == 'B' %}
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--blue);margin-top:8px">Admin Decision</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">To Reach A Level</div>
+        <div style="padding:24px 12px; text-align:center; width:100%;">
+          <div style="font-family:'Outfit',sans-serif; font-size:1.1rem; font-weight:700; color:var(--blue); text-align:center;">Admin Decision</div>
+          <div style="font-size:0.65rem; color:rgba(255,255,255,0.7); margin-top:8px; text-transform:uppercase; font-weight:600; text-align:center;">To Reach <span style="color:#fff; font-weight:900;">A LEVEL</span></div>
+        </div>
         {% else %}
-        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--green);margin-top:8px">Max Level</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Congratulations!</div>
+        <div style="padding:24px 12px; text-align:center; width:100%;">
+          <div style="font-family:'Outfit',sans-serif; font-size:1.2rem; font-weight:700; color:var(--green); text-align:center;">Max Level</div>
+          <div style="font-size:0.65rem; color:rgba(255,255,255,0.7); margin-top:8px; text-transform:uppercase; font-weight:600; text-align:center;">Congratulations 🎉</div>
+        </div>
         {% endif %}
       </div>
-      <div style="padding:20px;background:var(--surface);border-radius:10px;border:1px solid var(--border)">
+
+      <!-- Box 4: Promotion Status -->
+      <div style="width:100%; padding:24px 12px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
         {% if latest_promotion %}
-          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--orange);margin-top:8px">
-            {% if latest_promotion.status == 'pending' %}
-              Sent to Admin
-            {% else %}
-              {{ latest_promotion.get_status_display }}
-            {% endif %}
-          </div>
+          <div style="font-family:'Outfit',sans-serif; font-size:1rem; font-weight:600; color:var(--orange); text-align:center;">{% if latest_promotion.status == 'pending' %}Sent to Admin{% else %}{{ latest_promotion.get_status_display }}{% endif %}</div>
         {% else %}
-          <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--muted);margin-top:8px">No Requests</div>
+          <div style="font-family:'Outfit',sans-serif; font-size:1rem; font-weight:500; color:rgba(255,255,255,0.25); text-align:center;">No Requests</div>
         {% endif %}
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em">Promotion Status</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; font-weight:500; text-align:center;">Status</div>
       </div>
     </div>
   </div>
@@ -98,21 +137,28 @@
     .m-tab-btn.active {
       background: var(--surface); color: var(--teal); box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    #panel-available { display: block; }
-    #panel-upcoming { display: none; }
+    #panel-upcoming { display: block; }
+    #panel-available { display: none; }
   }
 </style>
 
 <div class="mobile-tabs" id="mobileTabsContainer">
-  <button class="m-tab-btn active" id="btn-available" onclick="switchDashboardTab('available')">Available Shifts</button>
-  <button class="m-tab-btn" id="btn-upcoming" onclick="switchDashboardTab('upcoming')">Upcoming Events</button>
+  <button class="m-tab-btn active" id="btn-upcoming" onclick="switchDashboardTab('upcoming')">Confirmed Events</button>
+  <button class="m-tab-btn" id="btn-available" onclick="switchDashboardTab('available')" style="position: relative;">
+    Available Shifts
+    {% if available_bookings|length > 0 %}
+      <span style="position: absolute; top: 0; right: 0; background: var(--red); color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: bold; transform: translate(30%, -30%); box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);">
+        {{ available_bookings|length }}
+      </span>
+    {% endif %}
+  </button>
 </div>
 
 <div class="grid2">
-  <!-- Upcoming Events -->
+  <!-- Confirmed Events -->
   <div class="panel" id="panel-upcoming">
     <div class="panel-hdr">
-      <div class="panel-title">Upcoming Events</div>
+      <div class="panel-title"><i class="fas fa-calendar-check" style="color:var(--teal); margin-right:8px;"></i> Confirmed Events</div>
       <a href="{% url 'staff_bookings' %}" class="panel-link">All →</a>
     </div>
     {% for ev in upcoming %}
@@ -136,7 +182,7 @@
         {% if ev.status == 'cancelled' %}
           <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancelled</span>
         {% elif ev.pk in cancel_req_booking_ids %}
-          <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Requested</span>
+          <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Request Submitted</span>
         {% elif ev.is_cancellable %}
         <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Are you sure you want to request cancellation for this event?', event);">
           {% csrf_token %}
@@ -154,9 +200,16 @@
   </div>
 
   <!-- Available Events to Claim -->
-  <div class="panel" id="panel-available" style="order: -1;">
+  <div class="panel" id="panel-available">
     <div class="panel-hdr">
-      <div class="panel-title">Available Shifts <span class="badge b-confirmed" style="font-size:0.6rem;margin-left:4px">{{ available_bookings|length }} Open</span></div>
+      <div class="panel-title" style="display: flex; align-items: center;">
+        Available Shifts 
+        {% if available_bookings|length > 0 %}
+          <span style="background: var(--red); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; margin-left: 8px; font-weight: bold; box-shadow: 0 0 10px rgba(231, 76, 60, 0.4);">
+            {{ available_bookings|length }}
+          </span>
+        {% endif %}
+      </div>
     </div>
     {% for ev in available_bookings %}
     <div class="ev-item" style="align-items:center">
@@ -177,9 +230,17 @@
       </div>
       
       {% if ev.pk in pending_app_booking_ids %}
-        <span class="badge b-pending" style="background:rgba(212,168,82,0.1); color:var(--gold); border:1px solid rgba(212,168,82,0.2);">Pending Approval</span>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <span class="badge b-pending" style="background:rgba(212,168,82,0.1); color:var(--gold); border:1px solid rgba(212,168,82,0.2);">Pending Approval</span>
+          {% if ev.is_cancellable %}
+          <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Withdraw this application?', event);">
+            {% csrf_token %}
+            <button type="submit" style="background:none; border:none; color:var(--red); font-size:0.75rem; cursor:pointer; text-decoration:underline; padding:0;">Withdraw</button>
+          </form>
+          {% endif %}
+        </div>
       {% elif ev.pk in cancel_req_booking_ids %}
-        <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Requested</span>
+        <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Request Submitted</span>
       {% elif ev.pk in rejected_app_booking_ids %}
         <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Not Approved</span>
       {% elif ev.pk in cancelled_app_booking_ids %}
@@ -189,10 +250,10 @@
       {% else %}
         {% if ev.allow_direct_join %}
           <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-             <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--green);border:1px solid var(--green);color:white"><i class="fas fa-sign-in-alt"></i> Join Now</a>
+             <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--green);border:1px solid var(--green);color:white">Join Event</a>
           </div>
         {% else %}
-          <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--surface);border:1px solid var(--gold);color:var(--gold)"><i class="fas fa-hand-paper"></i> Apply</a>
+           <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--blue);border:1px solid var(--blue);color:white">Apply</a>
         {% endif %}
       {% endif %}
     </div>

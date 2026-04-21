@@ -50,7 +50,7 @@
     {% csrf_token %}
     <div class="form-group">
       <label>Staff ID</label>
-      <input type="text" name="staff_id" placeholder="e.g. CB-2024-0042" autofocus required style="text-transform:uppercase"/>
+      <input type="text" name="staff_id" placeholder="e.g. MS-2024-0042" autofocus required style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()"/>
       <div class="id-hint">Your ID is printed on your staff card</div>
     </div>
     <div class="form-group">

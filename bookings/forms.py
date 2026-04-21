@@ -11,10 +11,15 @@ class BookingForm(forms.ModelForm):
                   'special_requests', 'message']
 
     def clean_phone(self):
-        phone = self.cleaned_data.get('phone')
-        if not phone.isdigit() or len(phone) < 10:
-            raise forms.ValidationError("Enter a valid phone number with at least 10 digits.")
-        return phone
+        from core.utils import validate_phone
+        phone = self.cleaned_data.get('phone', '')
+        cleaned = validate_phone(phone)
+        if not cleaned:
+            raise forms.ValidationError(
+                "Enter a valid Indian mobile number (10 digits, starting with 6–9). "
+                "You may include +91 or 0 prefix."
+            )
+        return cleaned
 
     def clean_event_date(self):
         event_date = self.cleaned_data.get('event_date')

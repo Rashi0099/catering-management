@@ -11,11 +11,11 @@
 </div>
 
 {% if categories %}
-<div style="margin-bottom:24px; padding:16px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px;">
+<div style="margin-bottom:24px; padding:16px; background:var(--card); border:1px solid var(--border); border-radius:12px;">
   <span style="font-size:0.88rem; font-weight:600; color:var(--text); margin-right:12px;">Manage Categories:</span>
   <div style="display:inline-flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
     {% for cat in categories %}
-      <span class="badge" style="background:var(--body-bg); border:1px solid var(--border); padding:6px 12px; display:inline-flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text);">
+      <span class="badge" style="background:var(--bg); border:1px solid var(--border); padding:6px 12px; display:inline-flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text);">
         {{ cat.name }}
         <a href="{% url 'admin_gallery_category_delete' cat.pk %}" onclick="return handleCustomConfirm(this, 'WARNING: Delete the entire \'{{ cat.name|escapejs }}\' gallery category? All images inside will be deleted as well!', event);" style="color:var(--red); display:flex; align-items:center;">
           <i class="fas fa-times-circle"></i>

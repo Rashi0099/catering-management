@@ -62,80 +62,46 @@
   </a>
 </div>
 
-<div id="live-staff-container" style="transition: opacity 0.2s;">
-
-<style>
+<div id="live-staff-container" style="transition: opacity 0.2s;"><style>
   @media (max-width: 768px) {
     .search-bar { flex-direction: column !important; align-items: stretch !important; gap: 12px; }
     .search-bar form { width: 100%; max-width: 100%; }
     .search-bar a.btn { width: 100%; margin-top: 4px; }
     
-    /* Filter Grid Improvements */
     #staff-filter-form { display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
     #staff-filter-form .filter-select { width: 100%; min-width: 0; height: 42px !important; }
     .search-sort-group { grid-column: 1 / -1; width: 100%; }
     .search-input-wrap input { width: 100% !important; border-radius: 12px !important;}
 
-    /* Premium Mobile Native ListTile UI */
-    .panel table { display: block; border: none; white-space: normal; }
+    /* List Item UI for Mobile */
+    .panel table, .panel tbody, .panel tr, .panel td { display: block; border: none !important; }
     .panel thead { display: none; }
-    .panel tbody { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-    
     .panel tr {
-      display: grid;
-      position: relative;
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 2px;
-      grid-template-columns: 1fr auto;
-      grid-template-rows: auto auto;
-      row-gap: 4px;
-      column-gap: 12px;
-      align-items: center;
-      grid-template-areas:
-        "name action"
-        "role status";
+      border-radius: 10px;
+      margin-bottom: 8px;
+      padding: 12px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
+    .panel td[data-label="Staff"] { min-height: 40px; padding-left: 55px !important; position: relative; order: 1; margin-bottom: 6px; }
+    .avatar-cell { position: absolute; left: 0; top: 0; width: 40px !important; height: 40px !important; }
     
-    .panel td { padding: 0 !important; border: none !important; text-align: left !important; display: block; }
-    .panel td::before { display: none !important; }
+    .panel td[data-label="Identity"] { order: 2; padding: 2px 8px !important; font-size: 0.8rem; }
+    .panel td[data-label="Stats"] { order: 3; padding: 2px 8px !important; font-size: 0.85rem; }
+    .panel td[data-label="Locality"] { order: 4; padding: 2px 8px !important; }
+    .panel td:last-child { order: 5; display: block; margin-top: 8px; text-align: center; }
+    .panel td:last-child a { width: 100%; padding: 6px 10px; font-size: 0.8rem; }
     
-    .panel td:nth-child(1) { display: none; } /* ID */
+    .panel td:not([data-label="Staff"]):not(:last-child) { display: block; }
     
-    /* Name */
-    .panel td:nth-child(2) { grid-area: name; align-self: end; }
-    .panel td:nth-child(2) > div:first-child { font-size: 1.05rem; font-weight: 600; color: var(--text); }
-    .panel td:nth-child(2) > div:last-child { display: none; } 
-    
-    /* Role */
-    .panel td:nth-child(3) { grid-area: role; font-size: 0.8rem; }
-    .panel td:nth-child(3) .badge { padding: 4px 8px; font-size: 0.65rem; border-radius: 6px; }
-    
-    /* Daily Rate */
-    .panel td:nth-child(4) { display: none; }
-    
-    /* Bookings */
-    .panel td:nth-child(5) { grid-area: status; justify-self: end; font-size: 0.8rem; color: var(--muted); }
-    .panel td:nth-child(5)::after { content: " events"; font-size: 0.7rem; }
-    
-    /* Action / View */
-    .panel td:nth-child(6) { grid-area: action; justify-self: end; align-self: center; }
-    .panel td:nth-child(6) a.btn { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; margin: 0; padding: 0; }
-    .panel td:nth-child(6)::after {
-      content: "\f054"; /* chevron-right */
-      font-family: "Font Awesome 5 Free";
-      font-weight: 900;
-      color: rgba(255,255,255,0.2);
-      font-size: 1rem;
-      pointer-events: none;
-    }
-
-    /* Stats Resize */
-    .responsive-grid.cols-3 > div > div:first-child { font-size: 1.6rem !important; }
+    /* Mobile Pagination Tweak */
+    .pagination { margin-top: 16px; justify-content: center; transform: scale(0.9); }
   }
 </style>
+
 <div class="panel" style="margin-bottom:32px">
   <div class="panel-header">
     <div class="panel-title">Team Stats</div>
@@ -155,49 +121,75 @@
     </div>
   </div>
 </div>
+
 <div class="panel">
   <table>
     <thead>
       <tr>
-        <th>Staff ID</th>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Daily Rate</th>
+        <th style="width: 300px;">Staff</th>
+        <th>Identity</th>
+        <th>Locality</th>
         <th style="cursor:pointer; user-select:none; color:var(--teal);" onclick="toggleSort('booking_count')" title="Click to sort by Bookings">
-          Bookings 
+          Stats 
           <i class="fas fa-sort{% if request.GET.sort == 'booking_count_asc' %}-up{% elif request.GET.sort == 'booking_count_desc' %}-down{% endif %}" style="margin-left:4px;"></i>
         </th>
-        <th></th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for s in staff %}
       <tr>
-        <td data-label="Staff ID" style="font-family:monospace;font-size:0.82rem;color:var(--gold)">{{ s.staff_id }}</td>
-        <td data-label="Name">
-          <div style="font-weight:500">{{ s.full_name }}</div>
-          <div style="font-size:0.73rem;color:var(--muted)">Joined {{ s.joined_at|date:"M Y" }} ({{ s.get_working_duration }})</div>
+        <td data-label="Staff">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="avatar-cell" style="width:45px; height:45px; border-radius:50%; overflow:hidden; border:2px solid var(--border); flex-shrink:0;">
+              {% if s.photo %}
+                <img src="{{ s.photo.url }}" style="width:100%; height:100%; object-fit:cover;">
+              {% else %}
+                <div style="width:100%; height:100%; background:linear-gradient(45deg, var(--teal), #1a8070); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:1.1rem;">
+                  {{ s.full_name|first|upper }}
+                </div>
+              {% endif %}
+            </div>
+            <div>
+              <div style="font-weight:600; color:var(--text); font-size:1.05rem;">{{ s.full_name }}</div>
+              <div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">{{ s.get_level_display }}</div>
+            </div>
+          </div>
         </td>
-        <td data-label="Role">
-          <span class="badge" style="background:rgba(212,168,82,0.1);color:var(--gold)">
-            {{ s.get_level_display }}
+        <td data-label="Identity">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <span style="font-family:monospace; color:var(--gold); font-size:0.9rem; font-weight:600;">#{{ s.staff_id }}</span>
+            <span style="font-size:0.75rem; color:var(--muted);">Rate: ₹{{ s.daily_rate }}</span>
+          </div>
+        </td>
+        <td data-label="Locality">
+          <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text); border:1px solid var(--border); font-size:0.8rem;">
+            {{ s.main_locality|default:"Not Set" }}
           </span>
         </td>
-        <td data-label="Daily Rate">₹{{ s.daily_rate }}</td>
-        <td data-label="Bookings"><strong style="color:var(--teal)">{{ s.filtered_booking_count }}</strong></td>
+        <td data-label="Stats">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div title="Bookings count" style="display:flex; align-items:center; gap:4px;">
+              <strong style="color:var(--teal); font-size:1rem;">{{ s.filtered_booking_count }}</strong>
+              <small style="color:var(--muted); font-size:0.7rem; margin-left:2px;">Events</small>
+            </div>
+          </div>
+        </td>
         <td>
-          <a href="{% url 'admin_staff_detail' s.pk %}" class="btn btn-ghost" style="padding:10px;font-size:0.85rem">
-            View Profile <i class="fas fa-arrow-right"></i>
+          <a href="{% url 'admin_staff_detail' s.pk %}" class="btn btn-ghost" style="padding:8px 12px; font-size:0.85rem; border:1px solid rgba(212,168,82,0.2);">
+            View Details <i class="fas fa-chevron-right" style="font-size:0.7rem; margin-left:4px;"></i>
           </a>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="9" style="text-align:center;padding:50px;color:var(--muted)">
-        No staff match your filters. <a href="{% url 'admin_staff_add' %}" style="color:var(--gold)">Add staff member →</a>
+      <tr><td colspan="5" style="text-align:center; padding:60px; color:var(--muted);">
+        <i class="fas fa-users-slash" style="font-size:2.5rem; margin-bottom:12px; opacity:0.2; display:block;"></i>
+        No team members found. <a href="{% url 'admin_staff_add' %}" style="color:var(--gold); text-decoration:underline;">Add new staff →</a>
       </td></tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 </div>
   {% include 'pagination.html' with page_obj=staff %}
 </div>

@@ -132,8 +132,14 @@
         <td><span class="badge badge-pending">Pending</span></td>
         <td>
           <div style="display:flex; gap:6px;">
-            <a href="{% url 'admin_handle_application' app.booking.pk app.pk 'approve_app' %}" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;">Approve</a>
-            <a href="{% url 'admin_handle_application' app.booking.pk app.pk 'reject_app' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;">Reject</a>
+            <form method="post" action="{% url 'admin_handle_application' app.booking.pk app.pk 'approve_app' %}" style="margin:0;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;">Approve</button>
+            </form>
+            <form method="post" action="{% url 'admin_handle_application' app.booking.pk app.pk 'reject_app' %}" style="margin:0;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;">Reject</button>
+            </form>
           </div>
         </td>
       </tr>
@@ -183,8 +189,14 @@
         <td style="color:var(--muted);font-size:0.82rem">{{ req.booking.event_date|date:"d M Y" }}</td>
         <td>
           <div style="display:flex; gap:6px;">
-            <a href="{% url 'admin_handle_application' req.booking.pk req.pk 'approve_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c; border-color:rgba(231,76,60,0.3);">Approve Cancel</a>
-            <a href="{% url 'admin_handle_application' req.booking.pk req.pk 'reject_cancel' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem;">Deny</a>
+            <form method="post" action="{% url 'admin_handle_application' req.booking.pk req.pk 'approve_cancel' %}" style="margin:0;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c; border-color:rgba(231,76,60,0.3);">Approve Cancel</button>
+            </form>
+            <form method="post" action="{% url 'admin_handle_application' req.booking.pk req.pk 'reject_cancel' %}" style="margin:0;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem;">Deny</button>
+            </form>
           </div>
         </td>
       </tr>

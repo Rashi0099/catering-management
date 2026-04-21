@@ -1,102 +1,98 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Mastan's Catering & Services — Premium Catering in Kozhikode{% endblock %}
 {% block nav_home %}active{% endblock %}
 
 {% block content %}
 
 <!-- HERO -->
-<section class="hero">
-  <div class="hero-content">
-    <div class="hero-tag">✦ Premium Catering Service</div>
-    <h1>Every Event Deserves <em>Extraordinary</em> Food</h1>
-    <p>From intimate gatherings to grand celebrations — the Mastan's Catering & Services team crafts menus that delight every guest and make memories that last a lifetime.</p>
-    <div class="hero-btns">
-      <a href="{% url 'booking' %}" class="btn-primary">Book Your Event <i class="fas fa-arrow-right"></i></a>
-      <a href="{% url 'menu' %}" class="btn-outline">Explore Menu</a>
-    </div>
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <div class="num">500+</div>
-        <div class="lbl">Events Catered</div>
-      </div>
-      <div class="hero-stat">
-        <div class="num">12+</div>
-        <div class="lbl">Years Experience</div>
-      </div>
-      <div class="hero-stat">
-        <div class="num">98%</div>
-        <div class="lbl">Happy Clients</div>
-      </div>
+<section class="hero" style="min-height:90vh; display:flex; align-items:center; background:linear-gradient(rgba(10,15,24,0.7), rgba(10,15,24,0.7)), url('{% static 'images/hero_luxury.png' %}'); background-size:cover; background-position:center; padding-top:100px;">
+  <div class="hero-content" style="max-width:800px; text-align:left;">
+    <div class="section-tag">✦ Premium Excellence</div>
+    <h1 style="font-family:'Cormorant Garamond',serif; font-size:clamp(3rem, 8vw, 5.5rem); color:#fff; line-height:1; margin-bottom:24px;">
+      Taste the Art of <em style="font-style:italic; color:var(--gold);">Catering</em>
+    </h1>
+    <p style="font-size:1.15rem; color:var(--muted); line-height:1.8; margin-bottom:40px; max-width:600px;">
+      Exquisite culinary experiences tailored for your most precious moments. From intimate weddings to grand corporate affairs, we define luxury on every plate.
+    </p>
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+      <a href="{% url 'booking' %}" class="btn-primary" style="padding:18px 40px;">Begin Planning <i class="fas fa-calendar-alt"></i></a>
+      <a href="{% url 'menu' %}" class="btn-outline" style="padding:18px 40px;">Explore Menu</a>
     </div>
   </div>
 </section>
 
 <!-- SERVICES -->
-<section>
+<section style="background:linear-gradient(var(--bg), var(--surface));">
   <div class="section-header">
-    <div class="section-tag">What We Do</div>
-    <h2 class="section-title">We Cater Every Occasion</h2>
+    <div class="section-tag">Direct From Our Kitchen</div>
+    <h2 class="section-title">Luxury Service Styles</h2>
     <div class="divider"></div>
-    <p class="section-sub">From family functions to corporate dinners, our team brings passion and precision to every plate.</p>
+    <p class="section-sub">We bring a touch of class and a burst of flavor to every occasion.</p>
   </div>
-  <div class="services-grid">
-    <div class="service-card">
-      <span class="service-icon">💒</span>
-      <h3>Weddings</h3>
-      <p>Make your special day unforgettable with customised menus, elegant presentation, and flawless service for your guests.</p>
+  
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
+    <div class="glass-card">
+      <div style="font-size:2.5rem; margin-bottom:20px;">💍</div>
+      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Grand Weddings</h3>
+      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">Bespoke wedding banquets designed to reflect your unique love story. Elegant presentation meets soulful taste.</p>
     </div>
-    <div class="service-card">
-      <span class="service-icon">🏢</span>
-      <h3>Corporate Events</h3>
-      <p>Professional catering for conferences, product launches, team lunches, and business dinners. We match your brand standards.</p>
+    <div class="glass-card">
+      <div style="font-size:2.5rem; margin-bottom:20px;">🏆</div>
+      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Corporate Galas</h3>
+      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">Professional catering that aligns with your brand's prestige. Perfect for launches, retreats, and high-level board meetings.</p>
     </div>
-    <div class="service-card">
-      <span class="service-icon">🎂</span>
-      <h3>Birthday Parties</h3>
-      <p>From kids' birthdays to milestone celebrations — we design menus that reflect your personality and wow your guests.</p>
+    <div class="glass-card">
+      <div style="font-size:2.5rem; margin-bottom:20px;">🥂</div>
+      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Private Dinners</h3>
+      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">Transform your home into a 5-star venue. Chef-curated menus served with absolute discretion and finesse.</p>
     </div>
-    <div class="service-card">
-      <span class="service-icon">🎓</span>
-      <h3>Graduations & More</h3>
-      <p>Anniversaries, graduations, religious events — every occasion is handled with care, culture, and culinary excellence.</p>
+    <div class="glass-card">
+      <div style="font-size:2.5rem; margin-bottom:20px;">🌟</div>
+      <h3 style="font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:#fff; margin-bottom:12px;">Themed Events</h3>
+      <p style="color:var(--muted); font-size:0.92rem; line-height:1.7;">From traditional Kerala Sadhya to modern International fusion — we create immersive culinary worlds.</p>
     </div>
   </div>
 </section>
 
 <!-- FEATURED MENU -->
 {% if featured_items %}
-<section class="menu-bg">
+<section style="background:var(--surface);">
   <div class="section-header">
-    <div class="section-tag">From Our Kitchen</div>
-    <h2 class="section-title">Featured Dishes</h2>
+    <div class="section-tag">Chef's Selection</div>
+    <h2 class="section-title">Signature Creations</h2>
     <div class="divider"></div>
-    <p class="section-sub">A taste of what we bring to your table — crafted with the finest ingredients.</p>
   </div>
-  <div class="menu-grid">
+  
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:30px;">
     {% for item in featured_items %}
-    <div class="menu-card">
-      <div class="menu-card-img">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:24px; overflow:hidden; transition:transform 0.3s;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="height:220px; overflow:hidden; position:relative;">
         {% if item.image %}
-        <img src="{{ item.image.url }}" style="width:100%;height:100%;object-fit:cover" alt="{{ item.name }}"/>
+        <img src="{{ item.image.url }}" style="width:100%; height:100%; object-fit:cover;" alt="{{ item.name }}"/>
         {% else %}
-        🍛
+        <div style="width:100%; height:100%; background:linear-gradient(45deg, #1f2937, #111827); display:flex; align-items:center; justify-content:center; font-size:3rem;">🍽️</div>
         {% endif %}
+        <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); padding:4px 12px; border-radius:50px; font-weight:600; color:var(--gold); font-size:0.85rem;">
+          ₹{{ item.price }}
+        </div>
       </div>
-      <div class="menu-card-body">
-        <h4>{{ item.name }}</h4>
-        <p>{{ item.description|truncatechars:90 }}</p>
-        <div class="menu-card-footer">
-          <span class="price">₹{{ item.price }}</span>
-          <div class="veg-dot {% if item.is_vegetarian %}veg{% else %}non-veg{% endif %}">
-            ●
+      <div style="padding:24px;">
+        <h4 style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; color:#fff; margin-bottom:10px;">{{ item.name }}</h4>
+        <p style="color:var(--muted); font-size:0.88rem; line-height:1.6; margin-bottom:20px;">{{ item.description|truncatechars:100 }}</p>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold);">Available for Order</span>
+          <div style="width:12px; height:12px; border:1px solid {% if item.is_vegetarian %}#2e7d32{% else %}#c62828{% endif %}; display:flex; align-items:center; justify-content:center;">
+            <div style="width:6px; height:6px; background:{% if item.is_vegetarian %}#2e7d32{% else %}#c62828{% endif %}; border-radius:50%;"></div>
           </div>
         </div>
       </div>
     </div>
     {% endfor %}
   </div>
-  <div style="text-align:center;margin-top:40px">
-    <a href="{% url 'menu' %}" class="btn-outline">View Full Menu →</a>
+  
+  <div style="text-align:center; margin-top:60px;">
+    <a href="{% url 'menu' %}" class="btn-outline">View Full Collection <i class="fas fa-chevron-right"></i></a>
   </div>
 </section>
 {% endif %}
@@ -105,30 +101,40 @@
 {% if testimonials %}
 <section>
   <div class="section-header">
-    <div class="section-tag">Happy Clients</div>
-    <h2 class="section-title">What They Say</h2>
+    <div class="section-tag">Reflections</div>
+    <h2 class="section-title">Client Stories</h2>
     <div class="divider"></div>
   </div>
-  <div class="testimonials-grid">
+  
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:30px;">
     {% for t in testimonials %}
-    <div class="testimonial-card">
-      <div class="stars">
-        {% for i in "12345" %}{% if forloop.counter <= t.rating %}★{% else %}☆{% endif %}{% endfor %}
+    <div class="glass-card" style="padding:40px; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <div style="color:var(--gold); font-size:0.8rem; margin-bottom:20px;">
+          {% for i in "12345" %}{% if forloop.counter <= t.rating %}★{% else %}☆{% endif %}{% endfor %}
+        </div>
+        <blockquote style="font-family:'Cormorant Garamond',serif; font-size:1.25rem; font-style:italic; color:#fff; line-height:1.6; margin-bottom:30px; position:relative;">
+          <span style="position:absolute; top:-10px; left:-20px; font-size:3rem; opacity:0.1; color:var(--gold);">"</span>
+          {{ t.review }}
+        </blockquote>
       </div>
-      <blockquote>"{{ t.review }}"</blockquote>
-      <div class="testimonial-author">{{ t.client_name }}</div>
-      <div class="testimonial-event">{{ t.event_type }}</div>
+      <div>
+        <div style="font-weight:600; color:var(--gold); font-size:0.95rem;">{{ t.client_name }}</div>
+        <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:4px;">{{ t.event_type }}</div>
+      </div>
     </div>
     {% endfor %}
   </div>
 </section>
 {% endif %}
 
-<!-- CTA BAND -->
-<div class="cta-band">
-  <h2>Ready to Plan Your Perfect Event?</h2>
-  <p>Let us handle the food while you enjoy the celebration. Reach out today for a custom quote.</p>
-  <a href="{% url 'booking' %}" class="btn-light">Get a Free Quote <i class="fas fa-arrow-right"></i></a>
-</div>
+<!-- CTA -->
+<section style="background:var(--bg); border-top:1px solid var(--border); padding:120px 5%;">
+  <div style="max-width:800px; margin:0 auto; text-align:center;">
+    <h2 style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.5rem, 6vw, 4rem); color:#fff; margin-bottom:24px;">Your Vision, <em style="color:var(--gold);">Tastefully</em> Executed.</h2>
+    <p style="font-size:1.1rem; color:var(--muted); margin-bottom:44px; line-height:1.8;">Connect with our experts today to begin crafting a menu that will leave your guests in awe.</p>
+    <a href="{% url 'booking' %}" class="btn-primary" style="padding:20px 50px; font-size:1.1rem;">Secure Your Date Today</a>
+  </div>
+</section>
 
 {% endblock %}

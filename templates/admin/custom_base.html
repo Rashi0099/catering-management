@@ -3,17 +3,43 @@
 <head>
   {% load static %}
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}Mastan's Catering & Services Admin{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   
   <!-- PWA Headers -->
-  <link rel="manifest" href="{% url 'manifest.json' %}">
+  <link rel="manifest" href="{% url 'manifest.json' %}?start_url=/admin-panel/&name=Mastan%20Admin&short_name=Mastan%20Admin">
   <meta name="theme-color" content="#d4a852">
-  <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mastan Admin">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
+    /* ── NAVIGATION PROGRESS BAR ── */
+    #nav-progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0;
+      background: linear-gradient(90deg, var(--gold), #f0c97a);
+      z-index: 99999; transition: width 0.3s ease, opacity 0.3s ease; border-radius: 0 2px 2px 0;
+      box-shadow: 0 2px 10px rgba(212, 168, 82, 0.3);
+    }
+    #nav-progress.loading { width: 92%; transition: width 10s cubic-bezier(0.08, 0.8, 0, 1); }
+    #nav-progress.done { width: 100% !important; transition: width 0.2s ease !important; opacity: 1; }
+    #nav-progress.fade { opacity: 0; transition: opacity 0.4s ease; }
+
+    /* Skeleton Loading */
+    .skeleton-loader { display: none; padding: 20px; }
+    .skeleton-item { background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); height: 120px; }
+    .skeleton-line { height: 12px; background: rgba(255,255,255,0.04); border-radius: 4px; margin-bottom: 12px; }
+    .skeleton-title { height: 24px; width: 50%; background: rgba(255,255,255,0.06); margin-bottom: 20px; border-radius: 6px; }
+    .skeleton-pulse { animation: skeleton-fade 0.8s infinite ease-in-out alternate; transform: translate3d(0,0,0); }
+    @keyframes skeleton-fade {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    body.nav-loading-active .content-inner { display: none !important; }
+    body.nav-loading-active .skeleton-loader { display: block !important; }
+    body.nav-loading-active { pointer-events: none; }
     :root {
       --bg:       #0d0f14;
       --surface:  #161a22;
@@ -28,13 +54,28 @@
       --blue:     #5b8dee;
       --orange:   #f39c50;
       --sidebar-w: 240px;
+      
+      /* Missing fallback tokens used in templates */
+      --card-bg:  var(--card);
+      --body-bg:  var(--bg);
+      --text-light: var(--muted);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); -webkit-tap-highlight-color: transparent; }
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+    body { 
+      font-family: 'DM Sans', sans-serif; 
+      background: var(--bg); color: var(--text); 
+      min-height: 100vh; display: flex;
+      user-select: none; /* Prevent accidental text selection */
+      -webkit-user-select: none;
+    }
+    input, textarea, [contenteditable="true"] { 
+      user-select: text; /* Allow selection in inputs */
+      -webkit-user-select: text; 
+    }
 
     /* ── SIDEBAR ── */
     .sidebar {
@@ -100,6 +141,7 @@
       background: var(--surface); border-bottom: 1px solid var(--border);
       padding: 16px 32px; display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 50;
+      padding-top: calc(16px + env(safe-area-inset-top)); /* Safe area for Notch */
     }
     .topbar-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
@@ -166,7 +208,6 @@
     }
     .badge-pending  { background: rgba(243,156,80,0.15); color: var(--orange); }
     .badge-confirmed { background: rgba(46,204,133,0.15); color: var(--green); }
-    .badge-in_progress { background: rgba(91,141,238,0.15); color: var(--blue); }
     .badge-completed { background: rgba(122,132,154,0.12); color: var(--muted); }
     .badge-cancelled { background: rgba(224,92,92,0.12); color: var(--red); }
 
@@ -179,6 +220,8 @@
     }
     .btn-gold { background: linear-gradient(135deg, var(--gold), #b8902a); color: #0d0f14; font-weight: 600; }
     .btn-gold:hover { filter: brightness(1.1); }
+    .btn-secondary { background: var(--border); color: var(--text); border: 1px solid rgba(255,255,255,0.1); }
+    .btn-secondary:hover { background: var(--surface); border-color: var(--gold); }
     .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
     .btn-ghost:hover { color: var(--text); border-color: var(--text); }
     .btn-danger { background: rgba(224,92,92,0.12); color: var(--red); border: 1px solid rgba(224,92,92,0.2); }
@@ -272,6 +315,7 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+<div id="nav-progress"></div>
 
 <!-- SIDEBAR OVERLAY -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -315,9 +359,13 @@
       <i class="nav-icon fas fa-images"></i> Gallery
     </a>
 
-    <div class="nav-section-label">Team</div>
+    <div class="nav-section-label">THE TEAM</div>
     {% load admin_tags %}
     
+    <a href="{% url 'admin_staff' %}" class="nav-item {% if page == 'staff' %}active{% endif %}">
+      <i class="nav-icon fas fa-users"></i> The Team
+    </a>
+
     {% get_pending_staff_apps_count as new_staff_count %}
     <a href="{% url 'admin_staff_applications' %}" class="nav-item {% if page == 'staff_applications' %}active{% endif %}">
       <i class="nav-icon fas fa-user-tie"></i> Staff Applications
@@ -336,10 +384,6 @@
       {% if promotions_count %}<span class="nav-badge">{{ promotions_count }}</span>{% endif %}
     </a>
     
-    <a href="{% url 'admin_staff' %}" class="nav-item {% if page == 'staff' %}active{% endif %}">
-      <i class="nav-icon fas fa-users"></i> The Team
-    </a>
-
     <a href="{% url 'admin_staff_notice' %}" class="nav-item {% if page == 'staff_notice' %}active{% endif %}">
       <i class="nav-icon fas fa-bullhorn"></i> Notice Board
     </a>
@@ -359,9 +403,12 @@
        <div class="user-role">Staff Member</div>
       </div>
     </div>
-    <a href="{% url 'admin_logout' %}" class="logout-btn">
-      <i class="fas fa-sign-out-alt"></i> Sign Out
-    </a>
+    <form method="post" action="{% url 'admin_logout' %}" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="logout-btn" style="background:none;border:none;cursor:pointer;width:100%;text-align:left;padding:0;">
+        <i class="fas fa-sign-out-alt"></i> Sign Out
+      </button>
+    </form>
   </div>
 </aside>
 
@@ -388,18 +435,97 @@
   </div>
 
   <div class="content">
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }}">
-      <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
-      {{ message }}
+    <div id="skeleton-loader" class="skeleton-loader">
+      <div class="skeleton-item skeleton-pulse">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-line" style="width: 80%;"></div>
+        <div class="skeleton-line" style="width: 60%;"></div>
+      </div>
+      <div class="skeleton-item skeleton-pulse">
+        <div class="skeleton-title" style="width: 40%"></div>
+        <div class="skeleton-line" style="width: 90%;"></div>
+        <div class="skeleton-line" style="width: 70%;"></div>
+      </div>
+      <div class="skeleton-item skeleton-pulse">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-line" style="width: 85%;"></div>
+        <div class="skeleton-line" style="width: 50%;"></div>
+      </div>
     </div>
-    {% endfor %}
 
-    {% block content %}{% endblock %}
+    <div class="content-inner">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+
+      {% block content %}{% endblock %}
+    </div>
   </div>
 </main>
 
+<!-- Global Lightbox Overlay -->
+<div id="global-lightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9000; align-items:center; justify-content:center; cursor:zoom-out;" onclick="this.style.display='none'">
+  <img id="lightbox-img" src="" style="max-width:95%; max-height:95%; border-radius:8px; border:2px solid var(--gold); box-shadow:0 0 50px rgba(0,0,0,0.5);">
+  <div style="position:absolute; top:20px; right:20px; color:#fff; font-size:1.5rem;"><i class="fas fa-times"></i></div>
+</div>
+
 <script>
+  // ── SMOOTH NAVIGATION PROGRESS BAR ──
+  const navBar = document.getElementById('nav-progress');
+  let navTimer;
+  function startNav() {
+    clearTimeout(navTimer);
+    navBar.className = '';
+    navBar.style.width = '0';
+    document.body.classList.add('nav-loading-active');
+    
+    // Close sidebar immediately on nav start (if on mobile)
+    if (typeof toggleSidebar === 'function' && document.querySelector('.sidebar.open')) {
+      toggleSidebar();
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        navBar.classList.add('loading');
+      });
+    });
+  }
+  function finishNav() {
+    navBar.classList.remove('loading');
+    navBar.classList.add('done');
+    document.body.classList.remove('nav-loading-active');
+    navTimer = setTimeout(() => navBar.classList.add('fade'), 200);
+  }
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    if (a.target === '_blank' || a.hasAttribute('download')) return;
+    if (a.href.startsWith('#') || a.href === '' || a.protocol === 'javascript:') return;
+    if (a.href.includes('logout')) return;
+    if (a.hostname !== window.location.hostname) return;
+    startNav();
+  });
+  document.addEventListener('submit', e => {
+    if(!e.defaultPrevented) startNav();
+  });
+  window.addEventListener('pageshow', e => { if (e.persisted) finishNav(); });
+  window.addEventListener('load', finishNav);
+
+  // Lightbox logic
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('.lightbox-trigger');
+    if (trigger) {
+      const img = trigger.tagName === 'IMG' ? trigger : trigger.querySelector('img');
+      if (img && img.src) {
+        document.getElementById('lightbox-img').src = img.src;
+        document.getElementById('global-lightbox').style.display = 'flex';
+      }
+    }
+  });
+
   // Service Worker Registration for PWA caching
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

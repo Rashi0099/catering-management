@@ -22,12 +22,18 @@
     <!-- Profile Card -->
     <div class="panel" style="margin-bottom:18px">
       <div style="display:flex;align-items:center;gap:18px;margin-bottom:20px">
-        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#9b7320);display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;color:#0d0f14;flex-shrink:0">
-          {{ member.full_name|first|upper }}
+        <div class="lightbox-trigger" style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:zoom-in;">
+          {% if member.photo %}
+            <img src="{{ member.photo.url }}" style="width:100%; height:100%; object-fit:cover;">
+          {% else %}
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--gold),#9b7320);display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;color:#0d0f14;">
+              {{ member.full_name|first|upper }}
+            </div>
+          {% endif %}
         </div>
         <div>
           <div style="font-family:'Playfair Display',serif;font-size:1.2rem">{{ member.full_name }}</div>
-          <div style="font-family:monospace;color:var(--gold);font-size:0.85rem">{{ member.staff_id }}</div>
+          <div style="font-family:monospace;color:var(--gold);font-size:0.85rem">#{{ member.staff_id }}</div>
           <span class="badge badge-confirmed" style="margin-top:4px">{{ member.get_level_display }}</span>
         </div>
       </div>
@@ -42,7 +48,6 @@
         </div>
       </div>
     </div>
-    <div>
 
     <!-- Staff Info -->
     <div class="panel" style="margin-bottom:18px">
@@ -98,11 +103,7 @@
         </div>
       </div>
     </div>
-
-
-  </div>
-  </div>
-
+  </div> <!-- End Left Column -->
 
   <!-- RIGHT -->
    <!-- Their Bookings -->
