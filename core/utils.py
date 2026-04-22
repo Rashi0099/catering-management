@@ -104,10 +104,13 @@ def send_fcm_notification(staff, title, body, link=None):
         
         message = messaging.MulticastMessage(
             notification=messaging.Notification(title=title, body=body),
+            data={'link': link or '/staff/'},
             webpush=messaging.WebpushConfig(
+                headers={"Urgency": "high"},
                 notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
                 fcm_options=messaging.WebpushFCMOptions(link=link or '/staff/')
             ),
+            android=messaging.AndroidConfig(priority='high'),
             tokens=tokens,
         )
         
