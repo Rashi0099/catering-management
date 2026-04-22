@@ -227,7 +227,7 @@ def staff_dashboard(request):
             'confirmed_count': my_bookings.filter(status='confirmed').count(),
             'completed_count': my_bookings.filter(status='completed').count(),
         }
-        cache.set(cache_key, cached_stats, 60) # 1 minute cache for fast reaction
+        cache.set(cache_key, cached_stats, 600) # Increased to 10 minutes for smoothness
         
     # Calculate Published Bookings Quota dynamic availability (already optimized with prefetch)
     available_bookings_qs = Booking.objects.filter(
@@ -609,8 +609,13 @@ def staff_apply_booking(request, pk):
                             link=f"/admin-panel/bookings/{booking.pk}/"
                         )
                 
-                # Invalidate dashboard cache for this user so they see the change immediately
+                # Invalidate dashboard cache after any application change
                 cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
+                
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'status': 'success', 'message': 'Action completed successfully.'})
+                
+                return redirect('staff_dashboard')
                 
         except Exception as e:
             # Catch potential IntegrityError or other DB issues
@@ -651,14 +656,15 @@ def staff_cancel_request(request, pk):
             application.status = 'cancelled'
             application.save()
             messages.success(request, "Your application has been withdrawn.")
-        elif application.status == 'approved' or request.user in booking.assigned_to.all():
-            # Needs admin approval if already approved/assigned
-            application.status = 'cancel_requested'
-            application.save()
-            messages.success(request, "Cancellation request sent to admin for approval.")
         else:
             messages.error(request, "You cannot cancel this application in its current state.")
             
+    # Invalidate dashboard cache after cancel request
+    cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
+    
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': 'Action completed.'})
+
     return redirect('staff_dashboard')
 
 

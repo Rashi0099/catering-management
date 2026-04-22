@@ -372,16 +372,20 @@
                   .attendance-checklist-grid {
                     display: grid;
                     grid-template-columns: repeat(4, 1fr);
-                    gap: 8px;
+                    gap: 6px;
                     background: rgba(0,0,0,0.2);
                     border: 1px solid rgba(255,255,255,0.03);
                     border-radius: 8px;
-                    padding: 10px;
+                    padding: 8px 5px;
                   }
+                  /* Mobile optimization for 4 columns */
                   @media (max-width: 480px) {
-                    .attendance-checklist-grid {
-                      grid-template-columns: repeat(2, 1fr);
-                      gap: 12px;
+                    .attendance-checklist-grid { 
+                      gap: 4px;
+                      padding: 6px 2px;
+                    }
+                    .attendance-checklist-grid span {
+                      font-size: 0.55rem !important;
                     }
                   }
                 </style>
