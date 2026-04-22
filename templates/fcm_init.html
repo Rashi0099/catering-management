@@ -88,33 +88,15 @@ function requestFCMToken() {
 
 // ── Native PushManager subscription ──────────────────────────────────────
 function tryNativePush(registration) {
-  const VAPID_PUBLIC_KEY = 'BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI';
-
-  registration.pushManager.getSubscription().then(existingSub => {
-    if (existingSub) {
-      console.log('[FCM] Already have native push subscription, syncing...');
-      // Convert existing subscription to JSON and send endpoint as token
-      const subJson = existingSub.toJSON();
-      const tokenKey = subJson.keys && subJson.keys.p256dh ? subJson.keys.p256dh : existingSub.endpoint;
-      saveFCMTokenToServer(existingSub.endpoint);
-      return;
-    }
-
-    // Convert VAPID key from base64url to Uint8Array
-    const vapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-    registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: vapidKey
-    }).then(subscription => {
-      console.log('[FCM] Native PushManager subscription created!');
-      // Use the endpoint as the token identifier
-      saveFCMTokenToServer(subscription.endpoint);
-    }).catch(err => {
-      console.error('[FCM] Native push subscription error:', err);
-    });
-  }).catch(err => {
-    console.error('[FCM] getSubscription error:', err);
-  });
+  // IMPORTANT: We cannot use the native PushManager endpoint as an FCM token.
+  // Raw WebPush endpoints are NOT FCM tokens — if saved to the DB, FCM will
+  // reject them on every send and silently delete the device record.
+  // The Firebase SDK path (above) is the ONLY correct way to get an FCM token.
+  // If we reach here, it means Firebase SDK failed — notifications won't work
+  // until the user grants permission again with the Firebase SDK available.
+  console.warn('[FCM] Firebase SDK path failed. Native PushManager endpoint cannot be used as an FCM token.');
+  console.warn('[FCM] Push notifications require the Firebase SDK to obtain a valid FCM token.');
+  // Do NOT call saveFCMTokenToServer() here — the endpoint is not an FCM token.
 }
 
 function urlBase64ToUint8Array(base64String) {

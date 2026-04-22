@@ -37,11 +37,10 @@ self.addEventListener('push', function(event) {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Firebase background handler (fires for data-only messages when browser is alive)
-messaging.onBackgroundMessage(function(payload) {
-  // push event above already handles display, just log here
-  console.log('[SW] onBackgroundMessage', payload);
-});
+// NOTE: We intentionally do NOT use messaging.onBackgroundMessage() here.
+// It conflicts with the raw 'push' event handler above on Android Chrome,
+// causing double-display or silent failures. The raw 'push' handler is
+// the most reliable approach across all platforms and app states.
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
