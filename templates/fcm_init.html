@@ -1,139 +1,196 @@
+{% load static %}
+<script>
+// ── Helper to get CSRF token ──────────────────────────────────────────────
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+// ── Send token to our backend ─────────────────────────────────────────────
+function saveFCMTokenToServer(token) {
+  console.log('[FCM] Saving token to server:', token.substring(0, 20) + '...');
+  return fetch('/staff/save-fcm-token/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ token: token })
+  }).then(resp => {
+    console.log('[FCM] Server response:', resp.status);
+    return resp;
+  }).catch(err => {
+    console.error('[FCM] Server save error:', err);
+  });
+}
+
+// ── Core token registration ───────────────────────────────────────────────
+function requestFCMToken() {
+  if (!window.isSecureContext) {
+    console.warn('[FCM] Not a secure context — push blocked by browser.');
+    return;
+  }
+  if (!('Notification' in window)) {
+    console.warn('[FCM] Notification API not supported on this device.');
+    return;
+  }
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[FCM] Service Worker not supported.');
+    return;
+  }
+
+  // Ask for permission if not yet granted
+  Promise.resolve(
+    Notification.permission === 'granted' ? 'granted' : Notification.requestPermission()
+  ).then(permission => {
+    console.log('[FCM] Permission:', permission);
+    if (permission !== 'granted') return;
+
+    navigator.serviceWorker.ready.then(registration => {
+      console.log('[FCM] SW ready, scope:', registration.scope);
+
+      // Method 1: Use Firebase SDK if available (Android Chrome works well)
+      try {
+        if (window.firebase && firebase.messaging) {
+          const msg = firebase.messaging();
+          msg.getToken({
+            vapidKey: "BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI",
+            serviceWorkerRegistration: registration
+          }).then(token => {
+            if (token) { saveFCMTokenToServer(token); }
+            else { console.warn('[FCM] Firebase returned null token — trying native PushManager.'); tryNativePush(registration); }
+          }).catch(err => {
+            console.warn('[FCM] Firebase getToken error (will try native):', err.message);
+            tryNativePush(registration);
+          });
+          return; // exit — will fallback inside .catch if needed
+        }
+      } catch(e) {
+        console.warn('[FCM] Firebase SDK unavailable, using native push:', e.message);
+      }
+
+      // Method 2: Native PushManager (required for iOS Safari PWA)
+      tryNativePush(registration);
+    });
+  });
+}
+
+// ── Native PushManager subscription ──────────────────────────────────────
+function tryNativePush(registration) {
+  const VAPID_PUBLIC_KEY = 'BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI';
+
+  registration.pushManager.getSubscription().then(existingSub => {
+    if (existingSub) {
+      console.log('[FCM] Already have native push subscription, syncing...');
+      // Convert existing subscription to JSON and send endpoint as token
+      const subJson = existingSub.toJSON();
+      const tokenKey = subJson.keys && subJson.keys.p256dh ? subJson.keys.p256dh : existingSub.endpoint;
+      saveFCMTokenToServer(existingSub.endpoint);
+      return;
+    }
+
+    // Convert VAPID key from base64url to Uint8Array
+    const vapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+    registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: vapidKey
+    }).then(subscription => {
+      console.log('[FCM] Native PushManager subscription created!');
+      // Use the endpoint as the token identifier
+      saveFCMTokenToServer(subscription.endpoint);
+    }).catch(err => {
+      console.error('[FCM] Native push subscription error:', err);
+    });
+  }).catch(err => {
+    console.error('[FCM] getSubscription error:', err);
+  });
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+  return outputArray;
+}
+
+// ── Boot: run as soon as possible after page load ─────────────────────────
+(function bootFCM() {
+  if (!window.isSecureContext || !('Notification' in window)) return;
+
+  console.log('[FCM] Boot — permission is currently:', Notification.permission);
+
+  if (Notification.permission === 'granted') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', requestFCMToken);
+    } else {
+      // Small delay to ensure SW is registered first
+      setTimeout(requestFCMToken, 1500);
+    }
+  } else if (Notification.permission === 'default') {
+    // Show enable button
+    const show = () => {
+      const btn = document.createElement('button');
+      btn.innerHTML = '🔔 Enable Notifications';
+      btn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:99999;background:#d4a852;color:#0d0f14;font-family:"DM Sans",sans-serif;font-weight:600;font-size:0.85rem;border:none;padding:12px 20px;border-radius:30px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;';
+      btn.onclick = () => {
+        requestFCMToken();
+        btn.style.opacity = '0';
+        setTimeout(() => btn.remove(), 300);
+      };
+      document.body.appendChild(btn);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+    else show();
+  } else {
+    console.warn('[FCM] Permission is DENIED — user must re-enable in iPhone Settings.');
+  }
+})();
+</script>
+
+<!-- Firebase SDK (loaded async after, does not block) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 <script>
-  // Initialize Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyD7qnoyAyG2nU3DZOLGy2kkDkQB3FEwvqQ",
-    authDomain: "mastan-761bc.firebaseapp.com",
-    projectId: "mastan-761bc",
-    storageBucket: "mastan-761bc.firebasestorage.app",
-    messagingSenderId: "227009036928",
-    appId: "1:227009036928:web:fedebf08a23e04442e1c65",
-  };
-  
-  if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-  }
-
-  const messaging = firebase.messaging();
-
-  // Function to register token
-  function requestFCMToken() {
-    Notification.requestPermission().then((permission) => {
-      if (permission === 'granted') {
-        navigator.serviceWorker.ready.then((registration) => {
-          messaging.getToken({ 
-            vapidKey: "BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI",
-            serviceWorkerRegistration: registration
-          })
-            .then((currentToken) => {
-              if (currentToken) {
-                  // Send the token to the server
-                  fetch('/staff/save-fcm-token/', {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json',
-                          'X-CSRFToken': getCookie('csrftoken')
-                      },
-                      body: JSON.stringify({token: currentToken})
-                  }).then(response => {
-                      console.log('FCM Token successfully synced to server');
-                  }).catch(err => {
-                      console.error('Failed to sync FCM Token:', err);
-                  });
-              } else {
-                console.log('No FCM registration token available. Request permission to generate one.');
-              }
-            }).catch((err) => {
-              console.log('An error occurred while retrieving token. ', err);
-            });
-        });
-      } else {
-        console.log('Unable to get permission to notify.');
-      }
-    });
-  }
-
-  // Helper to get CSRF token
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-  }
-
-  // Only request if logged in and in secure context or localhost
-  if (window.isSecureContext && 'Notification' in window) {
-      console.log('FCM Logic Starting, Permission:', Notification.permission);
-      if (Notification.permission === 'granted') {
-          if (document.readyState === "loading") {
-              document.addEventListener("DOMContentLoaded", requestFCMToken);
-          } else {
-              requestFCMToken();
-          }
-      } else if (Notification.permission === 'default') {
-          const showFCMButton = () => {
-             const btn = document.createElement('button');
-             btn.innerHTML = '🔔 Enable Notifications';
-             btn.style.cssText = 'position:fixed; bottom:20px; right:20px; z-index:99999; background:#d4a852; color:#0d0f14; font-family:"DM Sans",sans-serif; font-weight:600; font-size:0.85rem; border:none; padding:12px 20px; border-radius:30px; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.4); display:flex; align-items:center; gap:8px; transition:all 0.2s;';
-             btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
-             btn.onmouseout = () => btn.style.transform = 'translateY(0)';
-             btn.onclick = () => {
-                 requestFCMToken();
-                 btn.style.opacity = '0';
-                 setTimeout(() => btn.remove(), 300);
-             };
-             document.body.appendChild(btn);
-          };
-
-          if (document.readyState === "loading") {
-              document.addEventListener("DOMContentLoaded", showFCMButton);
-          } else {
-              showFCMButton();
-          }
-      } else {
-          console.warn('Notification permission is DENIED. Push will not work.');
-      }
-  } else {
-      console.warn('FCM blocked: Insecure context or Notification API missing.');
-  }
-
-  // Handle incoming messages when the app is in focus
-  messaging.onMessage((payload) => {
-    console.log('Message received. ', payload);
-    
-    var data = payload.data || {};
-    var notif = payload.notification || {};
-    const title = data.title || notif.title || 'Notification';
-    const body = data.body || notif.body || '';
-    const icon = data.icon || notif.icon || '/static/icons/icon-192x192_white.png';
-    
-    // Web custom toast if exists
-    if (typeof showToast === "function") {
-        showToast("📢 " + title + ": " + body);
-    }
-    
-    // Explicitly show OS notification since PWA foreground may not auto-display it
-    const options = {
-        body: body,
-        icon: icon
+  // Initialize Firebase for foreground in-app messages
+  try {
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7qnoyAyG2nU3DZOLGy2kkDkQB3FEwvqQ",
+      authDomain: "mastan-761bc.firebaseapp.com",
+      projectId: "mastan-761bc",
+      storageBucket: "mastan-761bc.firebasestorage.app",
+      messagingSenderId: "227009036928",
+      appId: "1:227009036928:web:fedebf08a23e04442e1c65",
     };
-    
-    if (navigator.serviceWorker) {
-        navigator.serviceWorker.ready.then((reg) => {
-            reg.showNotification(title, options);
-        });
-    } else {
-        new Notification(title, options);
-    }
-  });
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 
+    const messaging = firebase.messaging();
+
+    messaging.onMessage((payload) => {
+      console.log('[FCM] Foreground message:', payload);
+      var data = payload.data || {};
+      var notif = payload.notification || {};
+      const title = data.title || notif.title || 'Notification';
+      const body = data.body || notif.body || '';
+      const icon = data.icon || notif.icon || '/static/icons/icon-192x192.png';
+      if (typeof showToast === 'function') { showToast('📢 ' + title + ': ' + body); }
+      navigator.serviceWorker && navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification(title, { body, icon });
+      });
+    });
+  } catch(e) {
+    console.warn('[FCM] Firebase foreground SDK init failed (non-critical):', e.message);
+  }
 </script>
