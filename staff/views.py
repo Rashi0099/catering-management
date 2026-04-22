@@ -17,10 +17,18 @@ from bookings.models import Booking, BookingPayment, EventApplication
 
 
 
+from django.views.decorators.csrf import csrf_exempt
+
 # ── Firebase ────────────────────────────────────────────────────────────────
+@csrf_exempt
 @login_required
 def save_fcm_token(request):
     """Saves the Firebase Cloud Messaging token for the authenticated staff."""
+    # Debug log to /tmp/fcm.log
+    with open('/tmp/fcm.log', 'a') as f:
+        import datetime
+        f.write(f"[{datetime.datetime.now()}] User: {request.user} Method: {request.method} Auth: {request.user.is_authenticated}\n")
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -33,6 +41,8 @@ def save_fcm_token(request):
                 )
                 return JsonResponse({'status': 'success'})
         except Exception as e:
+            with open('/tmp/fcm.log', 'a') as f:
+                f.write(f"Error: {str(e)}\n")
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'invalid method'}, status=405)
 
