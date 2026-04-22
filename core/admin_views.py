@@ -1268,17 +1268,31 @@ def staff_notice(request):
                 tokens = list(FCMDevice.objects.filter(staff__is_active=True).values_list('token', flat=True))
                 if tokens:
                     base_url = "https://mastan.in"
-                    body_text = notice.message[:100] + ("..." if len(notice.message) > 100 else "")
-                    title = "📢 New Staff Notice"
+                    body_text = notice.message[:150] + ("..." if len(notice.message) > 150 else "")
+                    title = "MASTAN'S CATERING — Staff Notice"
                     icon = f"{base_url}/static/images/logo.png"
+                    badge = f"{base_url}/static/icons/icon-192x192.png"
                     link = f"{base_url}/staff/"
                     fcm_msg = messaging.MulticastMessage(
                         notification=messaging.Notification(title=title, body=body_text),
                         data={'title': title, 'body': body_text, 'link': link, 'icon': icon},
-                        android=messaging.AndroidConfig(priority='high'),
+                        android=messaging.AndroidConfig(
+                            priority='high',
+                            notification=messaging.AndroidNotification(
+                                title=title,
+                                body=body_text,
+                                icon='ic_notification',
+                                color='#D4A852',
+                            )
+                        ),
                         webpush=messaging.WebpushConfig(
                             headers={"Urgency": "high"},
-                            notification=messaging.WebpushNotification(icon=icon, title=title, body=body_text),
+                            notification=messaging.WebpushNotification(
+                                icon=icon,
+                                badge=badge,
+                                title=title,
+                                body=body_text,
+                            ),
                             fcm_options=messaging.WebpushFCMOptions(link=link)
                         ),
                         tokens=tokens,
