@@ -200,11 +200,11 @@
       .mobile-menu-btn { display: none !important; }
       .sidebar-overlay { display: none !important; }
       
-      .main { margin-left: 0; padding-bottom: 75px; }
+      .main { margin-left: 0; padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px)); }
       
       .bottom-nav {
         display: flex; justify-content: space-around;
-        position: fixed; bottom: 0; left: 0; right: 0; height: 75px; 
+        position: fixed; bottom: 0; left: 0; right: 0; height: calc(65px + env(safe-area-inset-bottom, 0px)); 
         background: rgba(16, 22, 37, 0.85); border-top: 1px solid rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
         z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
@@ -214,7 +214,7 @@
         color: var(--muted); text-decoration: none; font-size: 0.65rem; gap: 6px;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); width: 33.33%; height: 100%; font-weight: 600;
         text-transform: uppercase; letter-spacing: 1px;
-        padding-bottom: env(safe-area-inset-bottom, 10px); 
+        padding-bottom: env(safe-area-inset-bottom, 0px); 
       }
       .bottom-nav a i { font-size: 1.3rem; transition: transform 0.3s, color 0.3s; }
       .bottom-nav a.active { color: #ffffff; }

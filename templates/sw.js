@@ -1,6 +1,6 @@
 importScripts('/firebase-messaging-sw.js');
 
-const CACHE_NAME = 'mastans-catering-v15';
+const CACHE_NAME = 'mastans-catering-v16';
 const STATIC_ASSETS = [
     '/staff/login/',
     '/static/icons/icon-192x192.png',
@@ -11,11 +11,14 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', event => {
-    self.skipWaiting(); // Force the waiting service worker to become the active service worker.
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            console.log('[SW] Pre-caching core assets');
-            return cache.addAll(STATIC_ASSETS);
+            console.log('[SW] Pre-caching core assets (tolerate 404s)');
+            // Fallback tolerant caching instead of strict cache.addAll
+            return Promise.allSettled(
+                STATIC_ASSETS.map(url => cache.add(url).catch(err => console.warn('[SW] Cache add failed for', url, err)))
+            );
         })
     );
 });

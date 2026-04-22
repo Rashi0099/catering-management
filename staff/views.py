@@ -23,26 +23,47 @@ from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt
 @login_required
 def save_fcm_token(request):
-    """Saves the Firebase Cloud Messaging token for the authenticated staff."""
-    # Debug log to /tmp/fcm.log
-    with open('/tmp/fcm.log', 'a') as f:
-        import datetime
-        f.write(f"[{datetime.datetime.now()}] User: {request.user} Method: {request.method} Auth: {request.user.is_authenticated}\n")
-
+    """
+    Saves or updates the Firebase Cloud Messaging token for the authenticated staff.
+    Handles the 'unique=True' constraint by transferring tokens between users if a device changes hands.
+    """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             token = data.get('token')
-            if token and request.user.is_authenticated:
-                FCMDevice.objects.update_or_create(
+            if not token or not request.user.is_authenticated:
+                return JsonResponse({'status': 'error', 'message': 'Invalid token or user not authenticated'}, status=400)
+
+            # Fix: Handle unique=True constraint gracefully.
+            # If this token already exists for another user, delete the old record or update it.
+            # This prevents IntegrityError when a device is shared or re-assigned.
+            existing = FCMDevice.objects.filter(token=token).first()
+            if existing:
+                if existing.staff != request.user:
+                    # Token switched users (e.g. device shared)
+                    existing.staff = request.user
+                    existing.device_name = request.META.get('HTTP_USER_AGENT', 'Unknown')
+                    existing.save()
+                else:
+                    # Same user, just update last_used
+                    existing.device_name = request.META.get('HTTP_USER_AGENT', 'Unknown')
+                    existing.save()
+            else:
+                # New token entirely
+                FCMDevice.objects.create(
                     staff=request.user,
                     token=token,
-                    defaults={'device_name': request.META.get('HTTP_USER_AGENT', 'Unknown')}
+                    device_name=request.META.get('HTTP_USER_AGENT', 'Unknown')
                 )
-                return JsonResponse({'status': 'success'})
+
+            return JsonResponse({'status': 'success'})
         except Exception as e:
-            with open('/tmp/fcm.log', 'a') as f:
-                f.write(f"Error: {str(e)}\n")
+            # Fallback debug log
+            try:
+                with open('/tmp/fcm_error.log', 'a') as f:
+                    import datetime
+                    f.write(f"[{datetime.datetime.now()}] Error: {str(e)}\n")
+            except: pass
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'invalid method'}, status=405)
 
