@@ -1269,7 +1269,7 @@ def staff_notice(request):
                 if tokens:
                     base_url = "https://mastan.in"
                     body_text = notice.message[:150] + ("..." if len(notice.message) > 150 else "")
-                    title = "MASTAN'S CATERING — Staff Notice"
+                    title = "MASTAN'S CATERING — Official Notice"
                     icon = f"{base_url}/static/images/logo.png"
                     badge = f"{base_url}/static/icons/icon-192x192.png"
                     link = f"{base_url}/staff/"
