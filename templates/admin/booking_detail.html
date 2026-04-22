@@ -250,7 +250,7 @@
       <div class="panel-hdr">
         <div class="panel-title"><i class="fas fa-clipboard-check" style="color:var(--gold);"></i> Event Attendance</div>
         <div>
-          <a href="{% url 'admin_download_attendance' booking.pk %}" download="Attendance_Booking_{{ booking.pk }}.pdf" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
+          <a href="{% url 'admin_download_attendance' booking.pk %}" target="_blank" download="Attendance_Booking_{{ booking.pk }}.pdf" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
         </div>
       </div>
       {% if assigned_staff_with_att %}
@@ -368,7 +368,24 @@
                   </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
+                <style>
+                  .attendance-checklist-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 8px;
+                    background: rgba(0,0,0,0.2);
+                    border: 1px solid rgba(255,255,255,0.03);
+                    border-radius: 8px;
+                    padding: 10px;
+                  }
+                  @media (max-width: 480px) {
+                    .attendance-checklist-grid {
+                      grid-template-columns: repeat(2, 1fr);
+                      gap: 12px;
+                    }
+                  }
+                </style>
+                <div class="attendance-checklist-grid">
                   <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="On Time">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">On Time</span>
                     <input type="checkbox" name="on_time_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
