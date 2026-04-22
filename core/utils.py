@@ -98,28 +98,32 @@ def send_fcm_notification(staff, title, body, link=None):
     """
     try:
         from firebase_admin import messaging
+        BASE_URL = "https://mastan.in"
         tokens = list(staff.fcm_devices.values_list('token', flat=True))
         if not tokens:
             return None
-        # Send BOTH notification (for OS-level delivery when Chrome is killed)
-        # AND data (for service worker customization when app is in background).
+        icon = f"{BASE_URL}/static/images/logo.png"
+        badge = f"{BASE_URL}/static/icons/icon-192x192.png"
+        abs_link = link if (link and link.startswith('http')) else f"{BASE_URL}{link or '/staff/'}"
+
         message = messaging.MulticastMessage(
             notification=messaging.Notification(title=title, body=body),
             data={
                 'title': str(title),
                 'body': str(body),
-                'link': str(link or '/staff/'),
-                'icon': '/static/images/logo.png'
+                'link': abs_link,
+                'icon': icon
             },
             android=messaging.AndroidConfig(priority='high'),
             webpush=messaging.WebpushConfig(
                 headers={"Urgency": "high"},
                 notification=messaging.WebpushNotification(
-                    icon='/static/images/logo.png',
+                    icon=icon,
+                    badge=badge,
                     title=title,
                     body=body,
                 ),
-                fcm_options=messaging.WebpushFCMOptions(link=link or '/staff/')
+                fcm_options=messaging.WebpushFCMOptions(link=abs_link)
             ),
             tokens=tokens,
         )
@@ -132,7 +136,6 @@ def send_fcm_notification(staff, title, body, link=None):
             for idx, resp in enumerate(response.responses):
                 if not resp.success:
                     stale_tokens.append(tokens[idx])
-            
             if stale_tokens:
                 staff.fcm_devices.filter(token__in=stale_tokens).delete()
         
@@ -143,9 +146,9 @@ def send_fcm_notification(staff, title, body, link=None):
 
 
 def notify_admins(title, body, link='/admin-panel/'):
-    """Send an FCM Multicast Web Push to all Admin Staff."""
+    """Send an FCM push notification to all admin staff members."""
     from staff.models import Staff
-    admins = Staff.objects.filter(level='admin')
+    admins = Staff.objects.filter(is_staff=True, is_active=True)
     for admin in admins:
         send_fcm_notification(admin, title, body, link=link)
 

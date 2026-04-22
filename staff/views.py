@@ -14,6 +14,7 @@ from django.core.cache import cache
 
 from .models import Staff, StaffPayout, StaffAttendance, StaffNotice, FCMDevice
 from bookings.models import Booking, BookingPayment, EventApplication
+from core.utils import notify_admins
 
 
 
@@ -585,6 +586,12 @@ def staff_apply_booking(request, pk):
                         )
                         booking.assigned_to.add(request.user)
                         messages.success(request, f'✅ Success! You have joined {booking.name}.')
+                        # Notify admin about direct join
+                        notify_admins(
+                            title="✅ Staff Joined Event",
+                            body=f"{request.user.full_name} directly joined {booking.name} on {booking.event_date}.",
+                            link=f"/admin-panel/bookings/{booking.pk}/"
+                        )
                     else:
                         EventApplication.objects.create(
                             booking=booking,
@@ -595,6 +602,12 @@ def staff_apply_booking(request, pk):
                             status='pending'
                         )
                         messages.success(request, f'📩 Application received for {booking.name}. Check your dashboard for updates.')
+                        # Notify admin about new application
+                        notify_admins(
+                            title="📩 New Event Application",
+                            body=f"{request.user.full_name} applied for {booking.name} on {booking.event_date}.",
+                            link=f"/admin-panel/bookings/{booking.pk}/"
+                        )
                 
                 # Invalidate dashboard cache for this user so they see the change immediately
                 cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
