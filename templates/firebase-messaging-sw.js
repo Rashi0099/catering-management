@@ -12,35 +12,8 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// RAW push event — fires even when Chrome is fully killed on Android.
-// This is the most reliable way to display notifications in all states.
-self.addEventListener('push', function(event) {
-  var payload = {};
-  try { payload = event.data ? event.data.json() : {}; } catch(e) {}
-
-  var notif = payload.notification || {};
-  var data  = payload.data || {};
-
-  var title   = notif.title || data.title || 'Notification';
-  var body    = notif.body  || data.body  || '';
-  var icon    = notif.icon  || data.icon  || '/static/images/logo.png';
-  var link    = data.link   || '/staff/';
-
-  var options = {
-    body: body,
-    icon: icon,
-    badge: '/static/icons/icon-192x192.png',
-    data: { link: link },
-    requireInteraction: false
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// NOTE: We intentionally do NOT use messaging.onBackgroundMessage() here.
-// It conflicts with the raw 'push' event handler above on Android Chrome,
-// causing double-display or silent failures. The raw 'push' handler is
-// the most reliable approach across all platforms and app states.
+// Let the native Firebase background handler and OS manage the display!
+// Since our Python backend explicitly sends the "notification" payload, OS handles it entirely natively.
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
