@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from django.views.generic import TemplateView
+from django.views.decorators.cache import cache_control
 
 urlpatterns = [
     path('django-admin/',  admin.site.urls),
@@ -13,8 +14,8 @@ urlpatterns = [
     path('menu/',          include('menu.urls')),
     path('bookings/',      include('bookings.urls')),
     path('gallery/',       include('gallery.urls')),
-    path('firebase-messaging-sw.js', TemplateView.as_view(
+    path('firebase-messaging-sw.js', cache_control(no_cache=True, must_revalidate=True, max_age=0)(TemplateView.as_view(
         template_name="firebase-messaging-sw.js", 
         content_type="application/javascript"
-    )),
+    ))),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,5 +1,6 @@
 from django.urls import path
 from django.views.generic import TemplateView, RedirectView
+from django.views.decorators.cache import cache_control
 from . import views
 
 urlpatterns = [
@@ -8,6 +9,6 @@ urlpatterns = [
     path('contact/', views.contact, name='contact'),
     
     # PWA Endpoints
-    path('sw.js', TemplateView.as_view(template_name='sw.js', content_type='application/javascript'), name='sw.js'),
+    path('sw.js', cache_control(no_cache=True, must_revalidate=True, max_age=0)(TemplateView.as_view(template_name='sw.js', content_type='application/javascript')), name='sw.js'),
     path('manifest.json', views.manifest, name='manifest.json'),
 ]
