@@ -16,11 +16,12 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received data background message ', payload);
   
-  const title = payload.data?.title || 'Notification';
+  var data = payload.data || {};
+  const title = data.title || 'Notification';
   const options = {
-    body: payload.data?.body || '',
-    icon: payload.data?.icon || '/static/images/logo.png',
-    data: { link: payload.data?.link || '/staff/' }
+    body: data.body || '',
+    icon: data.icon || '/static/images/logo.png',
+    data: { link: data.link || '/staff/' }
   };
 
   self.registration.showNotification(title, options);
@@ -28,7 +29,8 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  const urlToOpen = event.notification.data?.link || '/staff/';
+  var notifData = event.notification.data || {};
+  const urlToOpen = notifData.link || '/staff/';
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((windowClients) => {
       if (windowClients.length > 0) {

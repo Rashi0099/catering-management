@@ -105,9 +105,11 @@
   messaging.onMessage((payload) => {
     console.log('Message received. ', payload);
     
-    const title = payload.data?.title || payload.notification?.title || 'Notification';
-    const body = payload.data?.body || payload.notification?.body || '';
-    const icon = payload.data?.icon || payload.notification?.icon || '/static/icons/icon-192x192_white.png';
+    var data = payload.data || {};
+    var notif = payload.notification || {};
+    const title = data.title || notif.title || 'Notification';
+    const body = data.body || notif.body || '';
+    const icon = data.icon || notif.icon || '/static/icons/icon-192x192_white.png';
     
     // Web custom toast if exists
     if (typeof showToast === "function") {
