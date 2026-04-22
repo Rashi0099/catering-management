@@ -191,9 +191,9 @@
         {% elif ev.pk in cancel_req_booking_ids %}
           <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Request Submitted</span>
         {% elif ev.is_cancellable %}
-        <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" class="ajax-action-form" data-confirm="Are you sure you want to request cancellation for this event?">
+        <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Are you sure you want to request cancellation for this event?', event);">
           {% csrf_token %}
-          <button type="submit" class="btn btn-sm action-btn" style="padding:4px 8px; border:1px solid var(--red); color:var(--red); background:transparent;"><i class="fas fa-times"></i> Cancel</button>
+          <button type="submit" class="btn btn-sm" style="padding:4px 8px; border:1px solid var(--red); color:var(--red); background:transparent;"><i class="fas fa-times"></i> Cancel</button>
         </form>
         {% endif %}
       </div>
@@ -262,12 +262,11 @@
         <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);"><i class="fas fa-lock"></i> Quota Full</span>
       {% else %}
         {% if ev.allow_direct_join %}
-          <form method="post" action="{% url 'staff_apply_booking' ev.pk %}" class="ajax-action-form">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-gold btn-sm action-btn" style="padding:6px 14px; background:var(--green); border:1px solid var(--green); color:white">Join Event</button>
-          </form>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+             <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--green);border:1px solid var(--green);color:white">Join Event</a>
+          </div>
         {% else %}
-          <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px; background:var(--blue); border:1px solid var(--blue); color:white">Apply</a>
+           <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--blue);border:1px solid var(--blue);color:white">Apply</a>
         {% endif %}
       {% endif %}
     </div>
@@ -289,53 +288,6 @@ function switchDashboardTab(tabId, btnElement) {
   btnElement.classList.add('active');
   document.getElementById('tab-' + tabId).classList.add('active');
 }
-
-// ── AJAX ACTION HANDLER ──
-document.querySelectorAll('.ajax-action-form').forEach(form => {
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const confirmMsg = this.getAttribute('data-confirm');
-    if (confirmMsg && !confirm(confirmMsg)) return;
-
-    const btn = this.querySelector('.action-btn');
-    const originalHTML = btn.innerHTML;
-    
-    // Loading state
-    btn.disabled = true;
-    btn.style.opacity = '0.7';
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    
-    try {
-      const formData = new FormData(this);
-      const response = await fetch(this.action, {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Success: Smoothly update the UI
-        btn.innerHTML = '<i class="fas fa-check"></i> Success';
-        btn.style.background = 'var(--green)';
-        btn.style.color = 'white';
-        btn.style.borderColor = 'var(--green)';
-        
-        // Brief delay for the checkmark to be seen, then reload dashboard
-        // A full reload is still cleanest for updating all counts, but it will be fast due to cache
-        setTimeout(() => window.location.reload(), 600);
-      } else {
-        throw new Error('Action failed');
-      }
-    } catch (error) {
-      alert("❌ Error: Something went wrong. Please try again.");
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.innerHTML = originalHTML;
-    }
-  });
-});
 </script>
 
 

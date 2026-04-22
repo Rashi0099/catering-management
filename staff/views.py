@@ -227,7 +227,7 @@ def staff_dashboard(request):
             'confirmed_count': my_bookings.filter(status='confirmed').count(),
             'completed_count': my_bookings.filter(status='completed').count(),
         }
-        cache.set(cache_key, cached_stats, 600) # Increased to 10 minutes for smoothness
+        cache.set(cache_key, cached_stats, 60) # 1 minute cache for fast reaction
         
     # Calculate Published Bookings Quota dynamic availability (already optimized with prefetch)
     available_bookings_qs = Booking.objects.filter(
@@ -512,7 +512,7 @@ def staff_apply_booking(request, pk):
 
     # If GET, render a simple apply form
     if request.method == 'GET':
-        return render(request, 'staff/apply_booking.html', {'booking': booking})
+        return render(request, 'staff/apply_booking.html', {'booking': booking, 'user': request.user})
     
     # If POST, process the application
     if request.method == 'POST':
@@ -609,11 +609,7 @@ def staff_apply_booking(request, pk):
                             link=f"/admin-panel/bookings/{booking.pk}/"
                         )
                 
-                # Invalidate dashboard cache after any application change
-                cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
                 
-                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'success', 'message': 'Action completed successfully.'})
                 
                 return redirect('staff_dashboard')
                 
@@ -659,12 +655,8 @@ def staff_cancel_request(request, pk):
         else:
             messages.error(request, "You cannot cancel this application in its current state.")
             
-    # Invalidate dashboard cache after cancel request
-    cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
     
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'status': 'success', 'message': 'Action completed.'})
-
+    
     return redirect('staff_dashboard')
 
 

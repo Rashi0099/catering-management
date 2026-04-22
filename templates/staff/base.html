@@ -435,14 +435,18 @@
     _deferredInstall.userChoice.then(() => { _deferredInstall = null; });
   }
 
-  // Service Worker Registration
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register("{% url 'sw.js' %}")
-        .then(reg => console.log('Staff SW Registered!', reg.scope))
-        .catch(err => console.error('Staff SW Failed!', err));
-    });
-  }
+  // Navigation Pre-fetching for instant feel
+  document.querySelectorAll('.nav-link, .nav-item a, .sidebar a').forEach(link => {
+    link.addEventListener('mouseenter', function() {
+      const url = this.href;
+      if (url && url.startsWith(window.location.origin) && !url.includes('#')) {
+        const linkElem = document.createElement('link');
+        linkElem.rel = 'prefetch';
+        linkElem.href = url;
+        document.head.appendChild(linkElem);
+      }
+    }, { once: true });
+  });
 </script>
 {% block extra_js %}{% endblock %}
   {% include 'confirm_modal.html' %}
