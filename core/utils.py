@@ -101,9 +101,10 @@ def send_fcm_notification(staff, title, body, link=None):
         tokens = list(staff.fcm_devices.values_list('token', flat=True))
         if not tokens:
             return None
-        # Send purely as 'data' payload to bypass Firebase's visual handling
-        # and force our service worker to construct the OS-level notification manually.
+        # Send BOTH notification (for OS-level delivery when Chrome is killed)
+        # AND data (for service worker customization when app is in background).
         message = messaging.MulticastMessage(
+            notification=messaging.Notification(title=title, body=body),
             data={
                 'title': str(title),
                 'body': str(body),
@@ -111,7 +112,15 @@ def send_fcm_notification(staff, title, body, link=None):
                 'icon': '/static/images/logo.png'
             },
             android=messaging.AndroidConfig(priority='high'),
-            webpush=messaging.WebpushConfig(headers={"Urgency": "high"}),
+            webpush=messaging.WebpushConfig(
+                headers={"Urgency": "high"},
+                notification=messaging.WebpushNotification(
+                    icon='/static/images/logo.png',
+                    title=title,
+                    body=body,
+                ),
+                fcm_options=messaging.WebpushFCMOptions(link=link or '/staff/')
+            ),
             tokens=tokens,
         )
         
