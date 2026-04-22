@@ -1249,8 +1249,14 @@ def staff_notice(request):
             if notice.message != message or notice.is_active != is_active:
                 notice.message = message
                 notice.is_active = is_active
+                import firebase_admin
+                if not firebase_admin._apps:
+                    messages.error(request, "🔥 SERVER ERROR: Firebase Admin is completely missing or broken on the server! Please verify firebase-adminsdk.json is present on the server.")
                 notice.save()
         else:
+            import firebase_admin
+            if not firebase_admin._apps:
+                messages.error(request, "🔥 SERVER ERROR: Firebase Admin is completely missing or broken on the server! Please verify firebase-adminsdk.json is present on the server.")
             StaffNotice.objects.create(message=message, is_active=is_active)
             
         messages.success(request, 'Notice Board updated successfully!')
