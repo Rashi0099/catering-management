@@ -1,8 +1,7 @@
 importScripts('/firebase-messaging-sw.js');
 
-const CACHE_NAME = 'mastans-catering-v11';
+const CACHE_NAME = 'mastans-catering-v12';
 const STATIC_ASSETS = [
-    '/',
     '/staff/login/',
     '/static/icons/icon-192x192.png',
     '/static/icons/icon-512x512.png',
@@ -12,6 +11,7 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', event => {
+    self.skipWaiting(); // Force the waiting service worker to become the active service worker.
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             console.log('[SW] Pre-caching core assets');
@@ -28,6 +28,7 @@ self.addEventListener('activate', event => {
             })
         ))
     );
+    self.clients.claim(); // Claim clients immediately so the new SW takes over.
 });
 
 self.addEventListener('fetch', event => {
@@ -35,8 +36,23 @@ self.addEventListener('fetch', event => {
     
     const url = new URL(event.request.url);
     
-    // Cache-First for core static assets
-    if (STATIC_ASSETS.includes(url.pathname)) {
+    // Network-First for all HTML Page Navigations (Including Root /)
+    if (event.request.mode === 'navigate' || url.pathname === '/') {
+        event.respondWith(
+            fetch(event.request).then(response => {
+                return caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, response.clone());
+                    return response;
+                });
+            }).catch(() => {
+                return caches.match(event.request);
+            })
+        );
+        return;
+    }
+
+    // Cache-First for core static assets ONLY
+    if (STATIC_ASSETS.includes(url.pathname) || STATIC_ASSETS.includes(url.href)) {
         event.respondWith(
             caches.match(event.request).then(response => response || fetch(event.request))
         );
