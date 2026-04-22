@@ -139,6 +139,7 @@ class Booking(models.Model):
                 body = f"A new {self.get_event_type_display()} event is scheduled for {self.event_date}. Apply now!"
                 message = messaging.MulticastMessage(
                     notification=messaging.Notification(title=title, body=body),
+                    android=messaging.AndroidConfig(priority='high'),
                     webpush=messaging.WebpushConfig(
                         notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
                         fcm_options=messaging.WebpushFCMOptions(link='/staff/events/')
@@ -164,6 +165,7 @@ class Booking(models.Model):
                 body = f"Details for {self.name} have changed. Check the new timings or venue!"
                 message = messaging.MulticastMessage(
                     notification=messaging.Notification(title=title, body=body),
+                    android=messaging.AndroidConfig(priority='high'),
                     webpush=messaging.WebpushConfig(
                         notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
                         fcm_options=messaging.WebpushFCMOptions(link='/staff/dashboard/')

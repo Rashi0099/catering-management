@@ -34,6 +34,7 @@ class Command(BaseCommand):
                     body = f"Reminder: You have a shift for {booking.name} tomorrow!"
                     message = messaging.MulticastMessage(
                         notification=messaging.Notification(title=title, body=body),
+                        android=messaging.AndroidConfig(priority='high'),
                         webpush=messaging.WebpushConfig(
                             notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
                             fcm_options=messaging.WebpushFCMOptions(link='/staff/events/')
