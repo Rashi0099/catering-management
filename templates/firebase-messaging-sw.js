@@ -12,4 +12,29 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Automatic push notification handling provided by Firebase SDK.
+// Manually parse pure data pushes
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received data background message ', payload);
+  
+  const title = payload.data?.title || 'Notification';
+  const options = {
+    body: payload.data?.body || '',
+    icon: payload.data?.icon || '/static/images/logo.png',
+    data: { link: payload.data?.link || '/staff/' }
+  };
+
+  self.registration.showNotification(title, options);
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const urlToOpen = event.notification.data?.link || '/staff/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((windowClients) => {
+      if (windowClients.length > 0) {
+        return windowClients[0].focus();
+      }
+      return clients.openWindow(urlToOpen);
+    })
+  );
+});

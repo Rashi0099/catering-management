@@ -105,16 +105,19 @@
   messaging.onMessage((payload) => {
     console.log('Message received. ', payload);
     
+    const title = payload.data?.title || payload.notification?.title || 'Notification';
+    const body = payload.data?.body || payload.notification?.body || '';
+    const icon = payload.data?.icon || payload.notification?.icon || '/static/icons/icon-192x192_white.png';
+    
     // Web custom toast if exists
     if (typeof showToast === "function") {
-        showToast("📢 " + payload.notification.title + ": " + payload.notification.body);
+        showToast("📢 " + title + ": " + body);
     }
     
     // Explicitly show OS notification since PWA foreground may not auto-display it
-    const title = payload.notification.title;
     const options = {
-        body: payload.notification.body,
-        icon: payload.notification.icon || '/static/icons/icon-192x192_white.png'
+        body: body,
+        icon: icon
     };
     
     if (navigator.serviceWorker) {

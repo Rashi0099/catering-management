@@ -101,16 +101,17 @@ def send_fcm_notification(staff, title, body, link=None):
         tokens = list(staff.fcm_devices.values_list('token', flat=True))
         if not tokens:
             return None
-        
+        # Send purely as 'data' payload to bypass Firebase's visual handling
+        # and force our service worker to construct the OS-level notification manually.
         message = messaging.MulticastMessage(
-            notification=messaging.Notification(title=title, body=body),
-            data={'link': link or '/staff/'},
-            webpush=messaging.WebpushConfig(
-                headers={"Urgency": "high"},
-                notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
-                fcm_options=messaging.WebpushFCMOptions(link=link or '/staff/')
-            ),
+            data={
+                'title': str(title),
+                'body': str(body),
+                'link': str(link or '/staff/'),
+                'icon': '/static/images/logo.png'
+            },
             android=messaging.AndroidConfig(priority='high'),
+            webpush=messaging.WebpushConfig(headers={"Urgency": "high"}),
             tokens=tokens,
         )
         
