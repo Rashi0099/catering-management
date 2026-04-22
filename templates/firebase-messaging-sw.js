@@ -12,29 +12,48 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Manually parse pure data pushes
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received data background message ', payload);
-  
-  var data = payload.data || {};
-  const title = data.title || 'Notification';
-  const options = {
-    body: data.body || '',
-    icon: data.icon || '/static/images/logo.png',
-    data: { link: data.link || '/staff/' }
+// RAW push event — fires even when Chrome is fully killed on Android.
+// This is the most reliable way to display notifications in all states.
+self.addEventListener('push', function(event) {
+  var payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch(e) {}
+
+  var notif = payload.notification || {};
+  var data  = payload.data || {};
+
+  var title   = notif.title || data.title || 'Notification';
+  var body    = notif.body  || data.body  || '';
+  var icon    = notif.icon  || data.icon  || '/static/images/logo.png';
+  var link    = data.link   || '/staff/';
+
+  var options = {
+    body: body,
+    icon: icon,
+    badge: '/static/icons/icon-192x192.png',
+    data: { link: link },
+    requireInteraction: false
   };
 
-  self.registration.showNotification(title, options);
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Firebase background handler (fires for data-only messages when browser is alive)
+messaging.onBackgroundMessage(function(payload) {
+  // push event above already handles display, just log here
+  console.log('[SW] onBackgroundMessage', payload);
 });
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   var notifData = event.notification.data || {};
-  const urlToOpen = notifData.link || '/staff/';
+  var urlToOpen = notifData.link || '/staff/';
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((windowClients) => {
-      if (windowClients.length > 0) {
-        return windowClients[0].focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        if (client.url.indexOf(self.location.origin) === 0 && 'focus' in client) {
+          return client.focus();
+        }
       }
       return clients.openWindow(urlToOpen);
     })
