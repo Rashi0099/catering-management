@@ -1246,9 +1246,10 @@ def staff_notice(request):
         is_active = request.POST.get('is_active') == 'on'
         
         if notice:
-            notice.message = message
-            notice.is_active = is_active
-            notice.save()
+            if notice.message != message or notice.is_active != is_active:
+                notice.message = message
+                notice.is_active = is_active
+                notice.save()
         else:
             StaffNotice.objects.create(message=message, is_active=is_active)
             

@@ -45,7 +45,7 @@ def notify_admin_promotion_request(sender, instance, created, **kwargs):
 @receiver(post_save, sender=StaffNotice)
 def broadcast_notice_to_staff(sender, instance, created, **kwargs):
     """Send FCM Web Push to all active staff when a new notice is published."""
-    if created and instance.is_active:
+    if instance.is_active:
         tokens = list(FCMDevice.objects.filter(staff__is_active=True).values_list('token', flat=True))
         if tokens:
             body_text = instance.message[:100] + ("..." if len(instance.message) > 100 else "")
