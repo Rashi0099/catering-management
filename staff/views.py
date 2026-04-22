@@ -25,9 +25,9 @@ def save_fcm_token(request):
         try:
             data = json.loads(request.body)
             token = data.get('token')
-            if token and hasattr(request.user, 'staff'):
+            if token and request.user.is_authenticated:
                 FCMDevice.objects.update_or_create(
-                    staff=request.user.staff,
+                    staff=request.user,
                     token=token,
                     defaults={'device_name': request.META.get('HTTP_USER_AGENT', 'Unknown')}
                 )
