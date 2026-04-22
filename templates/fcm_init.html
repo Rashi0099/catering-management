@@ -72,6 +72,7 @@
 
   // Only request if logged in and in secure context or localhost
   if (window.isSecureContext && 'Notification' in window) {
+      console.log('FCM Logic Starting, Permission:', Notification.permission);
       if (Notification.permission === 'granted') {
           if (document.readyState === "loading") {
               document.addEventListener("DOMContentLoaded", requestFCMToken);
@@ -98,7 +99,11 @@
           } else {
               showFCMButton();
           }
+      } else {
+          console.warn('Notification permission is DENIED. Push will not work.');
       }
+  } else {
+      console.warn('FCM blocked: Insecure context or Notification API missing.');
   }
 
   // Handle incoming messages when the app is in focus
