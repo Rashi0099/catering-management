@@ -514,6 +514,10 @@
     if (a.href.startsWith('#') || a.href === '' || a.protocol === 'javascript:') return;
     if (a.href.includes('logout')) return;
     if (a.hostname !== window.location.hostname) return;
+    
+    // Do not freeze the navigation if it's a confirm modal trigger that hasn't been confirmed yet!
+    if (a.getAttribute('onclick') && a.getAttribute('onclick').includes('handleCustomConfirm') && a.getAttribute('data-confirmed') !== 'true') return;
+    
     startNav();
   });
   document.addEventListener('submit', e => {
