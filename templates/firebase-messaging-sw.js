@@ -12,11 +12,20 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Let the native Firebase background handler and OS manage the display!
-// Since our Python backend explicitly sends the "notification" payload, OS handles it entirely natively.
+// Let the browser handle the WebPush payload natively!
+// Since our Python backend explicitly sends the "webpush.notification" dictionary, Chrome and Safari handle it entirely natively.
+
+self.addEventListener('push', function(event) {
+  if (navigator.setAppBadge) {
+    event.waitUntil(navigator.setAppBadge(1).catch(()=>{}));
+  }
+});
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
+  if (navigator.clearAppBadge) {
+    event.waitUntil(navigator.clearAppBadge().catch(()=>{}));
+  }
   var notifData = event.notification.data || {};
   var urlToOpen = notifData.link || '/staff/';
   event.waitUntil(

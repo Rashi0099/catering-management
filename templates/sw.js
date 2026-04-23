@@ -1,11 +1,12 @@
 importScripts('/firebase-messaging-sw.js');
 
-const CACHE_NAME = 'mastans-catering-v16';
+const CACHE_NAME = 'mastans-catering-v18';
 const STATIC_ASSETS = [
     '/staff/login/',
     '/static/icons/icon-192x192.png',
     '/static/icons/icon-512x512.png',
     '/static/images/logo.png',
+    '/offline/',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap'
 ];
@@ -48,7 +49,9 @@ self.addEventListener('fetch', event => {
                     return response;
                 });
             }).catch(() => {
-                return caches.match(event.request);
+                return caches.match(event.request).then(cachedResponse => {
+                    return cachedResponse || caches.match('/offline/');
+                });
             })
         );
         return;

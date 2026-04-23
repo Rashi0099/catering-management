@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Offline - Mastan Catering{% endblock %}
+{% block content %}
+<section style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center;">
+  <i class="fas fa-wifi" style="font-size:4rem; color:var(--muted); margin-bottom:20px; opacity:0.5;"></i>
+  <h1 class="section-title">You are <em>Offline</em></h1>
+  <p class="section-sub" style="margin-bottom:30px;">It looks like you've lost internet connection. Please check your network and try again.</p>
+  <button class="btn-primary" onclick="window.location.reload();">
+    <i class="fas fa-redo"></i> Retry Connection
+  </button>
+</section>
+{% endblock %}

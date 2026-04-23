@@ -11,4 +11,5 @@ urlpatterns = [
     # PWA Endpoints
     path('sw.js', cache_control(no_cache=True, must_revalidate=True, max_age=0)(TemplateView.as_view(template_name='sw.js', content_type='application/javascript')), name='sw.js'),
     path('manifest.json', views.manifest, name='manifest.json'),
+    path('offline/', TemplateView.as_view(template_name='core/offline.html'), name='offline'),
 ]

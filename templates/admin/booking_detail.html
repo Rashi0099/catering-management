@@ -368,42 +368,21 @@
                   </div>
                 </div>
 
-                <style>
-                  .attendance-checklist-grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 6px;
-                    background: rgba(0,0,0,0.2);
-                    border: 1px solid rgba(255,255,255,0.03);
-                    border-radius: 8px;
-                    padding: 8px 5px;
-                  }
-                  /* Mobile optimization for 4 columns */
-                  @media (max-width: 480px) {
-                    .attendance-checklist-grid { 
-                      gap: 4px;
-                      padding: 6px 2px;
-                    }
-                    .attendance-checklist-grid span {
-                      font-size: 0.55rem !important;
-                    }
-                  }
-                </style>
-                <div class="attendance-checklist-grid">
-                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="On Time">
-                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">On Time</span>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="On Time">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">On Time</span>
                     <input type="checkbox" name="on_time_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
-                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="Shoe">
-                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Shoe</span>
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Shoe">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Shoe</span>
                     <input type="checkbox" name="shoes_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
-                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="Uniform">
-                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Uniform</span>
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Uniform">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Uniform</span>
                     <input type="checkbox" name="uniform_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
-                  <label style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;" title="Grooming">
-                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase;">Grooming</span>
+                  <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Grooming">
+                    <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Grooming</span>
                     <input type="checkbox" name="grooming_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                 </div>
