@@ -503,6 +503,78 @@ document.getElementById('crop-modal-overlay').addEventListener('click', function
 
   <div style="margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px;">
     <h3 style="font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Account Security & Documents</h3>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+      <span style="display: flex; align-items: center; gap: 12px; color: var(--text);">
+        <i class="fas fa-bell" style="color: var(--blue); font-size: 1.1rem; width: 20px; text-align: center;"></i> 
+        <span style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-weight: 500;">Push Notifications</span>
+          <span id="prof-notif-status" style="font-size: 0.75rem; color: var(--muted);">Checking status...</span>
+        </span>
+      </span>
+      <button id="prof-notif-action" class="btn btn-ghost btn-sm" style="padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1); display: none; font-size: 0.75rem;" onclick="triggerProfNotif()">Turn On</button>
+    </div>
+    <script>
+      function checkProfNotif() {
+        const text = document.getElementById('prof-notif-status');
+        const btn = document.getElementById('prof-notif-action');
+        if (!('Notification' in window)) {
+          text.innerHTML = 'Not supported';
+          text.style.color = 'var(--red)';
+          return;
+        }
+        if (Notification.permission === 'granted') {
+          const status = localStorage.getItem('fcm_status');
+          const msg = localStorage.getItem('fcm_message');
+          if (status === 'error') {
+            text.innerHTML = msg || '❌ Setup incomplete<br>Click Fix to retry server sync.';
+            text.style.color = 'var(--red)';
+            text.style.lineHeight = '1.3';
+            btn.style.display = 'inline-flex';
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Fix';
+            btn.style.borderColor = 'rgba(231,76,60,0.4)';
+            btn.style.color = '#e74c3c';
+            btn.onclick = () => { if (typeof requestFCMToken === 'function') requestFCMToken(() => checkProfNotif()); };
+          } else if (status === 'active') {
+            text.innerHTML = '✅ Enabled (Active)';
+            text.style.color = 'var(--green)';
+            btn.style.display = 'none';
+          } else {
+            text.innerHTML = '⏳ Verifying connection...';
+            text.style.color = 'var(--blue)';
+            btn.style.display = 'none';
+          }
+        } else if (Notification.permission === 'denied') {
+          text.innerHTML = '🚫 Blocked in settings';
+          text.style.color = 'var(--red)';
+          btn.style.display = 'inline-flex';
+          btn.innerHTML = '<i class="fas fa-cog"></i> Guide';
+          btn.style.borderColor = 'rgba(231,76,60,0.4)';
+          btn.style.color = '#e74c3c';
+          btn.onclick = () => alert('Notifications are strictly blocked by your device. Open your phone Settings -> Apps -> Chrome/Mastan App -> Permissions -> Allow Notifications.');
+        } else {
+          text.innerHTML = '⚠️ Currently Disabled';
+          text.style.color = 'var(--orange)';
+          btn.style.display = 'inline-flex';
+          btn.innerHTML = 'Turn On';
+          btn.style.borderColor = 'rgba(255,255,255,0.1)';
+          btn.style.color = 'inherit';
+          btn.onclick = () => triggerProfNotif();
+        }
+      }
+      function triggerProfNotif() {
+        const floatingBtn = document.getElementById('notif-enable-btn');
+        if (floatingBtn) {
+          floatingBtn.click();
+          setTimeout(checkProfNotif, 2500);
+        } else if (typeof requestFCMToken === 'function') {
+           requestFCMToken((success) => checkProfNotif());
+        }
+      }
+      document.addEventListener('DOMContentLoaded', checkProfNotif);
+      document.addEventListener('fcmStatus', checkProfNotif);
+    </script>
+
     <a href="{% url 'staff_change_password' %}" class="btn btn-ghost" style="justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
       <span style="display: flex; align-items: center; gap: 12px; color: var(--text);"><i class="fas fa-lock" style="color: var(--teal); font-size: 1.1rem; width: 20px; text-align: center;"></i> <span style="font-weight: 500;">Change Account Password</span></span>
       <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--muted);"></i>

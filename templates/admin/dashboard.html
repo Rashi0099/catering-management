@@ -381,6 +381,89 @@
         </a>
       </div>
     </div>
+
+    <!-- Notification Settings -->
+    <div class="panel">
+      <div class="panel-header" style="border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:16px; margin-bottom:16px;">
+        <div class="panel-title" style="font-size:1.1rem;"><i class="fas fa-bell" style="color:var(--gold); margin-right:8px;"></i> Notification Setup</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.9rem; font-weight:600; margin-bottom:2px;">Push Notifications</div>
+          <div id="admin-notif-status" style="font-size:0.8rem; color:var(--muted);">Checking status...</div>
+        </div>
+        <button id="admin-notif-action" class="btn btn-ghost" style="padding:6px 14px; border:1px solid rgba(255,255,255,0.1); font-size:0.8rem; display:none;" onclick="triggerAdminNotif()">Turn On</button>
+      </div>
+      <script>
+      function checkAdminNotif() {
+        const text = document.getElementById('admin-notif-status');
+        const btn = document.getElementById('admin-notif-action');
+
+        if (!('Notification' in window)) {
+          text.innerHTML = 'Not supported';
+          text.style.color = 'var(--red)';
+          return;
+        }
+        if (Notification.permission === 'granted') {
+          const status = localStorage.getItem('fcm_status');
+          const msg = localStorage.getItem('fcm_message');
+          if (status === 'error') {
+            text.innerHTML = msg || '❌ Setup incomplete<br>Click to retry connection to server.';
+            text.style.color = 'var(--red)';
+            text.style.lineHeight = '1.3';
+            btn.style.display = 'inline-flex';
+            btn.innerHTML = '<i class="fas fa-sync-alt" style="margin-right:4px;"></i> Retry';
+            btn.style.borderColor = 'rgba(231,76,60,0.4)';
+            btn.style.color = '#e74c3c';
+            btn.onclick = () => { if (typeof requestFCMToken === 'function') requestFCMToken(() => checkAdminNotif()); };
+          } else if (status === 'active') {
+            text.innerHTML = '✅ Active & Receiving alerts';
+            text.style.color = 'var(--green)';
+            btn.style.display = 'none';
+          } else if (status === 'disabled') {
+            text.innerHTML = '🔕 Turned Off';
+            text.style.color = 'var(--muted)';
+            btn.style.display = 'inline-flex';
+            btn.innerHTML = 'Turn On';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.color = 'inherit';
+            btn.onclick = () => triggerAdminNotif();
+          } else {
+            text.innerHTML = '⏳ Verifying connection...';
+            text.style.color = 'var(--blue)';
+            btn.style.display = 'none';
+          }
+        } else if (Notification.permission === 'denied') {
+          text.innerHTML = '🚫 Blocked in Settings';
+          text.style.color = 'var(--red)';
+          btn.style.display = 'inline-flex';
+          btn.innerHTML = '<i class="fas fa-cog" style="margin-right:4px;"></i> Guide';
+          btn.style.borderColor = 'rgba(231,76,60,0.4)';
+          btn.style.color = '#e74c3c';
+          btn.onclick = () => alert('Notifications are strictly blocked by your device. Open your browser or phone Settings -> Permissions -> Allow Notifications.');
+        } else {
+          text.innerHTML = '⚠️ Currently Disabled';
+          text.style.color = 'var(--orange)';
+          btn.style.display = 'inline-flex';
+          btn.innerHTML = 'Turn On';
+          btn.style.borderColor = 'rgba(255,255,255,0.1)';
+          btn.style.color = 'inherit';
+          btn.onclick = () => triggerAdminNotif();
+        }
+      }
+      function triggerAdminNotif() {
+        const floatingBtn = document.getElementById('notif-enable-btn');
+        if (floatingBtn) {
+          floatingBtn.click();
+          setTimeout(checkAdminNotif, 2500);
+        } else if (typeof requestFCMToken === 'function') {
+           requestFCMToken((success) => checkAdminNotif());
+        }
+      }
+      document.addEventListener('DOMContentLoaded', checkAdminNotif);
+      document.addEventListener('fcmStatus', checkAdminNotif);
+      </script>
+    </div>
     
     <!-- Event Types Breakdown -->
     <div class="panel">

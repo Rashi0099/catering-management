@@ -68,6 +68,7 @@ def save_fcm_token(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'invalid method'}, status=405)
 
+
 # ── Authentication ───────────────────────────────────────────────────────────
 
 

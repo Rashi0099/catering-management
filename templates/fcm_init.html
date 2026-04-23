@@ -190,19 +190,36 @@ function requestFCMToken(onDone) {
           serviceWorkerRegistration: registration
         });
       } catch (e) {
-        // Common Firebase errors
-        let msg = '❌ Could not get push token.';
-        if (e.message && e.message.includes('permission')) {
-          msg = '🔕 Push permission was denied. Please enable notifications in Settings.';
-        } else if (e.message && e.message.includes('network')) {
-          msg = '❌ Network error. Please check your connection and try again.';
+        // Map Firebase errors to clear, user-friendly messages
+        let msg = '❌ Push setup failed.';
+        const err = (e.message || e.code || '').toLowerCase();
+        if (err.includes('permission') || err.includes('denied')) {
+          msg = '🔕 Notifications blocked — go to phone Settings → Chrome / Site → Allow Notifications, then retry.';
+        } else if (err.includes('network') || err.includes('fetch') || err.includes('offline')) {
+          msg = '📶 No internet — check your connection and try again.';
+        } else if (err.includes('service-worker') || err.includes('serviceworker') || err.includes('sw')) {
+          msg = '⚙️ Service worker issue — please reload the page and try again.';
+        } else if (err.includes('vapid') || err.includes('key')) {
+          msg = '🔑 Push key error — please contact the administrator.';
+        } else if (err.includes('not-registered') || err.includes('registration')) {
+          msg = '📵 This device is not registered for push. Tap Retry to re-register.';
+        } else if (err.includes('localhost') || err.includes('127.0.0') || !window.isSecureContext) {
+          msg = '🔒 Notifications only work on the live site (HTTPS), not on localhost.';
+        } else if (err) {
+          msg = '❌ Setup failed: ' + (e.message || 'Unknown error. Try reloading.');
         }
+        localStorage.setItem('fcm_status', 'error');
+        localStorage.setItem('fcm_message', msg);
+        document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
         showNotifToast(msg, 'error', 8000);
         if (onDone) onDone(false);
         return;
       }
 
       if (!token) {
+        localStorage.setItem('fcm_status', 'error');
+        localStorage.setItem('fcm_message', '❌ Push registration failed. No token generated.');
+        document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
         showNotifToast('❌ Push registration failed. Please try again later.', 'error', 8000);
         if (onDone) onDone(false);
         return;
@@ -212,17 +229,30 @@ function requestFCMToken(onDone) {
       try {
         const data = await saveFCMTokenToServer(token);
         if (data.status === 'success') {
+          localStorage.setItem('fcm_status', 'active');
+          localStorage.removeItem('fcm_message');
+          document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'active'}));
           showNotifToast('✅ Notifications enabled! You will receive alerts for new events.', 'success', 7000);
           if (onDone) onDone(true);
         } else {
-          showNotifToast('⚠️ Notification setup partly failed: ' + (data.message || 'Server error.'), 'error', 8000);
+          const errMsg = '⚠️ Notification setup partly failed: ' + (data.message || 'Server error.');
+          localStorage.setItem('fcm_status', 'error');
+          localStorage.setItem('fcm_message', errMsg);
+          document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
+          showNotifToast(errMsg, 'error', 8000);
           if (onDone) onDone(false);
         }
       } catch (e) {
+        localStorage.setItem('fcm_status', 'error');
+        localStorage.setItem('fcm_message', '⚠️ Could not save device registration.');
+        document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
         showNotifToast('⚠️ Could not save device registration. Please try again.', 'error', 8000);
         if (onDone) onDone(false);
       }
     } catch (err) {
+      localStorage.setItem('fcm_status', 'error');
+      localStorage.setItem('fcm_message', '❌ Unexpected error.');
+      document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
       showNotifToast('❌ Unexpected error: ' + (err.message || err), 'error', 8000);
       if (onDone) onDone(false);
     }
@@ -233,9 +263,55 @@ function requestFCMToken(onDone) {
 
 // ── Boot: show button or auto-register ──────────────────────────────────────
 (function bootFCM() {
-  if (!window.isSecureContext || !('Notification' in window)) return;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
+  if (!window.isSecureContext) return;
+  if (!('Notification' in window)) {
+    // On iOS 16.4+, Apple hides the Web Push Notification API unless the app is added to the home screen.
+    // If we're on iOS and not standalone, show the custom "Add to Home Screen" instructions.
+    if (isIOS && !window.navigator.standalone) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showIOSInstallInstruction);
+      } else {
+        showIOSInstallInstruction();
+      }
+    }
+    return;
+  }
 
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  function showIOSInstallInstruction() {
+    if (document.getElementById('ios-install-toast')) return;
+    const toast = document.createElement('div');
+    toast.id = 'ios-install-toast';
+    toast.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong style="display:block;margin-bottom:4px">📱 Install App on iPhone</strong>
+          <span style="font-size:0.8rem;opacity:0.9">To receive notifications, tap the Share icon <b><i class="fas fa-external-link-alt" style="transform: rotate(-90deg); margin:0 3px;"></i></b> below and select "<b>Add to Home Screen</b>".</span>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#fff;font-size:1.5rem;margin-left:14px;cursor:pointer;padding:0 5px;">&times;</button>
+      </div>
+    `;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.width = 'calc(100% - 40px)';
+    toast.style.maxWidth = '400px';
+    toast.style.background = 'linear-gradient(135deg, #2a4a7a, #1e3a5c)';
+    toast.style.color = '#fff';
+    toast.style.padding = '16px';
+    toast.style.borderRadius = '12px';
+    toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+    toast.style.zIndex = '999999';
+    toast.style.fontFamily = "'DM Sans', sans-serif";
+    document.body.appendChild(toast);
+  }
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.matchMedia('(display-mode: minimal-ui)').matches
+    || window.navigator.standalone === true
+    || document.referrer.startsWith('android-app://');
 
   if (Notification.permission === 'granted') {
     // Already allowed — silently re-register token in background (no UI)
@@ -257,9 +333,37 @@ function requestFCMToken(onDone) {
             vapidKey: "BGgRyomQ2W4ZXkbOwiQfGQNVMdEqc3jf5rr3YLzTrpzZIw_ifF-Af0cZXc8nTJmX2OfAfM7dWpFNZM_9_NM4EHI",
             serviceWorkerRegistration: reg
           }).then(token => {
-            if (token) saveFCMTokenToServer(token).catch(() => {});
-          }).catch(() => {});
-        } catch(e) {}
+            if (token) {
+              saveFCMTokenToServer(token).then(data => {
+                if (data.status === 'success') {
+                  localStorage.setItem('fcm_status', 'active');
+                  localStorage.removeItem('fcm_message');
+                  document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'active'}));
+                } else {
+                  localStorage.setItem('fcm_status', 'error');
+                  localStorage.setItem('fcm_message', '❌ Setup failed: ' + (data.message || 'Server error'));
+                  document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
+                }
+              }).catch(() => {
+                localStorage.setItem('fcm_status', 'error');
+                localStorage.setItem('fcm_message', '❌ Server error saving token.');
+                document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
+              });
+            } else {
+               localStorage.setItem('fcm_status', 'error');
+               localStorage.setItem('fcm_message', '❌ Push sync failed.');
+               document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
+            }
+          }).catch(e => {
+            localStorage.setItem('fcm_status', 'error');
+            localStorage.setItem('fcm_message', '❌ Background token error.');
+            document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
+          });
+        } catch(e) {
+          localStorage.setItem('fcm_status', 'error');
+          localStorage.setItem('fcm_message', '❌ Push SDK failed.');
+          document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
+        }
       }).catch(() => {});
     };
     if (document.readyState === 'loading') {
@@ -269,22 +373,42 @@ function requestFCMToken(onDone) {
     }
 
   } else if (Notification.permission === 'default') {
-    // Show the enable button ONLY if they are running the installed PWA
     if (!isStandalone) {
+      // If browser supports install prompt, show it
       if (window._deferredInstallPrompt) {
         showInstallBtn();
-      } else {
-        window.addEventListener('beforeinstallprompt', (e) => {
-          e.preventDefault();
-          window._deferredInstallPrompt = e;
-          showInstallBtn();
-        });
+        return;
       }
+      // Listen for the prompt — if it fires, show Install button
+      let promptFired = false;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window._deferredInstallPrompt = e;
+        promptFired = true;
+        // Remove the Enable button if it appeared, show Install instead
+        const existing = document.getElementById('notif-enable-btn');
+        if (existing) existing.remove();
+        showInstallBtn();
+      });
+      // Wait 2s — if no install prompt fires, show Enable Notifications anyway
+      // (handles: app already installed but opened in browser, or unsupported browser)
+      setTimeout(() => {
+        if (!promptFired && !isStandalone) {
+          showEnableBtn();
+        }
+      }, 2000);
       return;
     }
+    // Standalone mode — show Enable Notifications button safely after DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', showEnableBtn);
+    } else {
+      showEnableBtn();
+    }
 
-    const showBtn = () => {
+    function showEnableBtn() {
       if (document.getElementById('notif-enable-btn')) return;
+      if (!document.body) { setTimeout(showEnableBtn, 300); return; }
       const btn = document.createElement('button');
       btn.id = 'notif-enable-btn';
       btn.innerHTML = '🔔 Enable Notifications';
@@ -298,15 +422,10 @@ function requestFCMToken(onDone) {
         });
       };
       document.body.appendChild(btn);
-    };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showBtn);
-    else showBtn();
-
-  }
+    }
 
   } else if (Notification.permission === 'denied') {
-    if (!isStandalone) return;
-
+    // Show Unblock button in BOTH browser and standalone mode
     const showBtn = () => {
       const btn = document.createElement('button');
       btn.id = 'notif-enable-btn';
@@ -316,7 +435,7 @@ function requestFCMToken(onDone) {
       btn.style.color = '#fff';
       
       btn.onclick = () => {
-        showNotifToast('🔕 Notifications are blocked! Please open your phone Settings -> Apps and Allow notifications for this App, then restart it.', 'error', 12000);
+        showNotifToast('Notifications are blocked! Please open your phone Settings -> Apps and Allow notifications for this App, then restart it.', 'error', 12000);
       };
       document.body.appendChild(btn);
     };
