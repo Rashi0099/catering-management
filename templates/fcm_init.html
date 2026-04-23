@@ -151,13 +151,15 @@ function requestFCMToken(onDone) {
 
       showNotifToast('⚙️ Setting up push service…', 'info', 15000);
 
-      // Step 2: Wait for Service Worker
+      // Step 2: Ensure Service Worker is registered
       let registration;
       try {
-        registration = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 10000))
-        ]);
+        if ('serviceWorker' in navigator) {
+          registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          registration = await navigator.serviceWorker.ready;
+        } else {
+          throw new Error('SW not supported');
+        }
       } catch (e) {
         showNotifToast('❌ Push setup failed: Service worker not ready. Please reload and try again.', 'error', 8000);
         if (onDone) onDone(false);
@@ -315,8 +317,11 @@ function requestFCMToken(onDone) {
 
   if (Notification.permission === 'granted') {
     // Already allowed — silently re-register token in background (no UI)
-    const doSilent = () => {
-      navigator.serviceWorker.ready.then(reg => {
+    const doSilent = async () => {
+      if (!('serviceWorker' in navigator)) return;
+      try {
+        const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await navigator.serviceWorker.ready;
         if (!window.firebase || !window.firebase.messaging) return;
         try {
           if (!firebase.apps.length) {
@@ -364,7 +369,9 @@ function requestFCMToken(onDone) {
           localStorage.setItem('fcm_message', '❌ Push SDK failed.');
           document.dispatchEvent(new CustomEvent('fcmStatus', {detail: 'error'}));
         }
-      }).catch(() => {});
+      } catch (e) {
+        // Service worker failed
+      }
     };
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => setTimeout(doSilent, 1500));
