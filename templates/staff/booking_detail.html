@@ -51,7 +51,7 @@
       <div class="panel-hdr"><div class="panel-title">Mark Attendance</div>
         <div>
           <span class="badge" style="background:var(--surface);color:var(--text);font-size:0.75rem">{{ booking.event_date|date:"d M Y" }}</span>
-          <a href="{% url 'staff_download_attendance' booking.pk %}" download="Attendance_Booking_{{ booking.pk }}.pdf" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem; margin-left:10px;"><i class="fas fa-file-pdf"></i> Download PDF</a>
+          <button type="button" onclick="forceDownloadAttendance('{% url 'staff_download_attendance' booking.pk %}', 'Attendance_Booking_{{ booking.pk }}.pdf', this)" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem; margin-left:10px;"><i class="fas fa-file-pdf"></i> Download PDF</button>
         </div>
       </div>
       <form method="post" action="{% url 'staff_booking_detail' booking.pk %}">
@@ -441,5 +441,31 @@
 
     </div>
   </div>
-</div>
+<script>
+function forceDownloadAttendance(url, filename, btn) {
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+    
+    fetch(url)
+    .then(r => r.blob())
+    .then(blob => {
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        if(typeof showNotifToast !== 'undefined') showNotifToast("✅ PDF Downloaded Successfully", "success");
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        if(typeof showNotifToast !== 'undefined') showNotifToast("❌ Download Failed", "error");
+    });
+}
+</script>
+
 {% endblock %}

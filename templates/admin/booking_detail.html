@@ -249,9 +249,7 @@
     <div class="panel p-attendance" style="margin-bottom:16px;">
       <div class="panel-hdr">
         <div class="panel-title"><i class="fas fa-clipboard-check" style="color:var(--gold);"></i> Event Attendance</div>
-        <div>
-          <button type="button" onclick="forceDownloadAttendance('{% url \'admin_download_attendance\' booking.pk %}', 'Attendance_Booking_{{ booking.pk }}.pdf', this)" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</button>
-        </div>
+          <button type="button" onclick="forceDownloadAttendance('{% url 'admin_download_attendance' booking.pk %}', 'Attendance_Booking_{{ booking.pk }}.pdf', this)" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</button>
       </div>
       {% if assigned_staff_with_att %}
       <form method="post">
