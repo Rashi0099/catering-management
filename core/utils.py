@@ -117,12 +117,8 @@ def send_fcm_notification(staff, title, body, link=None):
             android=messaging.AndroidConfig(priority='high'),
             webpush=messaging.WebpushConfig(
                 headers={"Urgency": "high"},
-                notification=messaging.WebpushNotification(
-                    icon=icon,
-                    badge=badge,
-                    title=title,
-                    body=body,
-                ),
+                # NOT passing 'notification' parameter here removes FCM autorouting, 
+                # instead Service Worker `.showNotification()` explicitly handles it to hook WebAPK
                 fcm_options=messaging.WebpushFCMOptions(link=abs_link)
             ),
             tokens=tokens,
@@ -153,6 +149,57 @@ def notify_admins(title, body, link='/admin-panel/'):
         send_fcm_notification(admin, title, body, link=link)
 
 
+def _notify_all_task(title, body, link):
+    """Internal task function to broadcast FCM to all active staff."""
+    from firebase_admin import messaging
+    from staff.models import FCMDevice
+    BASE_URL = "https://mastan.in"
+    icon = f"{BASE_URL}/static/images/logo.png"
+    abs_link = link if (link and link.startswith('http')) else f"{BASE_URL}{link or '/staff/'}"
+    
+    # Get all tokens for active staff
+    devices = FCMDevice.objects.filter(staff__is_active=True).values_list('token', flat=True)
+    tokens = list(devices)
+    if not tokens:
+        return
+        
+    chunk_size = 500 # FCM MulticastMessage supports up to 500 tokens at a time
+    for i in range(0, len(tokens), chunk_size):
+        chunk_tokens = tokens[i:i + chunk_size]
+        try:
+            message = messaging.MulticastMessage(
+                notification=messaging.Notification(title=title, body=body),
+                data={
+                    'title': str(title),
+                    'body': str(body),
+                    'link': abs_link,
+                    'icon': icon
+                },
+                android=messaging.AndroidConfig(priority='high'),
+                webpush=messaging.WebpushConfig(
+                    headers={"Urgency": "high"},
+                    fcm_options=messaging.WebpushFCMOptions(link=abs_link)
+                ),
+                tokens=chunk_tokens,
+            )
+            response = messaging.send_each_for_multicast(message)
+            
+            if response.failure_count > 0:
+                stale_tokens = [chunk_tokens[idx] for idx, resp in enumerate(response.responses) if not resp.success]
+                if stale_tokens:
+                    FCMDevice.objects.filter(token__in=stale_tokens).delete()
+        except Exception as e:
+            print(f"FCM Bulk Background Error: {e}")
+
+def notify_all_staff_background(title, body, link='/staff/dashboard/'):
+    """Sends global push notification asynchronously to all active staff"""
+    thread = threading.Thread(
+        target=_notify_all_task,
+        args=(title, body, link)
+    )
+    thread.start()
+
+
 def send_mail_background(subject, message, from_email, recipient_list, **kwargs):
     """Sends email asynchronously to prevent UI blocking."""
     thread = threading.Thread(
@@ -161,7 +208,3 @@ def send_mail_background(subject, message, from_email, recipient_list, **kwargs)
         kwargs=kwargs
     )
     thread.start()
-
-
-
-

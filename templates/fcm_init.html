@@ -155,7 +155,7 @@ function requestFCMToken(onDone) {
       let registration;
       try {
         if ('serviceWorker' in navigator) {
-          registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          registration = await navigator.serviceWorker.register('/sw.js');
           registration = await navigator.serviceWorker.ready;
         } else {
           throw new Error('SW not supported');
@@ -320,7 +320,7 @@ function requestFCMToken(onDone) {
     const doSilent = async () => {
       if (!('serviceWorker' in navigator)) return;
       try {
-        const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        const reg = await navigator.serviceWorker.register('/sw.js');
         await navigator.serviceWorker.ready;
         if (!window.firebase || !window.firebase.messaging) return;
         try {

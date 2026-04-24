@@ -61,3 +61,12 @@ def notify_admin_on_promotion_request(sender, instance, created, **kwargs):
             body=f"{instance.staff.first_name} wants to upgrade from {instance.get_current_level_display()} to {instance.get_requested_level_display()}.",
             link="/admin-panel/staff/promotions/"
         )
+
+@receiver(post_save, sender=StaffNotice)
+def notify_staff_new_notice(sender, instance, created, **kwargs):
+    """Notify all active staff when an active notice is posted/updated"""
+    if instance.is_active:
+        from core.utils import notify_all_staff_background
+        title = "📢 New Notice" if created else "📢 Notice Updated"
+        body = instance.message[:100] + ('...' if len(instance.message) > 100 else '')
+        notify_all_staff_background(title=title, body=body, link="/staff/dashboard/")

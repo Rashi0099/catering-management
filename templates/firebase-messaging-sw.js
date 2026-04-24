@@ -16,9 +16,26 @@ const messaging = firebase.messaging();
 // Since our Python backend explicitly sends the "webpush.notification" dictionary, Chrome and Safari handle it entirely natively.
 
 self.addEventListener('push', function(event) {
-  if (navigator.setAppBadge) {
-    event.waitUntil(navigator.setAppBadge(1).catch(()=>{}));
-  }
+  const payload = event.data ? event.data.json() : {};
+  const data = payload.data || {};
+  
+  const title = data.title || 'Notification';
+  const options = {
+    body: data.body || '',
+    icon: data.icon || '/static/icons/icon-192x192.png',
+    badge: data.icon || '/static/icons/icon-192x192.png',
+    data: {
+      url: data.link || '/staff/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options).then(() => {
+      if (navigator.setAppBadge) {
+        return navigator.setAppBadge(1).catch(()=>{});
+      }
+    })
+  );
 });
 
 self.addEventListener('notificationclick', function(event) {
@@ -26,8 +43,10 @@ self.addEventListener('notificationclick', function(event) {
   if (navigator.clearAppBadge) {
     event.waitUntil(navigator.clearAppBadge().catch(()=>{}));
   }
+  
   var notifData = event.notification.data || {};
-  var urlToOpen = notifData.link || '/staff/';
+  var urlToOpen = notifData.url || '/staff/';
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
       for (var i = 0; i < windowClients.length; i++) {
