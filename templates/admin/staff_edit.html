@@ -130,10 +130,27 @@
         </label>
       </div>
 
-      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center;margin-top:20px">
+      <button type="submit" name="action" value="save" class="btn btn-gold" style="width:100%;justify-content:center;margin-top:20px">
         <i class="fas fa-save"></i> Save Changes
       </button>
     </form>
+
+    <hr style="border:none; border-top:1px dashed var(--border); margin:30px 0;">
+    
+    <div style="background:var(--bg); border:1px solid #7a2a2a; border-radius:10px; padding:20px;">
+      <h3 style="margin-top:0; color:#ffaaaa; font-size:1rem; margin-bottom:10px;"><i class="fas fa-exclamation-triangle"></i> Security & Recovery</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-bottom:15px; line-height:1.4;">
+        If this staff member has forgotten their password or cannot log in, you can securely reset their credentials here. Do NOT use the regular Django Admin to change passwords.
+        The password will be reset to <b>password123</b> and they will be forced to change it on their next login.
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reset_password">
+        <button type="submit" class="btn" style="background:#5c1e1e; color:#fff; border:1px solid #7a2a2a; justify-content:center; width:100%; padding:14px;" onclick="return confirm('Are you sure you want to completely reset this staff\'s password to password123?');">
+          <i class="fas fa-key"></i> Reset Password to Default
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 

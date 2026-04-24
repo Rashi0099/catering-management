@@ -33,10 +33,15 @@ class Command(BaseCommand):
                     title = "⏰ Event Reminder"
                     body = f"Reminder: You have a shift for {booking.name} tomorrow!"
                     message = messaging.MulticastMessage(
-                        notification=messaging.Notification(title=title, body=body),
+                        data={
+                            'title': str(title),
+                            'body': str(body),
+                            'link': '/staff/events/',
+                            'icon': '/static/images/logo.png'
+                        },
                         android=messaging.AndroidConfig(priority='high'),
                         webpush=messaging.WebpushConfig(
-                            notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
+                            headers={"Urgency": "high"},
                             fcm_options=messaging.WebpushFCMOptions(link='/staff/events/')
                         ),
                         tokens=tokens,

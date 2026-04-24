@@ -8,11 +8,11 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Q
 from django.db import transaction
 from django.core.cache import cache
 
-from .models import Staff, StaffPayout, StaffAttendance, StaffNotice, FCMDevice
+from .models import Staff, StaffAttendance, StaffNotice, FCMDevice
 from bookings.models import Booking, BookingPayment, EventApplication
 from core.utils import notify_admins
 
@@ -132,7 +132,6 @@ def staff_logout(request):
 def staff_download_attendance(request, pk):
     """Generates and downloads a PDF report of staff attendance for a specific booking."""
     from django.http import HttpResponse
-    from django.utils import timezone
     from core.pdf_utils import build_attendance_pdf
 
     me = request.user
@@ -311,7 +310,7 @@ def staff_bookings(request):
             Q(location_name__icontains=search)
         )
 
-    bookings = bookings.select_related('created_by').order_by('event_date')
+    bookings = bookings.select_related('created_by').prefetch_related('applications__staff', 'assigned_to').order_by('event_date')
     paginator = Paginator(bookings, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
 
@@ -642,7 +641,18 @@ def staff_cancel_request(request, pk):
         application = EventApplication.objects.filter(booking=booking, staff=request.user).first()
         
         if not application:
-            messages.error(request, "You do not have an active application for this event.")
+            if request.user in booking.assigned_to.all():
+                # Staff was manually assigned by Admin without a pending app
+                application = EventApplication.objects.create(
+                    booking=booking,
+                    staff=request.user,
+                    applicant_name=request.user.full_name,
+                    applicant_phone=request.user.phone,
+                    status='cancel_requested'
+                )
+                messages.success(request, "Cancellation requested. The Admin must approve your request.")
+            else:
+                messages.error(request, "You do not have an active application for this event.")
             return redirect('staff_dashboard')
 
         # 2. Process based on current status
@@ -653,6 +663,11 @@ def staff_cancel_request(request, pk):
             application.status = 'cancelled'
             application.save()
             messages.success(request, "Your application has been withdrawn.")
+        elif application.status == 'approved':
+            # Approved apps must go through Admin approval
+            application.status = 'cancel_requested'
+            application.save()
+            messages.success(request, "Cancellation requested. The Admin must approve your request.")
         else:
             messages.error(request, "You cannot cancel this application in its current state.")
             
@@ -722,7 +737,8 @@ def staff_profile(request):
 def upload_profile_photo(request):
     """AJAX endpoint: receives base64-encoded cropped image from Cropper.js, saves as profile photo."""
     from django.http import JsonResponse
-    import base64, io, os
+    import base64
+    import os
     from django.core.files.base import ContentFile
 
     if request.method != 'POST':
@@ -819,10 +835,15 @@ def staff_submit_report(request, pk):
             messages.error(request, f'Error submitting report: {e}')
     
     assigned_count = booking.assigned_to.count()
+    is_admin = request.GET.get('from') == 'admin'
+    base_template = 'admin/custom_base.html' if is_admin else 'staff/base.html'
+    
     return render(request, 'staff/submit_report.html', {
         'booking': booking,
         'assigned_count': assigned_count,
-        'report': existing_report
+        'report': existing_report,
+        'base_template': base_template,
+        'is_admin': is_admin
     })
 
 @login_required(login_url='/staff/login/')

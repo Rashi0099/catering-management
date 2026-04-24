@@ -8,7 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle,
     Paragraph, Spacer, HRFlowable
@@ -77,7 +77,6 @@ def _build_header(booking):
         logo = RLImage(_LOGO_PATH, width=46, height=46)
         right_items.append(logo)
 
-    from reportlab.platypus import KeepInFrame
     left_col  = [[item] for item in left]
     right_col = [[item] for item in right_items]
 

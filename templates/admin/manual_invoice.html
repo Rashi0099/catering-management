@@ -125,32 +125,34 @@
       items:   items
     };
 
-    // Use native form POST to force actual mobile bowser native download (bypasses Safari Blob-handling issues)
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{% url "admin_download_invoice_pdf" %}';
-
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = 'csrfmiddlewaretoken';
-    csrf.value = '{{ csrf_token }}';
-    form.appendChild(csrf);
-
-    const payload = document.createElement('input');
-    payload.type = 'hidden';
-    payload.name = 'invoice_data';
-    payload.value = JSON.stringify(data);
-    form.appendChild(payload);
-
-    document.body.appendChild(form);
-    form.submit();
-    
-    // Clean up
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.innerHTML = oldHtml;
-      document.body.removeChild(form);
-    }, 1500);
+    // Use standard fetch blob proxy to force mobile browser to save the file rather than inline fallback
+    fetch('{% url "admin_download_invoice_pdf" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({
+            'invoice_data': JSON.stringify(data)
+        })
+    })
+    .then(r => r.blob())
+    .then(blob => {
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = `Invoice_${data.inv_no}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        if(typeof showNotifToast !== 'undefined') showNotifToast("✅ Invoice Downloaded!", "success");
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        if(typeof showNotifToast !== 'undefined') showNotifToast("❌ Download Failed", "error");
+    });
   }
 
   function initDefaults() {

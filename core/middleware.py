@@ -72,3 +72,6 @@ class LoginRateLimitMiddleware:
             # Take the first (leftmost) IP in the chain — that's the client
             return x_forwarded_for.split(',')[0].strip()
         return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+
+        return request.META.get('REMOTE_ADDR', '0.0.0.0')

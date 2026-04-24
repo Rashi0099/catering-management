@@ -2,10 +2,8 @@ from django.db.models.signals import post_save, post_init
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
-from firebase_admin import messaging
 
-from staff.models import FCMDevice
-from .models import EventApplication, Booking, EventReport
+from .models import EventApplication, EventReport
 from core.utils import notify_admins
 
 
@@ -67,7 +65,6 @@ def notify_staff_application_status(sender, instance, created, **kwargs):
 @receiver(post_save, sender=EventApplication)
 def notify_admin_cancellation_request(sender, instance, created, **kwargs):
     """Handled within the status check above to avoid redundant signals, but keeping as placeholder."""
-    pass
 
 @receiver(post_save, sender=EventReport)
 def notify_admin_on_report_submit(sender, instance, created, **kwargs):

@@ -206,4 +206,52 @@
     </tbody>
   </table>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const forms = document.querySelectorAll("#booking-req-table form, #cancel-req-table form");
+    forms.forEach(form => {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector("button[type='submit']");
+        const originalText = btn ? btn.innerHTML : '';
+        if(btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+
+        try {
+          const res = await fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
+            headers: {
+              "X-Requested-With": "XMLHttpRequest"
+            }
+          });
+          if(res.ok) {
+            const data = await res.json();
+            if(data.status === 'success') {
+              const tr = form.closest("tr");
+              if(tr) {
+                tr.style.transition = "all 0.3s ease";
+                tr.style.opacity = "0";
+                tr.style.transform = "translateX(20px)";
+                setTimeout(() => tr.remove(), 300);
+              }
+            } else {
+               if(btn) { btn.disabled = false; btn.innerHTML = originalText; }
+               alert(data.message || 'Error occurred.');
+            }
+          } else {
+             if(btn) { btn.disabled = false; btn.innerHTML = originalText; }
+          }
+        } catch(err) {
+          console.error(err);
+          if(btn) { btn.disabled = false; btn.innerHTML = originalText; }
+          alert('Network Error.');
+        }
+      });
+    });
+  });
+</script>
 {% endblock %}

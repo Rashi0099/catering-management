@@ -1,7 +1,6 @@
 from django import forms
 from .models import Booking
 from django.utils import timezone
-import datetime
 
 class BookingForm(forms.ModelForm):
     class Meta:

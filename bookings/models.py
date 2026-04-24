@@ -87,8 +87,8 @@ class Booking(models.Model):
         settings.AUTH_USER_MODEL, blank=True, related_name='bookings'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -138,12 +138,12 @@ class Booking(models.Model):
                 title = "📅 New Event Published!"
                 body = f"A new {self.get_event_type_display()} event is scheduled for {self.event_date}. Apply now!"
                 message = messaging.MulticastMessage(
-                    notification=messaging.Notification(title=title, body=body),
-                    android=messaging.AndroidConfig(priority='high'),
-                    webpush=messaging.WebpushConfig(
-                        notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
-                        fcm_options=messaging.WebpushFCMOptions(link='/staff/events/')
-                    ),
+                    data={
+                        'title': str(title),
+                        'body': str(body),
+                        'link': '/staff/events/',
+                        'icon': '/static/images/logo.png'
+                    },
                     tokens=tokens,
                 )
                 messaging.send_each_for_multicast(message)
@@ -164,12 +164,12 @@ class Booking(models.Model):
                 title = "⚠️ Event Update"
                 body = f"Details for {self.name} have changed. Check the new timings or venue!"
                 message = messaging.MulticastMessage(
-                    notification=messaging.Notification(title=title, body=body),
-                    android=messaging.AndroidConfig(priority='high'),
-                    webpush=messaging.WebpushConfig(
-                        notification=messaging.WebpushNotification(icon="/static/images/logo.png"),
-                        fcm_options=messaging.WebpushFCMOptions(link='/staff/dashboard/')
-                    ),
+                    data={
+                        'title': str(title),
+                        'body': str(body),
+                        'link': '/staff/dashboard/',
+                        'icon': '/static/images/logo.png'
+                    },
                     tokens=tokens,
                 )
                 messaging.send_each_for_multicast(message)

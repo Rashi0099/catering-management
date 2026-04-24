@@ -94,10 +94,21 @@ function showNotifToast(msg, type = 'info', duration = 5000) {
   void toast.offsetHeight;
   toast.classList.add(type, 'show');
   clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => {
-    toast.classList.remove('show');
-  }, duration);
+  if (duration > 0) {
+    toast._timer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, duration);
+  }
 }
+
+// ── Network Connectivity Monitor ──────────────────────────────────────────────
+window.addEventListener('offline', () => {
+    showNotifToast('❌ Network Error: You are currently offline.', 'error', 0); // 0 keeps it persistent
+});
+
+window.addEventListener('online', () => {
+    showNotifToast('✅ Back Online! Connection restored.', 'success', 3000);
+});
 
 // ── Save FCM token to backend ────────────────────────────────────────────────
 function saveFCMTokenToServer(token) {

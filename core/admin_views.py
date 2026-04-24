@@ -1,13 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
 
 def admin_required(view_func):
     return user_passes_test(lambda u: u.is_authenticated and u.is_staff, login_url='/admin-panel/login/')(view_func)
 from django.http import JsonResponse, HttpResponse
-import csv
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -359,6 +358,10 @@ def handle_application(request, pk, app_id, action):
             cache.delete(f'staff_dash_stats_v2_{application.staff_id}')
             messages.success(request, 'Cancel request rejected.')
 
+    from django.http import JsonResponse
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success'})
+
     referer = request.META.get('HTTP_REFERER')
     if referer:
         return redirect(referer)
@@ -410,7 +413,6 @@ def admin_create_booking(request):
             
     return render(request, 'admin/create_booking.html', {
         'page': 'bookings',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -453,7 +455,6 @@ def admin_edit_booking(request, pk):
     return render(request, 'admin/edit_booking.html', {
         'booking': booking,
         'page': 'bookings',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -573,7 +574,6 @@ def staff_requests(request):
         'selected_booking': booking_id,
         'live_quota_data': live_quota_data,
         'page': 'staff_requests',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     }
     return render(request, 'admin/staff_requests.html', context)
 
@@ -584,7 +584,6 @@ def staff_applications(request):
     context = {
         'applications': applications,
         'page': 'staff_applications',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     }
     return render(request, 'admin/staff_applications.html', context)
 
@@ -796,6 +795,15 @@ def staff_edit(request, pk):
     from core.utils import validate_phone
     member = get_object_or_404(Staff, pk=pk)
     if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'reset_password':
+            member.set_password('password123')
+            member.must_change_password = True
+            member.save(update_fields=['password', 'must_change_password'])
+            messages.success(request, f"Password carefully reset to 'password123' for {member.full_name}. They must change it upon login.")
+            return redirect('admin_staff_detail', pk=member.pk)
+            
         phone_raw = request.POST.get('phone', '')
         phone = validate_phone(phone_raw)
         if not phone:
@@ -888,7 +896,7 @@ def mark_payout_paid(request, pk):
 def menu_list(request):
     categories = MenuCategory.objects.prefetch_related('items').all()
     context = {'categories': categories, 'page': 'menu',
-               'pending_count': Booking.objects.filter(status='pending').count()}
+}
     return render(request, 'admin/menu.html', context)
 
 
@@ -916,7 +924,6 @@ def menu_add(request):
     categories = MenuCategory.objects.all()
     return render(request, 'admin/menu_add.html', {
         'categories': categories, 'page': 'menu',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -946,7 +953,6 @@ def menu_edit(request, pk):
     categories = MenuCategory.objects.all()
     return render(request, 'admin/menu_edit.html', {
         'item': item, 'categories': categories, 'page': 'menu',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -979,7 +985,7 @@ def gallery_list(request):
     images = GalleryImage.objects.order_by('-uploaded_at')
     categories = GalleryCategory.objects.all()
     context = {'images': images, 'categories': categories, 'page': 'gallery',
-               'pending_count': Booking.objects.filter(status='pending').count()}
+}
     return render(request, 'admin/gallery.html', context)
 
 
@@ -1011,7 +1017,6 @@ def gallery_add(request):
     categories = GalleryCategory.objects.all()
     return render(request, 'admin/gallery_add.html', {
         'categories': categories, 'page': 'gallery',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -1042,7 +1047,6 @@ def gallery_edit(request, pk):
     categories = GalleryCategory.objects.all()
     return render(request, 'admin/gallery_edit.html', {
         'img': img, 'categories': categories, 'page': 'gallery',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -1075,7 +1079,6 @@ def team_page(request):
     staff = Staff.objects.filter(is_active=True)
     return render(request, 'admin/team.html', {
         'staff': staff, 'page': 'team',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -1086,7 +1089,6 @@ def staff_promotions(request):
     return render(request, 'admin/staff_promotions.html', {
         'requests': requests,
         'page': 'staff_promotions',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -1147,7 +1149,6 @@ def admin_reports(request):
         'month_filter': month_filter,
         'month_name': month_name,
         'year_filter': year_filter,
-        'pending_count': Booking.objects.filter(status='pending').count(),
     }
     return render(request, 'admin/reports.html', context)
 
@@ -1184,7 +1185,6 @@ def admin_report_add(request):
             
     return render(request, 'admin/report_add.html', {
         'page': 'reports',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 @admin_required
@@ -1233,7 +1233,6 @@ def admin_report_edit(request, pk):
     return render(request, 'admin/report_edit.html', {
         'report': report,
         'page': 'reports',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 @admin_required
@@ -1317,14 +1316,12 @@ def staff_notice(request):
     return render(request, 'admin/notice.html', {
         'notice': notice,
         'page': 'staff_notice',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 @admin_required
 def manual_invoice(request):
     return render(request, 'admin/manual_invoice.html', {
         'page': 'reports',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 
@@ -1341,7 +1338,6 @@ def event_reports_list(request):
     return render(request, 'admin/event_reports_list.html', {
         'reports': page_obj,
         'page': 'reports',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 
 @admin_required
@@ -1351,7 +1347,6 @@ def event_report_detail(request, pk):
     return render(request, 'admin/event_report_detail.html', {
         'report': report,
         'page': 'reports',
-        'pending_count': Booking.objects.filter(status='pending').count(),
     })
 @admin_required
 def download_invoice_pdf(request):

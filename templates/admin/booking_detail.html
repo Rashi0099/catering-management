@@ -250,7 +250,7 @@
       <div class="panel-hdr">
         <div class="panel-title"><i class="fas fa-clipboard-check" style="color:var(--gold);"></i> Event Attendance</div>
         <div>
-          <a href="{% url 'admin_download_attendance' booking.pk %}" target="_blank" download="Attendance_Booking_{{ booking.pk }}.pdf" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</a>
+          <button type="button" onclick="forceDownloadAttendance('{% url \'admin_download_attendance\' booking.pk %}', 'Attendance_Booking_{{ booking.pk }}.pdf', this)" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem;"><i class="fas fa-file-pdf"></i> Download PDF</button>
         </div>
       </div>
       {% if assigned_staff_with_att %}
@@ -614,5 +614,32 @@
       .p-attendance { order: 4; }
     }
   </style>
+
+<script>
+function forceDownloadAttendance(url, filename, btn) {
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+    
+    fetch(url)
+    .then(r => r.blob())
+    .then(blob => {
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        if(typeof showNotifToast !== 'undefined') showNotifToast("✅ PDF Downloaded Successfully", "success");
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+        if(typeof showNotifToast !== 'undefined') showNotifToast("❌ Download Failed", "error");
+    });
+}
+</script>
 
 {% endblock %}

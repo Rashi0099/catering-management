@@ -1,10 +1,14 @@
-{% extends 'staff/base.html' %}
+{% extends base_template|default:'staff/base.html' %}
 {% block title %}Post-Event Settlement Report{% endblock %}
 {% block page_title %}Submit Report{% endblock %}
 
 {% block content %}
 <div style="margin-bottom:16px">
-  <a href="{% url 'staff_booking_detail' booking.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Booking</a>
+  {% if is_admin %}
+    <a href="javascript:history.back()" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Report</a>
+  {% else %}
+    <a href="{% url 'staff_booking_detail' booking.pk %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back to Booking</a>
+  {% endif %}
 </div>
 
 <div class="panel">

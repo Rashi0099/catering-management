@@ -3,9 +3,6 @@ import threading
 from django.utils import timezone
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.core.files import File
-from io import BytesIO
-from PIL import Image
 from bookings.models import Booking
 
 
@@ -24,11 +21,11 @@ def auto_complete_past_bookings():
         return
 
     today = timezone.now().date()
-    past_confirmed = Booking.objects.filter(status='confirmed', event_date__lt=today)
+    past_events = Booking.objects.filter(status__in=['pending', 'confirmed'], event_date__lt=today)
 
-    if past_confirmed.exists():
-        # Process up to 10 at a time to avoid long-running requests
-        for booking in past_confirmed[:10]:
+    if past_events.exists():
+        # Process up to 50 at a time to avoid long-running requests
+        for booking in past_events[:50]:
             booking.status = 'completed'
             booking.save(update_fields=['status', 'updated_at'])
 
@@ -105,25 +102,15 @@ def send_fcm_notification(staff, title, body, link=None):
         icon = f"{BASE_URL}/static/images/logo.png"
         badge = f"{BASE_URL}/static/icons/icon-192x192.png"
         abs_link = link if (link and link.startswith('http')) else f"{BASE_URL}{link or '/staff/'}"
-
         message = messaging.MulticastMessage(
-            notification=messaging.Notification(title=title, body=body),
             data={
                 'title': str(title),
                 'body': str(body),
                 'link': abs_link,
                 'icon': icon
             },
-            android=messaging.AndroidConfig(priority='high'),
-            webpush=messaging.WebpushConfig(
-                headers={"Urgency": "high"},
-                # NOT passing 'notification' parameter here removes FCM autorouting, 
-                # instead Service Worker `.showNotification()` explicitly handles it to hook WebAPK
-                fcm_options=messaging.WebpushFCMOptions(link=abs_link)
-            ),
             tokens=tokens,
         )
-        
         response = messaging.send_each_for_multicast(message)
         
         # Cleanup expired tokens
@@ -168,18 +155,12 @@ def _notify_all_task(title, body, link):
         chunk_tokens = tokens[i:i + chunk_size]
         try:
             message = messaging.MulticastMessage(
-                notification=messaging.Notification(title=title, body=body),
                 data={
                     'title': str(title),
                     'body': str(body),
                     'link': abs_link,
                     'icon': icon
                 },
-                android=messaging.AndroidConfig(priority='high'),
-                webpush=messaging.WebpushConfig(
-                    headers={"Urgency": "high"},
-                    fcm_options=messaging.WebpushFCMOptions(link=abs_link)
-                ),
                 tokens=chunk_tokens,
             )
             response = messaging.send_each_for_multicast(message)
