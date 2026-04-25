@@ -6,10 +6,36 @@
 {% block extra_css %}
 <style>
   .booking-hero {
-    padding: 140px 5% 100px;
-    background: var(--bg);
-    text-align: center;
+    min-height: 52vh; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; text-align: center; padding: 0 5%;
   }
+  .bk-bg {
+    position: absolute; inset: -60px;
+    background: url('/media/gallery/Wedding_Buffet_Setup.jpg') center/cover no-repeat;
+  }
+  .bk-ov {
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(61,28,2,0.80) 0%, rgba(30,13,2,0.62) 60%, rgba(10,4,0,0.84) 100%);
+  }
+  .bk-hero-body {
+    position: relative; z-index: 2; max-width: 700px; padding-top: 100px;
+  }
+  .bk-eyebrow {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.32em;
+    text-transform: uppercase; color: var(--gold);
+    display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px;
+  }
+  .bk-eyebrow::before, .bk-eyebrow::after {
+    content: ''; display: block; width: 30px; height: 1px; background: var(--gold); opacity: 0.6;
+  }
+  .bk-hero-body h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.8rem, 6vw, 4.8rem); color: #fff; line-height: 1.08;
+    margin-bottom: 18px; text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .bk-hero-body h1 em { font-style: italic; color: var(--gold-lt); }
+  .bk-hero-body p { color: rgba(255,255,255,0.72); font-size: 1rem; line-height: 1.8; max-width: 500px; margin: 0 auto; }
   .booking-wrap {
     max-width: 960px; margin: -50px auto 100px;
     padding: 0 5%;
@@ -60,13 +86,56 @@
   }
   
   .booking-section { display: none; margin-top: 20px; }
-  .booking-section.active { display: block; animation: fadeIn 0.6s cubic-bezier(0.2, 0, 0, 1); }
+  .booking-section.active { display: block; animation: fadeInSec 0.6s cubic-bezier(0.2, 0, 0, 1); }
   
-  @keyframes fadeIn {
+  @keyframes fadeInSec {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
   
+  /* PREMIUM VALIDATION CSS */
+  .is-invalid { 
+    border-color: #e74c3c !important; 
+    background-color: rgba(231,76,60,0.02) !important; 
+    box-shadow: 0 0 0 3px rgba(231,76,60,0.15) !important; 
+  }
+  .is-valid { 
+    border-color: #27ae60 !important; 
+    box-shadow: 0 0 0 3px rgba(39,174,96,0.15) !important; 
+  }
+  .invalid-feedback { 
+    color: #e74c3c; font-size: 0.8rem; margin-top: 6px; 
+    display: none; font-weight: 500; font-family: 'Outfit', sans-serif;
+  }
+  .is-invalid ~ .invalid-feedback { 
+    display: block; animation: fadeIn 0.3s ease forwards; 
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* Terms Modal Styles */
+  .terms-modal {
+    display: none; position: fixed; inset: 0; 
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+    animation: fadeInModal 0.3s ease;
+  }
+  .terms-modal.active { display: flex; text-align: left; }
+  .terms-modal-content {
+    background: #fff; width: 100%; max-width: 600px;
+    max-height: 80vh; overflow-y: auto; border-radius: 16px;
+    padding: 32px; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: relative; animation: slideUp 0.3s ease;
+  }
+  .terms-close {
+    position: absolute; top: 16px; right: 16px; cursor: pointer;
+    background: rgba(0,0,0,0.05); width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center; border-radius: 50%;
+    color: #777; transition: all 0.2s; border: 1px solid var(--border);
+  }
+  .terms-close:hover { background: rgba(0,0,0,0.1); color: var(--gold); transform: rotate(90deg); }
+  @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
   @media (max-width:768px) {
     .form-grid { grid-template-columns: 1fr; }
     .booking-wrap { margin-top: -30px; }
@@ -74,15 +143,19 @@
     .tab-btn { width: 100%; text-align: center; }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
 
 {% block content %}
 
 <div class="booking-hero">
-  <div class="section-tag" style="color:var(--gold); font-weight:700; letter-spacing:0.2em; text-transform:uppercase; font-size:0.75rem; margin-bottom:16px;">✦ Reservations & Careers</div>
-  <h1 class="section-title" style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.5rem, 5vw, 4rem); color:var(--brown); margin-bottom:20px;">Shape Your Experience</h1>
-  <div class="divider" style="width:60px; height:3px; background:var(--gold); margin:20px auto; border-radius:2px;"></div>
-  <p class="section-sub" style="font-size:1.1rem; color:var(--muted); max-width:640px; line-height:1.7; margin:0 auto;">Excellence is in the details. Share your vision or join our prestigious team today.</p>
+  <div class="bk-bg"></div>
+  <div class="bk-ov"></div>
+  <div class="bk-hero-body">
+    <div class="bk-eyebrow">Reservations & Careers</div>
+    <h1>Shape Your <em>Experience</em></h1>
+    <p>Excellence is in the details. Share your vision or join our prestigious team today.</p>
+  </div>
 </div>
 
 <div class="booking-wrap">
@@ -97,30 +170,35 @@
     <!-- TABS -->
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('event')">Book an Event</button>
-      <button class="tab-btn" onclick="switchTab('staff')">Join the Elite Team</button>
+      <button class="tab-btn" onclick="switchTab('staff')">Join Team</button>
     </div>
 
     <!-- EVENT BOOKING SECTION -->
     <div id="event-section" class="booking-section active">
       <form method="post" action="{% url 'booking' %}#event">
         {% csrf_token %}
+        <input type="text" name="website" tabindex="-1" autocomplete="off" style="display:none; position:absolute; left:-9999px;" aria-hidden="true">
         <div class="form-grid">
           <div class="form-section-title">Primary Coordinator</div>
           <div class="form-group">
             <label>Full Name</label>
             <input type="text" name="name" required placeholder="Name of host or organizer" value="{{ event_form.name.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group">
             <label>WhatsApp Contact</label>
-            <input type="tel" name="phone" required pattern="[0-9]{10}" placeholder="+91 0000000000" value="{{ event_form.phone.value|default:'' }}"/>
+            <input type="tel" name="phone" required placeholder="+91 0000000000" value="{{ event_form.phone.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group">
             <label>Email Address</label>
             <input type="email" name="email" required placeholder="contact@domain.com" value="{{ event_form.email.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group">
             <label>Company (Optional)</label>
             <input type="text" name="company" placeholder="Organization name" value="{{ event_form.company.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
 
           <div class="form-section-title">Event Logistics</div>
@@ -130,32 +208,39 @@
               {{ event_form.event_type }}
               <i class="fas fa-chevron-down" style="position:absolute; right:20px; top:22px; font-size:0.8rem; pointer-events:none; opacity:0.4; color:var(--brown);"></i>
             </div>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group">
             <label>Expected Attendance</label>
             <input type="number" name="guest_count" required min="1" placeholder="Number of guests" value="{{ event_form.guest_count.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group">
             <label>Scheduled Date</label>
             <input type="date" name="event_date" required min="{% now 'Y-m-d' %}" value="{{ event_form.event_date.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group">
             <label>Preferred Start Time</label>
             <input type="time" name="event_time" value="{{ event_form.event_time.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group full">
             <label>Venue / Destination Address</label>
-            <input type="text" name="venue" placeholder="Exact location or hall name" value="{{ event_form.venue.value|default:'' }}"/>
+            <input type="text" name="venue" required placeholder="Exact location or hall name" value="{{ event_form.venue.value|default:'' }}"/>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
 
           <div class="form-section-title">Vision & Customization</div>
           <div class="form-group full">
             <label>Dietary Considerations</label>
             <textarea name="dietary_requirements" placeholder="Vegetarian, allergies, or specific dietary themes...">{{ event_form.dietary_requirements.value|default:'' }}</textarea>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
           <div class="form-group full">
             <label>Tell Us More</label>
             <textarea name="message" placeholder="Describe your vision, menu preferences, or additional services needed...">{{ event_form.message.value|default:'' }}</textarea>
+            <div class="invalid-feedback js-error-msg"></div>
           </div>
         </div>
         <button type="submit" name="submit_event" class="btn-primary" style="width:100%; padding:22px; border-radius:14px; border:none; background:var(--brown); color:#fff; font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:all 0.3s;" onmouseover="this.style.background='var(--brown-lt)'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 30px rgba(61,28,2,0.2)'" onmouseout="this.style.background='var(--brown)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
@@ -168,10 +253,11 @@
     <div id="staff-section" class="booking-section">
       <form method="post" action="{% url 'booking' %}#staff" enctype="multipart/form-data">
         {% csrf_token %}
+        <input type="text" name="website" tabindex="-1" autocomplete="off" style="display:none; position:absolute; left:-9999px;" aria-hidden="true">
         <div class="form-grid">
           <div class="form-section-title">Candidate Profile</div>
           {% for field in staff_form %}
-            <div class="form-group {% if field.name == 'place' or field.name == 'education' %}full{% endif %}">
+            <div class="form-group {% if field.name == 'home_address' or field.name == 'education' %}full{% endif %}">
               <label>{{ field.label }} {% if field.field.required %}*{% endif %}</label>
               {% if field.name == 'image' %}
                 <div style="background:var(--bg); padding:18px; border-radius:14px; border:1px solid var(--border);">
@@ -180,6 +266,7 @@
               {% else %}
                 {{ field }}
               {% endif %}
+              <div class="invalid-feedback js-error-msg"></div>
               {% if field.errors %}
                 <div style="color:#dc2626; font-size:0.8rem; margin-top:8px; font-weight:500;">
                   {% for error in field.errors %}• {{ error }}<br>{% endfor %}
@@ -187,13 +274,48 @@
               {% endif %}
             </div>
           {% endfor %}
+
+          <!-- TERMS & CONDITIONS -->
+          <div class="form-group full" style="margin-top:20px;">
+            <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;" class="terms-label">
+              <input type="checkbox" name="agree_terms" required style="width:20px; height:20px; margin-top:2px; accent-color:var(--gold); flex-shrink:0;">
+              <span style="text-transform:none; font-size:0.95rem; font-weight:500; color:var(--text); letter-spacing:0;">
+                I deeply understand and agree to the <a href="javascript:void(0)" onclick="openTermsModal(event)" style="color:var(--gold); text-decoration:underline; font-weight:600;">Terms & Conditions</a> of working with Mastan's Catering & Services.
+              </span>
+            </label>
+            <div class="invalid-feedback js-error-msg">You must accept the terms before submitting.</div>
+          </div>
+
         </div>
         <button type="submit" name="submit_staff" class="btn-primary" style="width:100%; padding:22px; border-radius:14px; border:none; background:var(--brown); color:#fff; font-weight:700; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:all 0.3s;" onmouseover="this.style.background='var(--brown-lt)'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 30px rgba(61,28,2,0.2)'" onmouseout="this.style.background='var(--brown)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-          <i class="fas fa-id-badge"></i> Submit Professional Application
+          <i class="fas fa-id-badge"></i> Submit Application
         </button>
       </form>
     </div>
 
+  </div>
+</div>
+
+<!-- Terms Modal -->
+<div id="termsModal" class="terms-modal">
+  <div class="terms-modal-content">
+    <div class="terms-close" onclick="closeTermsModal()"><i class="fas fa-times"></i></div>
+    <div style="font-family:'Cormorant Garamond',serif; font-size:1.6rem; font-weight:600; color:var(--brown); margin-bottom:18px; padding-right:40px; line-height:1.3;">
+      Terms & Conditions
+    </div>
+    <div style="font-size:0.95rem; line-height:1.6; color:#444;">
+      <div style="margin-bottom:15px; font-weight:600; color:var(--brown);">MASTAN'S കാറ്ററിങ് മാനേജ്മെന്റിൽ.. പാർടൈമായും ജോലി ചെയ്യാനുള്ള "ഉപാധികളും നിബന്ധനകളും"</div>
+      <ol style="padding-left:18px;">
+        <li style="margin-bottom:10px;">ജോലി ചെയ്യുന്ന കമ്പനിയോട് വിശ്വസ്തതയും കൂറും പുലർത്തുന്നവർ ആയിരിക്കണം. വർക്ക് ബുക്ക് ചെയ്താൽ നിർബന്ധമായും സൈറ്റിൽ എത്തണം. <b style="color:#e74c3c;">"ക്യാൻസലേഷൻ അനുവദിക്കുകയില്ല"</b>.</li>
+        <li style="margin-bottom:10px;">കൃത്യമായ സമയത്ത് സൈറ്റിൽ എത്തുകയും ക്യാപ്റ്റൻ/സീനിയേഴ്സ് പറഞ്ഞതനുസരിച്ച് വർക്ക് ചെയ്യുകയും ചെയ്താൽ താങ്കളിലുള്ള വിശ്വാസം വർദ്ധിപ്പിക്കാൻ അത് കാരണമാകും.</li>
+        <li style="margin-bottom:10px;">അച്ചടക്കമുള്ള നല്ല സ്റ്റാഫുകളെ വാർത്തെടുക്കാൻ മൂല്യനിർണയം നടത്തും. വർക്കിന് പ്രവേശിച്ചാൽ പിന്നീടുള്ള സമയങ്ങളിൽ മൊബൈലുകൾക്ക് ഏർപ്പെടുത്തിയ നിയന്ത്രണത്തിന് താങ്കൾ പൂർണ്ണമായും സഹകരിക്കണം.</li>
+        <li style="margin-bottom:10px;">റിപ്പോർട്ടിംഗ് മുതൽ ഡിസ്പോസൽ വരെ താങ്കളുടെ ഉത്തരവാദിത്വം കമ്പനിക്ക് ആയിരിക്കും.</li>
+        <li style="margin-bottom:10px;">കമ്പനി ഏൽപ്പിച്ച ക്യാപ്റ്റൻ ആയിരിക്കും സൈറ്റിനെ പൂർണ ചുമതല. ക്യാപ്റ്റൻ തരുന്ന നിർദ്ദേശങ്ങൾ പാലിക്കാൻ താങ്കൾ ബാധ്യസ്ഥനാണ്.</li>
+      </ol>
+    </div>
+    <div style="margin-top:24px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="btn-primary" onclick="closeTermsModal()" style="padding:12px 24px; background:var(--brown); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size:0.95rem; display:flex; align-items:center; gap:8px;"><i class="fas fa-check"></i> I Understand</button>
+    </div>
   </div>
 </div>
 
@@ -220,14 +342,149 @@
     } else {
       switchTab('event');
     }
+    
+    // Close modal on click outside
+    const modal = document.getElementById('termsModal');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) closeTermsModal();
+      });
+    }
   });
-  
+
   window.addEventListener('hashchange', () => {
     if (window.location.hash === '#staff') {
       switchTab('staff');
     } else {
       switchTab('event');
     }
+  });
+
+  function openTermsModal(e) {
+    if (e) e.preventDefault();
+    document.getElementById('termsModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeTermsModal() {
+    document.getElementById('termsModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+  }
+
+  // Premium Validation Logic for all forms
+  document.addEventListener("DOMContentLoaded", function() {
+    const forms = document.querySelectorAll(".booking-section form");
+    
+    forms.forEach(form => {
+      const inputs = form.querySelectorAll("input, select, textarea");
+
+      const validateField = (field) => {
+        let isValid = true;
+        let errMsg = "";
+        
+        // Required check
+        if (field.type === 'checkbox') {
+          if (field.hasAttribute("required") && !field.checked) {
+            isValid = false;
+            errMsg = "You must check this box to proceed.";
+          }
+        } else if (field.hasAttribute("required") && !field.value.trim() && field.type !== 'file') {
+          isValid = false;
+          errMsg = "This field is required.";
+        } else if (field.value.trim()) {
+          // Specific checks
+          if (field.name === "phone" || field.name === "phone_2" || field.name === "guardian_phone") {
+            if (!/^\d{8,15}$/.test(field.value)) { 
+               isValid = false; errMsg = "Enter a valid phone number (8-15 digits).";
+            }
+          } else if (field.name === "date_of_birth") {
+            const selectedDate = new Date(field.value);
+            const today = new Date();
+            let age = today.getFullYear() - selectedDate.getFullYear();
+            const m = today.getMonth() - selectedDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) { age--; }
+            if (age < 18) {
+              isValid = false; errMsg = "You must be at least 18 years old to apply.";
+            } else if (age > 80) {
+              isValid = false; errMsg = "Please enter a valid date of birth.";
+            }
+          } else if (field.name === "event_date") {
+            const selectedDate = new Date(field.value);
+            const today = new Date(); today.setHours(0,0,0,0);
+            if (selectedDate < today) {
+              isValid = false; errMsg = "Event date cannot be in the past.";
+            }
+          } else if (field.type === "email") {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
+              isValid = false; errMsg = "Please enter a valid email address.";
+            }
+          }
+        }
+
+        const errDiv = field.parentNode.querySelector(".js-error-msg");
+        if (!isValid) {
+          field.classList.add("is-invalid");
+          field.classList.remove("is-valid");
+          if(errDiv) errDiv.innerText = errMsg;
+        } else {
+          if(field.value.trim() && field.type !== 'file'){ field.classList.add("is-valid"); }
+          else { field.classList.remove("is-valid"); }
+          field.classList.remove("is-invalid");
+          if(errDiv) errDiv.innerText = "";
+        }
+        return isValid;
+      };
+
+      inputs.forEach(input => {
+        if (input.type === 'hidden' || input.name === 'csrfmiddlewaretoken') return;
+        input.addEventListener("input", function() {
+          if(input.classList.contains("is-invalid")) validateField(input);
+        });
+        input.addEventListener("blur", function() {
+          validateField(input);
+        });
+      });
+
+      form.addEventListener("submit", function(e) {
+        let formValid = true;
+        inputs.forEach(input => {
+          if (input.type === 'hidden' || input.name === 'csrfmiddlewaretoken') return;
+          if (input.hasAttribute("required")) {
+            if (!validateField(input)) formValid = false;
+          } else if(input.value.trim()) {
+            if (!validateField(input)) formValid = false;
+          }
+        });
+
+        if (!formValid) {
+          e.preventDefault();
+          const firstInvalid = form.querySelector(".is-invalid");
+          if (firstInvalid) {
+            // Un-hide the section containing the invalid input if hidden
+            const sectionId = form.parentNode.id;
+            const isEvent = sectionId === 'event-section';
+            if (isEvent && !document.getElementById('event-section').classList.contains('active')) switchTab('event');
+            if (!isEvent && !document.getElementById('staff-section').classList.contains('active')) switchTab('staff');
+
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstInvalid.focus();
+          }
+          
+          if(typeof Swal !== 'undefined') {
+            Swal.fire({ 
+              icon: 'error', 
+              title: 'Validation Error', 
+              text: 'Please correct the highlighted errors before submitting.',
+              confirmButtonColor: 'var(--brown)',
+              background: 'var(--cream)',
+              color: 'var(--text)'
+            });
+          } else {
+            alert('Please correct the highlighted errors before submitting.');
+          }
+        }
+      });
+
+    });
   });
 </script>
 {% endblock %}

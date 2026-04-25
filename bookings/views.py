@@ -11,7 +11,11 @@ def booking_form(request):
     error = None
 
     if request.method == 'POST':
-        if 'submit_event' in request.POST:
+        # Anti-spam Honeypot Check
+        if request.POST.get('website', '').strip():
+            error = 'Suspicious activity detected. Submission blocked.'
+        
+        elif 'submit_event' in request.POST:
             event_form = BookingForm(request.POST)
             if event_form.is_valid():
                 try:
@@ -34,7 +38,8 @@ def booking_form(request):
                 error = 'Please correct the errors in the Event Booking form.'
 
         elif 'submit_staff' in request.POST:
-            staff_form = StaffApplicationForm(request.POST)
+            # Added request.FILES to ensure images are persisted and validated
+            staff_form = StaffApplicationForm(request.POST, request.FILES)
             if staff_form.is_valid():
                 try:
                     application = staff_form.save(commit=False)

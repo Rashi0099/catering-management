@@ -360,7 +360,27 @@ def handle_application(request, pk, app_id, action):
 
     from django.http import JsonResponse
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'status': 'success'})
+        # Return updated quota counts so the frontend can refresh counts without page reload
+        booking = application.booking
+        quota_data = {
+            'captain': {
+                'q': booking.quota_captain,
+                'c': booking.applications.filter(status='approved', staff__level='captain').count()
+            },
+            'a': {
+                'q': booking.quota_a,
+                'c': booking.applications.filter(status='approved', staff__level='A').count()
+            },
+            'b': {
+                'q': booking.quota_b,
+                'c': booking.applications.filter(status='approved', staff__level='B').count()
+            },
+            'c': {
+                'q': booking.quota_c,
+                'c': booking.applications.filter(status='approved', staff__level='C').count()
+            },
+        }
+        return JsonResponse({'status': 'success', 'quota': quota_data})
 
     referer = request.META.get('HTTP_REFERER')
     if referer:
@@ -604,16 +624,16 @@ def handle_staff_application(request, pk, action):
                 phone=application.phone_1,
                 phone_2=application.phone_2,
                 email=application.email,
-                age=application.age,
+                date_of_birth=application.date_of_birth,
+                gender=application.gender,
                 height=application.height,
                 blood_group=application.blood_group,
                 guardian_name=application.guardian_name,
                 guardian_phone=application.guardian_phone,
                 main_locality=application.main_locality,
                 coat_size=application.coat_size,
-                place=application.place,
+                home_address=application.home_address,
                 education=application.education,
-                aadhar_card_no=application.aadhar_card_no,
                 must_change_password=True,   # Force password change on first login
             )
             
@@ -744,15 +764,15 @@ def staff_add(request):
             daily_rate = 0
 
         email = request.POST.get('email', '')
-        age = request.POST.get('age') or None
+        date_of_birth = request.POST.get('date_of_birth') or None
+        gender = request.POST.get('gender', '')
         height = request.POST.get('height', '')
         blood_group = request.POST.get('blood_group', '')
         guardian_name = request.POST.get('guardian_name', '')
         main_locality = request.POST.get('main_locality', '')
         coat_size = request.POST.get('coat_size') or None
-        place = request.POST.get('place', '')
+        home_address = request.POST.get('home_address', '')
         education = request.POST.get('education', '')
-        aadhar_card_no = request.POST.get('aadhar_card_no', '')
 
         try:
             from staff.models import generate_staff_id
@@ -766,16 +786,16 @@ def staff_add(request):
                 phone=phone,
                 phone_2=phone_2,
                 email=email,
-                age=age,
+                date_of_birth=date_of_birth,
+                gender=gender,
                 height=height,
                 blood_group=blood_group,
                 guardian_name=guardian_name,
                 guardian_phone=guardian_phone or '',
                 main_locality=main_locality,
                 coat_size=coat_size,
-                place=place,
+                home_address=home_address,
                 education=education,
-                aadhar_card_no=aadhar_card_no,
                 must_change_password=True,  # Force password change on first login
             )
             messages.success(request, f'✅ Staff added! ID: {member.staff_id} — Share login credentials privately. They must change their password on first login.')
@@ -816,16 +836,16 @@ def staff_edit(request, pk):
         member.phone = phone
         member.phone_2 = validate_phone(request.POST.get('phone_2', '')) or request.POST.get('phone_2', '')
         member.email = request.POST.get('email', '')
-        member.age = request.POST.get('age') or None
+        member.date_of_birth = request.POST.get('date_of_birth') or None
+        member.gender = request.POST.get('gender', '')
         member.height = request.POST.get('height', '')
         member.blood_group = request.POST.get('blood_group', '')
         member.guardian_name = request.POST.get('guardian_name', '')
         member.guardian_phone = request.POST.get('guardian_phone', '')
         member.main_locality = request.POST.get('main_locality', '')
         member.coat_size = request.POST.get('coat_size') or None
-        member.place = request.POST.get('place', '')
+        member.home_address = request.POST.get('home_address', '')
         member.education = request.POST.get('education', '')
-        member.aadhar_card_no = request.POST.get('aadhar', '')
         member.is_active = request.POST.get('is_active') == 'on'
         member.save()
         messages.success(request, f'Staff {member.full_name} updated successfully!')
@@ -917,8 +937,13 @@ def menu_add(request):
             price         = request.POST['price'],
             is_vegetarian = request.POST.get('is_vegetarian') == 'on',
             is_vegan      = request.POST.get('is_vegan') == 'on',
+            is_gluten_free= request.POST.get('is_gluten_free') == 'on',
             is_featured   = request.POST.get('is_featured') == 'on',
+            is_available  = request.POST.get('is_available', 'on') in ['on', True, 'true'],
         )
+        if 'image' in request.FILES and request.FILES['image']:
+            item.image = request.FILES['image']
+            item.save()
         messages.success(request, 'Menu item added!')
         return redirect('admin_menu')
     categories = MenuCategory.objects.all()
@@ -944,8 +969,15 @@ def menu_edit(request, pk):
         item.price = request.POST['price']
         item.is_vegetarian = request.POST.get('is_vegetarian') == 'on'
         item.is_vegan = request.POST.get('is_vegan') == 'on'
+        item.is_gluten_free = request.POST.get('is_gluten_free') == 'on'
         item.is_featured = request.POST.get('is_featured') == 'on'
         item.is_available = request.POST.get('is_available') == 'on'
+
+        if 'image' in request.FILES and request.FILES['image']:
+            item.image = request.FILES['image']
+        elif request.POST.get('clear_image') == 'on':
+            item.image = None
+
         item.save()
         messages.success(request, f'"{item.name}" updated successfully!')
         return redirect('admin_menu')

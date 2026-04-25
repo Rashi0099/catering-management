@@ -78,10 +78,9 @@
             {{ app.email|default:"No email" }}
           </td>
           <td style="font-size:0.9rem; color: var(--muted); line-height:1.5;">
-            <strong style="color: var(--text);">Age:</strong> {{ app.age }} | <strong style="color: var(--text);">Blood:</strong> {{ app.blood_group }} | <strong style="color: var(--text);">Ht:</strong> {{ app.height }}<br>
-            <strong style="color: var(--text);">Education:</strong> {{ app.education }}<br>
-            <strong style="color: var(--text);">Aadhar:</strong> {{ app.aadhar_card_no }} <br>
-            <strong style="color: var(--text);">Place:</strong> {{ app.place }} | <strong style="color: var(--text);">Locality:</strong> <span style="color:var(--gold)">{{ app.main_locality }}</span><br>
+            <strong style="color: var(--text);">DOB:</strong> {{ app.date_of_birth|date:"d M Y"|default:"-" }} | <strong style="color: var(--text);">Blood:</strong> {{ app.blood_group }} | <strong style="color: var(--text);">Ht:</strong> {{ app.height }}<br>
+            <strong style="color: var(--text);">Gender:</strong> {{ app.gender }} | <strong style="color: var(--text);">Education:</strong> {{ app.education }}<br>
+            <strong style="color: var(--text);">Home Adrs:</strong> {{ app.home_address }} | <strong style="color: var(--text);">Locality:</strong> <span style="color:var(--gold)">{{ app.main_locality }}</span><br>
             <strong style="color: var(--text);">Guardian:</strong> {{ app.guardian_name }} ({{ app.guardian_phone }})
           </td>
           <td style="font-size:0.9rem; color: var(--muted);">

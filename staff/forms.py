@@ -13,7 +13,8 @@ class StaffApplicationForm(forms.ModelForm):
         exclude = ['status']
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
-            'age': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Age', 'min': '18'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'gender': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
             'height': forms.TextInput(attrs={'class': 'form-control', 'placeholder': "e.g. 5'9\""}),
             'blood_group': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Blood Group'}),
             'phone_1': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone Number 1', 'pattern': '[0-9]{10}', 'title': 'Please enter a valid 10-digit phone number'}),
@@ -21,9 +22,8 @@ class StaffApplicationForm(forms.ModelForm):
             'guardian_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Guardian Name'}),
             'guardian_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Guardian Phone No.', 'pattern': '[0-9]{10}', 'title': 'Please enter a valid 10-digit phone number'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (Optional)'}),
-            'place': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Place / City'}),
-            'education': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Highest Education'}),
-            'aadhar_card_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aadhar Card No.'}),
+            'home_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Home Address / City'}),
+            'education': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
             'main_locality': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
             'coat_size': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
         }
@@ -46,8 +46,13 @@ class StaffApplicationForm(forms.ModelForm):
             raise forms.ValidationError("Enter a valid 10-digit phone number.")
         return phone
 
-    def clean_age(self):
-        age = self.cleaned_data.get('age')
-        if age < 18:
-            raise forms.ValidationError("You must be at least 18 years old to apply.")
-        return age
+    def clean_date_of_birth(self):
+        dob = self.cleaned_data.get('date_of_birth')
+        if not dob:
+            raise forms.ValidationError("Date of birth is required.")
+        from datetime import date
+        today = date.today()
+        calculated_age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        if calculated_age < 18:
+            raise forms.ValidationError(f"You must be at least 18 years old to apply (calculated age: {calculated_age}).")
+        return dob

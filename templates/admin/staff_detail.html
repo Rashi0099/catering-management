@@ -70,8 +70,12 @@
           <span style="word-break:break-all;text-align:right;max-width:65%;">{{ member.email|default:"—" }}</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
-          <span style="color:var(--muted)">Age / Height</span>
-          <span>{{ member.age|default:"—" }} / {{ member.height|default:"—" }}</span>
+          <span style="color:var(--muted)">DOB / Height</span>
+          <span>{{ member.date_of_birth|date:"d M Y"|default:"—" }} / {{ member.height|default:"—" }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
+          <span style="color:var(--muted)">Gender</span>
+          <span>{{ member.gender|default:"—" }}</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
           <span style="color:var(--muted)">Blood Group</span>
@@ -86,16 +90,12 @@
           <span>{{ member.guardian_phone|default:"—" }}</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
-          <span style="color:var(--muted)">Place</span>
-          <span>{{ member.place|default:"—" }}</span>
+          <span style="color:var(--muted)">Home Address</span>
+          <span>{{ member.home_address|default:"—" }}</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
           <span style="color:var(--muted)">Education</span>
           <span>{{ member.education|default:"—" }}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(37,44,61,0.5)">
-          <span style="color:var(--muted)">Aadhar No.</span>
-          <span>{{ member.aadhar_card_no|default:"—" }}</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:7px 0">
           <span style="color:var(--muted)">Joined</span>

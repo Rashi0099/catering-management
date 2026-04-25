@@ -421,16 +421,24 @@ document.getElementById('crop-modal-overlay').addEventListener('click', function
       <div class="detail-row">
         <div class="detail-icon"><i class="fas fa-street-view"></i></div>
         <div class="detail-content">
-          <div class="detail-label">Place / Area</div>
-          <div class="detail-value">{{ me.place|default:"—" }}</div>
+          <div class="detail-label">Home Address</div>
+          <div class="detail-value">{{ me.home_address|default:"—" }}</div>
         </div>
       </div>
 
       <div class="detail-row">
         <div class="detail-icon"><i class="fas fa-birthday-cake"></i></div>
         <div class="detail-content">
-          <div class="detail-label">Age / Height</div>
-          <div class="detail-value">{{ me.age|default:"—" }} yrs / {{ me.height|default:"—" }}</div>
+          <div class="detail-label">DOB / Height</div>
+          <div class="detail-value">{{ me.date_of_birth|date:"d M Y"|default:"—" }} / {{ me.height|default:"—" }}</div>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <div class="detail-icon"><i class="fas fa-venus-mars"></i></div>
+        <div class="detail-content">
+          <div class="detail-label">Gender</div>
+          <div class="detail-value">{{ me.gender|default:"—" }}</div>
         </div>
       </div>
 
@@ -471,14 +479,6 @@ document.getElementById('crop-modal-overlay').addEventListener('click', function
         <div class="detail-content">
           <div class="detail-label">Education</div>
           <div class="detail-value">{{ me.education|default:"—" }}</div>
-        </div>
-      </div>
-
-      <div class="detail-row">
-        <div class="detail-icon"><i class="fas fa-id-card"></i></div>
-        <div class="detail-content">
-          <div class="detail-label">Aadhar Number</div>
-          <div class="detail-value" style="letter-spacing:0.5px;">{{ me.aadhar_card_no|default:"—" }}</div>
         </div>
       </div>
 

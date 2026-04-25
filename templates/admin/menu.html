@@ -29,9 +29,12 @@
       <div class="panel-title" style="display:inline-block; margin-right:10px;">{{ category.icon }} {{ category.name }}</div>
       <span style="font-size:0.8rem;color:var(--muted)">{{ category.items.count }} items</span>
     </div>
-    <a href="{% url 'admin_menu_category_delete' category.pk %}" onclick="return handleCustomConfirm(this, 'WARNING: This will permanently delete the entire \'{{ category.name|escapejs }}\' category and all its menu items!', event);" style="color:var(--red); font-size:0.85rem; font-weight:500;">
-      <i class="fas fa-trash"></i> Delete Category
-    </a>
+    <form method="post" action="{% url 'admin_menu_category_delete' category.pk %}" style="display:inline; margin:0;">
+      {% csrf_token %}
+      <button type="submit" onclick="return handleCustomConfirm(this, 'WARNING: This will permanently delete the entire \'{{ category.name|escapejs }}\' category and all its menu items!', event);" style="color:var(--red); font-size:0.85rem; font-weight:500; background:none; border:none; padding:0; cursor:pointer;">
+        <i class="fas fa-trash"></i> Delete Category
+      </button>
+    </form>
   </div>
   <table>
     <thead>
@@ -66,11 +69,12 @@
           <a href="{% url 'admin_menu_edit' item.pk %}" class="btn btn-ghost" style="padding:5px 10px;font-size:0.75rem;margin-right:4px;">
             <i class="fas fa-edit"></i>
           </a>
-          <a href="{% url 'admin_menu_delete' item.pk %}"
-             onclick="return handleCustomConfirm(this, 'Remove {{ item.name|escapejs }} from menu?', event);"
-             class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem">
-            <i class="fas fa-trash"></i>
-          </a>
+          <form method="post" action="{% url 'admin_menu_delete' item.pk %}" style="display:inline-block; margin:0;">
+            {% csrf_token %}
+            <button type="submit" onclick="return handleCustomConfirm(this, 'Remove {{ item.name|escapejs }} from menu?', event);" class="btn btn-danger" style="padding:5px 10px;font-size:0.75rem; border:none;">
+              <i class="fas fa-trash"></i>
+            </button>
+          </form>
         </td>
       </tr>
       {% empty %}

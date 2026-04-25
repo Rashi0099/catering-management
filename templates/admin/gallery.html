@@ -17,9 +17,12 @@
     {% for cat in categories %}
       <span class="badge" style="background:var(--bg); border:1px solid var(--border); padding:6px 12px; display:inline-flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text);">
         {{ cat.name }}
-        <a href="{% url 'admin_gallery_category_delete' cat.pk %}" onclick="return handleCustomConfirm(this, 'WARNING: Delete the entire \'{{ cat.name|escapejs }}\' gallery category? All images inside will be deleted as well!', event);" style="color:var(--red); display:flex; align-items:center;">
-          <i class="fas fa-times-circle"></i>
-        </a>
+        <form method="post" action="{% url 'admin_gallery_category_delete' cat.pk %}" style="display:inline; margin:0;">
+          {% csrf_token %}
+          <button type="submit" onclick="return handleCustomConfirm(this, 'WARNING: Delete the entire \'{{ cat.name|escapejs }}\' gallery category? All images inside will be deleted as well!', event);" style="color:var(--red); display:flex; align-items:center; background:none; border:none; padding:0; cursor:pointer;">
+            <i class="fas fa-times-circle"></i>
+          </button>
+        </form>
       </span>
     {% endfor %}
   </div>
@@ -42,9 +45,12 @@
         <a href="{% url 'admin_gallery_edit' img.pk %}" class="btn btn-secondary" style="padding:4px 10px;font-size:0.72rem;margin-left:auto">
           <i class="fas fa-edit"></i>
         </a>
-        <a href="{% url 'admin_gallery_delete' img.pk %}" class="btn btn-danger" style="padding:4px 10px;font-size:0.72rem;" onclick="return handleCustomConfirm(this, 'Delete this image?', event);">
-          <i class="fas fa-trash"></i>
-        </a>
+        <form method="post" action="{% url 'admin_gallery_delete' img.pk %}" style="display:inline-block; margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger" style="padding:4px 10px;font-size:0.72rem;" onclick="return handleCustomConfirm(this, 'Delete this image?', event);">
+            <i class="fas fa-trash"></i>
+          </button>
+        </form>
       </div>
     </div>
   </div>

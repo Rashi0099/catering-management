@@ -83,7 +83,7 @@
       
       <div class="form-group" style="margin-bottom:16px;">
         <label style="display:block; margin-bottom:6px; font-weight:500;">Active Phone Number *</label>
-        <input type="text" name="applicant_phone" value="{{ user.phone }}" required placeholder="e.g. 9876543210"
+        <input type="text" name="applicant_phone" value="{{ user.phone }}" required placeholder="e.g. 9744067400"
                style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);"/>
       </div>
 
@@ -148,7 +148,8 @@ document.getElementById('termsModal').addEventListener('click', function(e) {
         <li style="margin-bottom:10px;">കമ്പനി ഏൽപ്പിച്ച ക്യാപ്റ്റൻ ആയിരിക്കും സൈറ്റിനെ പൂർണ ചുമതല. ക്യാപ്റ്റൻ തരുന്ന നിർദ്ദേശങ്ങൾ പാലിക്കാൻ താങ്കൾ ബാധ്യസ്ഥനാണ്.</li>
       </ol>
     </div>
-    <div style="margin-top:24px; text-align:right;">
+    <div style="margin-top:24px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeTermsModal()" style="color:var(--muted);">← Back</button>
       <button type="button" class="btn btn-gold btn-sm" onclick="closeTermsModal()">I Understand</button>
     </div>
   </div>

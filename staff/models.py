@@ -91,14 +91,27 @@ class Staff(AbstractBaseUser, PermissionsMixin):
     main_locality = models.CharField(max_length=50, choices=LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
     coat_size = models.CharField(max_length=5, choices=COAT_SIZE_CHOICES, blank=True, null=True, help_text="Required coat size")
 
-    age = models.PositiveIntegerField(null=True, blank=True)
+    GENDER_CHOICES = [
+        ('Male', 'Male'),
+        ('Female', 'Female'),
+        ('Other', 'Other'),
+    ]
+    EDUCATION_CHOICES = [
+        ('10th', '10th'),
+        ('+1', '+1'),
+        ('+2', '+2'),
+        ('UG', 'UG'),
+        ('PG', 'PG'),
+    ]
+
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
     height = models.CharField(max_length=20, blank=True)
     blood_group = models.CharField(max_length=10, blank=True)
     guardian_name = models.CharField(max_length=150, blank=True)
     guardian_phone = models.CharField(max_length=20, blank=True)
-    place = models.CharField(max_length=255, blank=True, help_text="Specific city/town details")
-    education = models.CharField(max_length=255, blank=True)
-    aadhar_card_no = models.CharField(max_length=20, blank=True)
+    home_address = models.CharField(max_length=255, blank=True, help_text="Specific city/town/home details")
+    education = models.CharField(max_length=50, choices=EDUCATION_CHOICES, blank=True)
 
     # Role & pay
     level      = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='C', db_index=True)
@@ -262,15 +275,15 @@ class StaffApplication(models.Model):
     ]
 
     full_name = models.CharField(max_length=200)
-    age = models.PositiveIntegerField()
+    gender = models.CharField(max_length=10, choices=Staff.GENDER_CHOICES)
+    date_of_birth = models.DateField(null=True, blank=True)
     height = models.CharField(max_length=20, help_text="e.g. 5'9\"")
     blood_group = models.CharField(max_length=10)
     phone_1 = models.CharField(max_length=20)
     phone_2 = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
-    place = models.CharField(max_length=255)
-    education = models.CharField(max_length=255)
-    aadhar_card_no = models.CharField(max_length=20)
+    home_address = models.CharField(max_length=255)
+    education = models.CharField(max_length=50, choices=Staff.EDUCATION_CHOICES)
     
     main_locality = models.CharField(max_length=50, choices=Staff.LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
     coat_size = models.CharField(max_length=5, choices=Staff.COAT_SIZE_CHOICES, blank=True, null=True)

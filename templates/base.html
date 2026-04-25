@@ -303,19 +303,19 @@
        FOOTER
     ══════════════════════════════════ */
     footer {
-      background: #0c0805;
+      background: #eaddd1;
       padding: 88px 5% 40px;
-      color: #a1958b;
+      color: var(--muted);
       position: relative; overflow: hidden;
     }
     footer::before {
       content: ''; position: absolute; top: 0; left: 5%; right: 5%; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(200,148,10,0.4), transparent);
+      background: linear-gradient(90deg, transparent, rgba(200,148,10,0.5), transparent);
     }
     footer::after {
       content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
       width: 60%; height: 160px;
-      background: radial-gradient(ellipse, rgba(200,148,10,0.04) 0%, transparent 70%);
+      background: radial-gradient(ellipse, rgba(200,148,10,0.06) 0%, transparent 70%);
       pointer-events: none;
     }
 
@@ -326,7 +326,7 @@
 
     .footer-brand {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.75rem; color: #fff; margin-bottom: 6px;
+      font-size: 1.75rem; color: var(--brown); margin-bottom: 6px;
     }
     .footer-brand span { color: var(--gold); }
 
@@ -335,7 +335,7 @@
       background: var(--gold); border-radius: 2px; margin: 14px 0 18px;
     }
 
-    footer p { font-size: 0.88rem; line-height: 1.85; color: #a1958b; max-width: 300px; }
+    footer p { font-size: 0.88rem; line-height: 1.85; color: var(--muted); max-width: 300px; }
 
     .footer-heading {
       font-size: 0.68rem; text-transform: uppercase;
@@ -346,13 +346,13 @@
     footer ul { list-style: none; }
     footer ul li { margin-bottom: 12px; }
     footer ul li a {
-      color: #a1958b; text-decoration: none; font-size: 0.9rem;
+      color: var(--muted); text-decoration: none; font-size: 0.9rem;
       transition: all 0.22s; display: inline-flex; align-items: center; gap: 7px;
     }
     footer ul li a:hover { color: var(--gold); padding-left: 5px; }
 
     .footer-bottom {
-      border-top: 1px solid rgba(255,255,255,0.05);
+      border-top: 1px solid rgba(61,28,2,0.1);
       padding-top: 32px;
       display: flex; justify-content: space-between; align-items: center;
       font-size: 0.82rem; position: relative; z-index: 1;
@@ -361,9 +361,9 @@
     .social-links { display: flex; gap: 10px; }
     .social-links a {
       width: 40px; height: 40px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid rgba(61,28,2,0.12);
       display: flex; align-items: center; justify-content: center;
-      color: #a1958b; text-decoration: none; font-size: 0.95rem;
+      color: var(--muted); text-decoration: none; font-size: 0.95rem;
       transition: all 0.28s;
     }
     .social-links a:hover {
@@ -380,6 +380,45 @@
     }
     @media (max-width: 768px) {
       .footer-bottom { flex-direction: column; gap: 20px; text-align: center; }
+    }
+    /* ══ SCROLL PROGRESS BAR ══ */
+    #scroll-bar {
+      position: fixed; top: 0; left: 0; z-index: 9999;
+      height: 3px; width: 0%;
+      background: linear-gradient(90deg, var(--gold-dk), var(--gold-lt), var(--gold));
+      box-shadow: 0 0 10px var(--gold), 0 0 4px var(--gold-lt);
+      transition: width 0.08s linear;
+      border-radius: 0 2px 2px 0;
+      pointer-events: none;
+    }
+
+    /* ══ CUSTOM CURSOR ══ */
+    @media (pointer: fine) {
+      * { cursor: none !important; }
+      #csr {
+        position: fixed; z-index: 99999; pointer-events: none;
+        width: 14px; height: 14px;
+        background: var(--gold);
+        border-radius: 50%;
+        transform: translate(-50%,-50%);
+        transition: transform 0.12s ease, width 0.2s, height 0.2s, background 0.2s, opacity 0.3s;
+        mix-blend-mode: normal;
+        box-shadow: 0 0 10px rgba(200,148,10,0.8), 0 0 20px rgba(200,148,10,0.35);
+        opacity: 0;
+      }
+      #csr-ring {
+        position: fixed; z-index: 99998; pointer-events: none;
+        width: 38px; height: 38px;
+        border: 1.5px solid rgba(200,148,10,0.55);
+        border-radius: 50%;
+        transform: translate(-50%,-50%);
+        transition: left 0.18s ease, top 0.18s ease, width 0.3s, height 0.3s, opacity 0.3s;
+        opacity: 0;
+      }
+      body:has(a:hover) #csr,
+      body:has(button:hover) #csr { width: 22px; height: 22px; background: var(--gold-lt); }
+      body:has(a:hover) #csr-ring,
+      body:has(button:hover) #csr-ring { width: 54px; height: 54px; opacity: 0.45; }
     }
   </style>
   {% block extra_css %}{% endblock %}
@@ -443,8 +482,12 @@
     <div>
       <div class="footer-heading">Connect</div>
       <ul>
-        <li><a href="tel:+919876543210">                    📞 +91 98765 43210</a></li>
-        <li><a href="mailto:hello@mastanscatering.com">     ✉️ hello@mastanscatering.com</a></li>
+        <li style="display:flex; justify-content:center; align-items:center;">
+          <a href="tel:+919744067400" style="display:inline-block">📞 +91 97440 67400</a> 
+          <span style="color:rgba(255,255,255,0.4); margin:0 8px;">/</span> 
+          <a href="tel:+916235240942" style="display:inline-block">+91 62352 40942</a>
+        </li>
+        <li><a href="mailto:mastanboys999@gmail.com">     ✉️ mastanboys999@gmail.com</a></li>
         <li><a href="#">                                    📍 Kozhikode, Kerala</a></li>
         <li><a href="#">                                    ⏰ Available 24/7 for Bookings</a></li>
       </ul>
@@ -454,7 +497,7 @@
   <div class="footer-bottom">
     <span>© 2026 Mastan Catering Service &amp; Event Supporters. All rights reserved.</span>
     <div class="social-links">
-      <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+      <a href="https://instagram.com/mastan_catering" aria-label="Instagram" target="_blank"><i class="fab fa-instagram"></i></a>
       <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
       <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
     </div>
@@ -505,6 +548,136 @@
         .catch(err => console.error('SW Failed!', err));
     });
   }
+</script>
+
+<!-- ═══════ GLOBAL TECH EFFECTS ═══════ -->
+<div id="scroll-bar"></div>
+<div id="csr"></div>
+<div id="csr-ring"></div>
+
+<script>
+(function() {
+  /* ── Gold Scroll Progress Bar ── */
+  const bar = document.getElementById('scroll-bar');
+  window.addEventListener('scroll', () => {
+    const pct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+    bar.style.width = Math.min(pct, 100) + '%';
+  }, { passive: true });
+
+  /* ── Custom Gold Cursor (desktop only) ── */
+  const csr = document.getElementById('csr');
+  const ring = document.getElementById('csr-ring');
+  if (window.matchMedia('(pointer:fine)').matches) {
+    let mx = 0, my = 0, rx = 0, ry = 0, cursorReady = false;
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      csr.style.left = mx + 'px';
+      csr.style.top  = my + 'px';
+      if (!cursorReady) {
+        cursorReady = true;
+        csr.style.opacity = '1';
+        ring.style.opacity = '0.7';
+        rx = mx; ry = my;
+      }
+    });
+    function animateRing() {
+      rx += (mx - rx) * 0.14;
+      ry += (my - ry) * 0.14;
+      ring.style.left = rx + 'px';
+      ring.style.top  = ry + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+    document.addEventListener('mousedown', () => csr.style.transform = 'translate(-50%,-50%) scale(0.7)');
+    document.addEventListener('mouseup',   () => csr.style.transform = 'translate(-50%,-50%) scale(1)');
+  } else {
+    csr.style.display = 'none';
+    ring.style.display = 'none';
+  }
+
+  /* ── 3D Card Tilt on any .m-card or .mc ── */
+  function applyTilt(selector) {
+    document.querySelectorAll(selector).forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width  - 0.5;
+        const y = (e.clientY - r.top)  / r.height - 0.5;
+        card.style.transform = `perspective(800px) rotateY(${x * 12}deg) rotateX(${-y * 12}deg) translateY(-8px)`;
+        card.style.transition = 'transform 0.1s ease';
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+        card.style.transition = 'transform 0.5s ease';
+      });
+    });
+  }
+  applyTilt('.m-card');
+  applyTilt('.mc');
+  applyTilt('.stat-glass');
+
+  /* ── Hero Particle Canvas ── */
+  const hero = document.getElementById('s-hero');
+  if (hero) {
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0.45;';
+    hero.style.position = 'relative';
+    hero.prepend(canvas);
+    const ctx = canvas.getContext('2d');
+    let W, H, pts = [];
+
+    function resize() {
+      W = canvas.width  = hero.offsetWidth;
+      H = canvas.height = hero.offsetHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+
+    const NUM = 55;
+    for (let i = 0; i < NUM; i++) {
+      pts.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.8 + 0.4,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.28,
+        a: Math.random()
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      pts.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        p.a += 0.008;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        const alpha = (Math.sin(p.a) + 1) / 2 * 0.65 + 0.1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200,148,10,${alpha})`;
+        ctx.fill();
+      });
+      /* connect close particles */
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(200,148,10,${0.18 * (1 - dist/110)})`;
+            ctx.lineWidth = 0.6;
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+
+})();
 </script>
 </body>
 </html>

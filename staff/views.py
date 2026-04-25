@@ -662,12 +662,25 @@ def staff_cancel_request(request, pk):
             # Instant withdrawal for pending applications
             application.status = 'cancelled'
             application.save()
+            from django.core.cache import cache
+            cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
             messages.success(request, "Your application has been withdrawn.")
         elif application.status == 'approved':
             # Approved apps must go through Admin approval
+            # Reset cancel_rejected flag if admin had previously denied a cancel request
+            if application.cancel_rejected:
+                application.cancel_rejected = False
             application.status = 'cancel_requested'
             application.save()
+            from django.core.cache import cache
+            cache.delete(f'staff_dash_stats_v2_{request.user.pk}')
             messages.success(request, "Cancellation requested. The Admin must approve your request.")
+            # Notify admin again
+            notify_admins(
+                title="⚠️ Cancel Request",
+                body=f"{request.user.full_name} has requested to cancel their slot for {booking.name} on {booking.event_date}.",
+                link=f"/admin-panel/staff-requests/"
+            )
         else:
             messages.error(request, "You cannot cancel this application in its current state.")
             

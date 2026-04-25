@@ -57,31 +57,31 @@
 </div>
 
 {% if live_quota_data %}
-<div style="margin-bottom:20px;">
+<div style="margin-bottom:20px;" id="quota-bar">
   <div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;font-weight:600">Event Approval Progress</div>
   <div class="responsive-grid cols-4" style="gap:10px;">
       <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">Captains</div>
-          <div style="font-size:1.1rem;font-weight:600;color:var(--gold)">
-              {{ live_quota_data.captain.c }} / {% if live_quota_data.captain.q > 0 %}{{ live_quota_data.captain.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          <div style="font-size:1.1rem;font-weight:600;color:var(--gold)" id="quota-captain-display">
+              <span id="quota-captain-count">{{ live_quota_data.captain.c }}</span> / {% if live_quota_data.captain.q > 0 %}<span id="quota-captain-max">{{ live_quota_data.captain.q }}</span>{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
           </div>
       </div>
       <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">A-Level</div>
-          <div style="font-size:1.1rem;font-weight:600;color:var(--teal)">
-            {{ live_quota_data.a.c }} / {% if live_quota_data.a.q > 0 %}{{ live_quota_data.a.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          <div style="font-size:1.1rem;font-weight:600;color:var(--teal)" id="quota-a-display">
+            <span id="quota-a-count">{{ live_quota_data.a.c }}</span> / {% if live_quota_data.a.q > 0 %}<span id="quota-a-max">{{ live_quota_data.a.q }}</span>{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
           </div>
       </div>
       <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">B-Level</div>
-          <div style="font-size:1.1rem;font-weight:600;color:var(--blue)">
-            {{ live_quota_data.b.c }} / {% if live_quota_data.b.q > 0 %}{{ live_quota_data.b.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          <div style="font-size:1.1rem;font-weight:600;color:var(--blue)" id="quota-b-display">
+            <span id="quota-b-count">{{ live_quota_data.b.c }}</span> / {% if live_quota_data.b.q > 0 %}<span id="quota-b-max">{{ live_quota_data.b.q }}</span>{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
           </div>
       </div>
       <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">C-Level</div>
-          <div style="font-size:1.1rem;font-weight:600;color:var(--green)">
-            {{ live_quota_data.c.c }} / {% if live_quota_data.c.q > 0 %}{{ live_quota_data.c.q }}{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          <div style="font-size:1.1rem;font-weight:600;color:var(--green)" id="quota-c-display">
+            <span id="quota-c-count">{{ live_quota_data.c.c }}</span> / {% if live_quota_data.c.q > 0 %}<span id="quota-c-max">{{ live_quota_data.c.q }}</span>{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
           </div>
       </div>
   </div>
@@ -237,6 +237,15 @@
                 tr.style.opacity = "0";
                 tr.style.transform = "translateX(20px)";
                 setTimeout(() => tr.remove(), 300);
+              }
+              // Update quota counts live if server returned them
+              if(data.quota) {
+                const q = data.quota;
+                const update = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+                update('quota-captain-count', q.captain.c);
+                update('quota-a-count', q.a.c);
+                update('quota-b-count', q.b.c);
+                update('quota-c-count', q.c.c);
               }
             } else {
                if(btn) { btn.disabled = false; btn.innerHTML = originalText; }

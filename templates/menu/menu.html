@@ -3,50 +3,121 @@
 {% block title %}Our Menu — Mastan's Catering & Services{% endblock %}
 {% block nav_menu %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ── Menu Hero ── */
+.menu-hero {
+  min-height: 55vh; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; text-align: center; padding: 0 5%;
+}
+.menu-hero-bg {
+  position: absolute; inset: -60px;
+  background: url('/media/gallery/Outdoor_Dining_Arrangement.jpg') center/cover no-repeat;
+  will-change: transform;
+}
+.menu-hero-ov {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(61,28,2,0.78) 0%, rgba(30,13,2,0.6) 60%, rgba(10,4,0,0.82) 100%);
+}
+.menu-hero-content { position: relative; z-index: 2; max-width: 700px; margin: 0 auto; padding-top: 100px; }
+.menu-hero-content .eyebrow-w {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--gold);
+  display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px;
+}
+.menu-hero-content .eyebrow-w::before, .menu-hero-content .eyebrow-w::after {
+  content: ''; display: block; width: 30px; height: 1px; background: var(--gold); opacity: 0.6;
+}
+.menu-hero-content h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.8rem, 6vw, 5rem); color: #fff; line-height: 1.08;
+  margin-bottom: 18px; text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.menu-hero-content h1 em { font-style: italic; color: var(--gold-lt); }
+.menu-hero-content p { color: rgba(255,255,255,0.72); font-size: 1rem; line-height: 1.8; max-width: 480px; margin: 0 auto; }
+
+/* ── Category pills ── */
+.cat-bar {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  justify-content: center; margin: 48px auto 0; max-width: 900px; padding: 0 5%;
+}
+.cat-pill {
+  padding: 10px 26px; border-radius: 50px;
+  border: 1.5px solid var(--border);
+  font-size: 0.88rem; font-weight: 600;
+  color: var(--muted); background: #fff;
+  text-decoration: none; transition: all 0.28s ease;
+}
+.cat-pill:hover { border-color: var(--gold); color: var(--brown); }
+.cat-pill.active { background: var(--brown); color: #fff; border-color: var(--brown); box-shadow: 0 6px 20px rgba(61,28,2,0.2); }
+
+/* ── Menu layout ── */
+.menu-body { padding: 60px 5% 100px; }
+.menu-items-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 30px; max-width: 1200px; margin: 0 auto;
+}
+.m-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(61,28,2,0.05);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+.m-card:hover { transform: translateY(-10px); box-shadow: 0 20px 55px rgba(61,28,2,0.12); }
+.m-card-img { height: 230px; overflow: hidden; position: relative; background: #fdf9f3; }
+.m-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+.m-card:hover .m-card-img img { transform: scale(1.08); }
+.m-card-price {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(30,13,2,0.88); color: var(--gold-lt);
+  padding: 6px 16px; border-radius: 30px;
+  font-size: 0.82rem; font-weight: 700;
+  backdrop-filter: blur(6px); border: 1px solid rgba(200,148,10,0.25);
+}
+.m-card-body { padding: 28px; }
+.m-card-name { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--brown); margin-bottom: 10px; }
+.m-card-desc { color: var(--muted); font-size: 0.88rem; line-height: 1.72; margin-bottom: 18px; }
+.m-card-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag-veg { font-size: 0.68rem; background: rgba(56,142,60,0.07); color: #2e7d32; padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(56,142,60,0.18); font-weight: 700; }
+.tag-gf  { font-size: 0.68rem; background: rgba(91,141,238,0.07); color: #1a73e8; padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(91,141,238,0.18); font-weight: 700; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="padding:140px 5% 100px; background:var(--bg); min-height:100vh;">
-  <div class="section-header" style="margin-bottom:60px; text-align:center;">
-    <div class="section-tag" style="color:var(--gold); font-weight:700; letter-spacing:0.2em; text-transform:uppercase; font-size:0.75rem; margin-bottom:16px;">✦ Chef's Gallery</div>
-    <h1 class="section-title" style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.2rem, 5vw, 3.5rem); color:var(--brown); margin-bottom:20px;">Curated Menu</h1>
-    <div class="divider" style="width:60px; height:3px; background:var(--gold); margin:20px auto; border-radius:2px;"></div>
-    <p class="section-sub" style="font-size:1.05rem; color:var(--muted); max-width:580px; line-height:1.7; margin:0 auto;">A symphony of flavors crafted with the finest local ingredients and global inspiration.</p>
+<div class="menu-hero">
+  <div class="menu-hero-bg"></div>
+  <div class="menu-hero-ov"></div>
+  <div class="menu-hero-content">
+    <div class="eyebrow-w">Chef's Collection</div>
+    <h1>Curated <em>Menu</em></h1>
+    <p>A symphony of flavours crafted with the finest local ingredients and refined culinary artistry.</p>
   </div>
+</div>
 
-  <!-- Category Tabs -->
-  <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:60px">
-    <a href="{% url 'menu' %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if not active_category %}var(--brown){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if not active_category %}#fff{% else %}var(--muted){% endif %}; background:{% if not active_category %}var(--brown){% else %}transparent{% endif %}; transition:all 0.3s;">
-      All Collections
-    </a>
-    {% for cat in categories %}
-    <a href="{% url 'menu_category' cat.slug %}" style="padding:10px 28px; border-radius:12px; border:1px solid {% if active_category.slug == cat.slug %}var(--brown){% else %}var(--border){% endif %}; text-decoration:none; font-size:0.9rem; font-weight:600; color:{% if active_category.slug == cat.slug %}#fff{% else %}var(--muted){% endif %}; background:{% if active_category.slug == cat.slug %}var(--brown){% else %}transparent{% endif %}; transition:all 0.3s;">
-      {{ cat.icon }} {{ cat.name }}
-    </a>
-    {% endfor %}
-  </div>
+<div class="cat-bar">
+  <a href="{% url 'menu' %}" class="cat-pill {% if not active_category %}active{% endif %}">All Collections</a>
+  {% for cat in categories %}
+  <a href="{% url 'menu_category' cat.slug %}" class="cat-pill {% if active_category.slug == cat.slug %}active{% endif %}">{{ cat.icon }} {{ cat.name }}</a>
+  {% endfor %}
+</div>
 
-  <!-- Menu Items Grid -->
-  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:30px">
+<div class="menu-body">
+  <div class="menu-items-grid">
     {% for item in items %}
-    <div class="glass-card" style="background:#fff; border:1px solid var(--border); padding:24px; border-radius:24px; transition:transform 0.3s; box-shadow:0 10px 30px rgba(61,28,2,0.05);" onmouseover="this.style.transform='translateY(-8px)'" onmouseout="this.style.transform='translateY(0)'">
-      <div style="height:220px; border-radius:16px; overflow:hidden; margin-bottom:20px; border:1px solid var(--border); background:#fdf9f3;">
-        {% if item.image %}
-        <img src="{{ item.image.url }}" style="width:100%; height:100%; object-fit:cover;" alt="{{ item.name }}"/>
-        {% else %}
-        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:3.5rem;">🍽️</div>
-        {% endif %}
+    <div class="m-card">
+      <div class="m-card-img">
+        {% if item.image %}<img src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy">
+        {% else %}<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3.5rem;">🍽️</div>{% endif %}
+        <div class="m-card-price">₹{{ item.price }}</div>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-        <h4 style="font-family:'Cormorant Garamond',serif; font-size:1.45rem; color:var(--brown); font-weight:600;">{{ item.name }}</h4>
-        <span style="color:var(--gold); font-weight:700; font-size:1.1rem;">₹{{ item.price }}</span>
-      </div>
-      <p style="color:var(--muted); font-size:0.9rem; line-height:1.7; margin-bottom:20px;">{{ item.description }}</p>
-      <div style="display:flex; gap:8px; border-top:1px solid var(--border); padding-top:16px;">
-        {% if item.is_vegetarian %}
-        <span style="font-size:0.7rem; background:rgba(56,142,60,0.06); color:#2e7d32; padding:4px 10px; border-radius:6px; border:1px solid rgba(56,142,60,0.15); font-weight:700;">VEGETARIAN</span>
-        {% endif %}
-        {% if item.is_gluten_free %}
-        <span style="font-size:0.7rem; background:rgba(91,141,238,0.06); color:#1a73e8; padding:4px 10px; border-radius:6px; border:1px solid rgba(91,141,238,0.15); font-weight:700;">GLUTEN FREE</span>
-        {% endif %}
+      <div class="m-card-body">
+        <div class="m-card-name">{{ item.name }}</div>
+        <p class="m-card-desc">{{ item.description }}</p>
+        <div class="m-card-tags">
+          {% if item.is_vegetarian %}<span class="tag-veg">VEGETARIAN</span>{% endif %}
+          {% if item.is_gluten_free %}<span class="tag-gf">GLUTEN FREE</span>{% endif %}
+        </div>
       </div>
     </div>
     {% empty %}
@@ -61,8 +132,9 @@
 
 <!-- CTA -->
 <div style="background:linear-gradient(135deg, var(--brown) 0%, var(--brown-lt) 100%); padding:120px 5%; text-align:center; color:#fff;">
-  <h2 style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.5rem, 5vw, 3.5rem); color:#fff; margin-bottom:24px;">Looking for something bespoke?</h2>
+  <h2 style="font-family:'Cormorant Garamond',serif; font-size:clamp(2.5rem,5vw,3.5rem); color:#fff; margin-bottom:24px;">Looking for something bespoke?</h2>
   <p style="color:rgba(255,255,255,0.7); max-width:640px; margin:0 auto 48px; line-height:1.8; font-size:1.1rem;">Our executive chefs can design a custom menu perfectly balanced for your specific event theme and dietary requirements.</p>
-  <a href="{% url 'booking' %}" class="btn-primary" style="padding:20px 50px; background:var(--gold); border-radius:12px; text-decoration:none; color:#fff; font-weight:700; font-size:1.05rem; display:inline-block; transition:all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 30px rgba(200, 148, 10, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">Request a Custom Proposal</a>
+  <a href="{% url 'booking' %}" class="btn-primary" style="padding:20px 50px; background:var(--gold); border-radius:12px; text-decoration:none; color:#fff; font-weight:700; font-size:1.05rem; display:inline-block;">Request a Custom Proposal</a>
 </div>
 {% endblock %}
+

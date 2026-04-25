@@ -73,7 +73,27 @@
     .form-grid { grid-template-columns: 1fr; }
     .booking-form { padding: 28px 22px; }
   }
+
+  /* PREMIUM VALIDATION CSS */
+  .is-invalid { 
+    border-color: #e74c3c !important; 
+    background-color: rgba(231,76,60,0.02) !important; 
+    box-shadow: 0 0 0 3px rgba(231,76,60,0.15) !important; 
+  }
+  .is-valid { 
+    border-color: #27ae60 !important; 
+    box-shadow: 0 0 0 3px rgba(39,174,96,0.15) !important; 
+  }
+  .invalid-feedback { 
+    color: #e74c3c; font-size: 0.8rem; margin-top: 6px; 
+    display: none; font-weight: 500; font-family: 'Outfit', sans-serif;
+  }
+  .is-invalid ~ .invalid-feedback { 
+    display: block; animation: fadeIn 0.3s ease forwards; 
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
 
 {% block content %}
@@ -98,9 +118,10 @@
         <div class="form-grid">
           <div class="form-section-title">Personal Details</div>
           {% for field in staff_form %}
-            <div class="form-group {% if field.name == 'place' or field.name == 'education' %}full{% endif %}">
+            <div class="form-group {% if field.name == 'home_address' or field.name == 'education' %}full{% endif %}">
               <label>{{ field.label }} {% if field.field.required %}*{% endif %}</label>
               {{ field }}
+              <div class="invalid-feedback js-error-msg"></div>
               {% if field.errors %}
                 <ul class="errorlist" style="color:#c62828; font-size: 0.8rem; margin-top: 5px;">
                   {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
@@ -117,5 +138,100 @@
 
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const form = document.querySelector(".booking-form form");
+  const inputs = form.querySelectorAll("input, select, textarea");
+
+  const validateField = (field) => {
+    let isValid = true;
+    let errMsg = "";
+    
+    // Required check
+    if (field.hasAttribute("required") && !field.value.trim()) {
+      isValid = false;
+      errMsg = "This field is required.";
+    } else if (field.value.trim()) {
+      // Specific checks
+      if (field.name === "phone" || field.name === "phone_2") {
+        if (!/^\d{8,15}$/.test(field.value)) { 
+           isValid = false; errMsg = "Enter a valid phone number (8-15 digits).";
+        }
+      } else if (field.name === "date_of_birth") {
+        const selectedDate = new Date(field.value);
+        const today = new Date();
+        let age = today.getFullYear() - selectedDate.getFullYear();
+        const m = today.getMonth() - selectedDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) { age--; }
+        if (age < 18) {
+          isValid = false; errMsg = "You must be at least 18 years old to apply.";
+        } else if (age > 80) {
+          isValid = false; errMsg = "Please enter a valid date of birth.";
+        }
+      } else if (field.type === "email") {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
+          isValid = false; errMsg = "Please enter a valid email address.";
+        }
+      }
+    }
+
+    const errDiv = field.parentNode.querySelector(".js-error-msg");
+    if (!isValid) {
+      field.classList.add("is-invalid");
+      field.classList.remove("is-valid");
+      if(errDiv) errDiv.innerText = errMsg;
+    } else {
+      if(field.value.trim()){ field.classList.add("is-valid"); }
+      else { field.classList.remove("is-valid"); }
+      field.classList.remove("is-invalid");
+      if(errDiv) errDiv.innerText = "";
+    }
+    return isValid;
+  };
+
+  inputs.forEach(input => {
+    if (input.type === 'hidden' || input.name === 'csrfmiddlewaretoken') return;
+    input.addEventListener("input", function() {
+      if(input.classList.contains("is-invalid")) validateField(input);
+    });
+    input.addEventListener("blur", function() {
+      validateField(input);
+    });
+  });
+
+  form.addEventListener("submit", function(e) {
+    let formValid = true;
+    inputs.forEach(input => {
+      if (input.type === 'hidden' || input.name === 'csrfmiddlewaretoken') return;
+      if (input.hasAttribute("required")) {
+        if (!validateField(input)) formValid = false;
+      } else if(input.value.trim()) {
+        if (!validateField(input)) formValid = false;
+      }
+    });
+
+    if (!formValid) {
+      e.preventDefault();
+      // Find first invalid and scroll to it smoothly
+      const firstInvalid = form.querySelector(".is-invalid");
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstInvalid.focus();
+      }
+      
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Validation Error', 
+        text: 'Please correct the highlighted errors before submitting your application.',
+        confirmButtonColor: 'var(--brown)',
+        background: 'var(--cream)',
+        color: 'var(--text)'
+      });
+    }
+  });
+
+});
+</script>
 
 {% endblock %}

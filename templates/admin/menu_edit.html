@@ -12,7 +12,7 @@
     <div class="panel-header">
       <div class="panel-title">Edit {{ item.name }}</div>
     </div>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       <div class="form-group">
         <label>Category *</label>
@@ -38,15 +38,35 @@
         <label>Description *</label>
         <textarea name="description" required rows="3">{{ item.description }}</textarea>
       </div>
-      <div style="display:flex;gap:20px;align-items:center;margin-bottom:20px">
+      
+      <div class="form-group">
+        <label>Dish Image</label>
+        {% if item.image %}
+          <div style="margin-bottom:10px;">
+            <img src="{{ item.image.url }}" alt="{{ item.name }}" style="height:80px; width:80px; object-fit:cover; border-radius:8px;">
+            <label style="display:inline-flex; align-items:center; gap:8px; margin-left:15px; cursor:pointer; text-transform:none; font-size:0.85rem;">
+              <input type="checkbox" name="clear_image"> Remove image
+            </label>
+          </div>
+        {% endif %}
+        <input type="file" name="image" accept="image/*" style="padding:8px" />
+      </div>
+
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:20px">
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
-          <input type="checkbox" name="is_vegetarian" {% if item.is_vegetarian %}checked{% endif %} style="width:auto;padding:0"/> Vegetarian
+          <input type="checkbox" name="is_vegetarian" {% if item.is_vegetarian %}checked{% endif %} style="width:auto;padding:0"/> Veg
         </label>
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
           <input type="checkbox" name="is_vegan" {% if item.is_vegan %}checked{% endif %} style="width:auto;padding:0"/> Vegan
         </label>
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
-          <input type="checkbox" name="is_featured" {% if item.is_featured %}checked{% endif %} style="width:auto;padding:0"/> Featured on Homepage
+          <input type="checkbox" name="is_gluten_free" {% if item.is_gluten_free %}checked{% endif %} style="width:auto;padding:0"/> Gluten Free
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_featured" {% if item.is_featured %}checked{% endif %} style="width:auto;padding:0"/> Featured
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
+          <input type="checkbox" name="is_available" {% if item.is_available %}checked{% endif %} style="width:auto;padding:0"/> Available
         </label>
       </div>
       <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
