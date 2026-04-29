@@ -353,7 +353,17 @@
     body.app-loaded #app-splash { opacity: 0; visibility: hidden; pointer-events: none; }
   </style>
   <script>
-    window.addEventListener('load', function() { setTimeout(function() { document.body.classList.add('app-loaded'); }, 250); });
+    if (!sessionStorage.getItem('splashShown')) {
+        window.addEventListener('load', function() { 
+            setTimeout(function() { 
+                document.body.classList.add('app-loaded'); 
+                sessionStorage.setItem('splashShown', 'true');
+            }, 300); 
+        });
+    } else {
+        document.body.classList.add('app-loaded');
+        document.getElementById('app-splash').style.display = 'none';
+    }
   </script>
 <div id="nav-progress"></div>
 
