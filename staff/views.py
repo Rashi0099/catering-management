@@ -398,7 +398,7 @@ def staff_booking_detail(request, pk):
     me = request.user
     # Staff can only view their own bookings
     booking = get_object_or_404(
-        Booking,
+        Booking.objects.select_related('created_by'),
         pk=pk
     )
     # Check access
@@ -439,11 +439,11 @@ def staff_booking_detail(request, pk):
         pass
 
     assigned_staff_list = []
-    attendances = StaffAttendance.objects.filter(booking=booking, date=booking.event_date)
+    attendances = StaffAttendance.objects.filter(booking=booking, date=booking.event_date).select_related('staff')
     att_map = {a.staff_id: a for a in attendances}
-    applications_map = {app.staff_id: app for app in booking.applications.filter(status__in=['approved', 'pending'])}
-    
-    for s in booking.assigned_to.all():
+    applications_map = {app.staff_id: app for app in booking.applications.filter(status__in=['approved', 'pending']).select_related('staff')}
+
+    for s in booking.assigned_to.select_related():
         app = applications_map.get(s.id)
         phone = s.phone
         assigned_staff_list.append({
@@ -778,16 +778,23 @@ def staff_profile(request):
     # Context for Level Progress Tracking
     today = timezone.now().date()
     my_bookings = me.bookings.all()
-    
-    day_works = my_bookings.filter(status='completed', session='day').count()
-    night_works = my_bookings.filter(status='completed', session='night').count()
-    long_works = my_bookings.filter(status='completed', is_long_work=True).count()
-    
+
+    # Reuse dashboard cache to avoid 3 extra COUNT queries on every profile load
+    _dash_cache = cache.get(f'staff_dash_stats_v2_{me.pk}')
+    if _dash_cache and 'day_works' in _dash_cache:
+        day_works   = _dash_cache['day_works']
+        night_works = _dash_cache['night_works']
+        long_works  = _dash_cache['long_works']
+    else:
+        day_works   = my_bookings.filter(status='completed', session='day').count()
+        night_works = my_bookings.filter(status='completed', session='night').count()
+        long_works  = my_bookings.filter(status='completed', is_long_work=True).count()
+
     rem_day, rem_night, rem_long = 0, 0, 0
     if me.level == 'C':
-        rem_day = max(0, 10 - day_works)
-        rem_night = max(0, 5 - night_works)
-        rem_long = max(0, 5 - long_works)
+        rem_day   = max(0, 10 - day_works)
+        rem_night = max(0, 5  - night_works)
+        rem_long  = max(0, 5  - long_works)
 
     latest_promotion = me.promotion_requests.order_by('-created_at').first()
 
