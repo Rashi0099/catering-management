@@ -87,3 +87,8 @@ def manifest(request):
         'name': name,
         'short_name': short_name,
     }, content_type='application/json')
+
+
+def download_app(request):
+    """App download page — shows Android APK link and iPhone Add-to-Home-Screen guide."""
+    return render(request, 'core/download_app.html')
