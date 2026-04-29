@@ -186,44 +186,46 @@
     </div>
 
     <!-- Box 3: Progression Tracking -->
-    <div style="background:var(--surface); border-radius:10px; border:1px solid var(--border); overflow:hidden;">
+    <div style="background:var(--surface); border-radius:10px; border:1px solid var(--border); padding: 12px; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px; animation: pulseBlueBox 3s infinite ease-in-out;">
       {% if me.level == 'C' %}
-      <div style="display: grid; grid-template-rows: auto auto auto; font-family: 'Outfit', sans-serif; text-align: center;">
-        <!-- Row 1: Numbers -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
-          <div style="border-right: 1px solid var(--border); font-size: 1.6rem; font-weight: 800; color: var(--gold); padding: 12px 2px; text-shadow: 0 0 10px rgba(224,171,74,0.2);">{{ rem_day }}</div>
-          <div style="border-right: 1px solid var(--border); font-size: 1.6rem; font-weight: 800; color: var(--gold); padding: 12px 2px; text-shadow: 0 0 10px rgba(224,171,74,0.2);">{{ rem_night }}</div>
-          <div style="font-size: 1.6rem; font-weight: 800; color: var(--gold); padding: 12px 2px; text-shadow: 0 0 10px rgba(224,171,74,0.2);">{{ rem_long }}</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex: 1; padding: 5px 0;">
+        <div style="flex: 1; text-align: center;">
+          <div style="font-family:'Outfit',sans-serif; font-size: 1.4rem; font-weight: 800; color: #fff;">{{ rem_day }}</div>
+          <div style="font-size: 0.55rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Day</div>
         </div>
-        <!-- Row 2: Labels -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--border);">
-          <div style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid var(--border); letter-spacing: 0.05em;">Day</div>
-          <div style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid var(--border); letter-spacing: 0.05em;">Night</div>
-          <div style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 800; padding: 6px 2px; letter-spacing: 0.05em;">Long</div>
+        <div style="width: 1px; height: 25px; background: var(--border); opacity: 0.5;"></div>
+        <div style="flex: 1; text-align: center;">
+          <div style="font-family:'Outfit',sans-serif; font-size: 1.4rem; font-weight: 800; color: #fff;">{{ rem_night }}</div>
+          <div style="font-size: 0.55rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Night</div>
         </div>
-        <!-- Row 3: Progress Note -->
-        <div style="padding: 10px 4px; font-size: 0.75rem; color: var(--teal); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(56, 201, 176, 0.06);">
-          Reaching to B Level
+        <div style="width: 1px; height: 25px; background: var(--border); opacity: 0.5;"></div>
+        <div style="flex: 1; text-align: center;">
+          <div style="font-family:'Outfit',sans-serif; font-size: 1.4rem; font-weight: 800; color: #fff;">{{ rem_long }}</div>
+          <div style="font-size: 0.55rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Long</div>
+        </div>
+      </div>
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); text-align: center;">
+        <div style="font-size: 0.65rem; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+          REACHING TO B LEVEL
         </div>
       </div>
       {% elif me.level == 'B' %}
-      <div style="display: grid; grid-template-rows: auto auto; font-family: 'Outfit', sans-serif; text-align: center;">
-        <div style="padding: 18px 5px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border);">
-          <div style="font-family:'Outfit',sans-serif; font-size: 1rem; font-weight: 800; color: var(--gold);">Admin Decision</div>
-          <div style="font-size: 0.55rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Evaluation Phase</div>
-        </div>
-        <div style="padding: 10px 4px; font-size: 0.75rem; color: var(--teal); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(56, 201, 176, 0.06);">
-          Reaching to A Level
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px 0;">
+        <div style="font-family:'Outfit',sans-serif; font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 2px;">Admin Decision</div>
+        <div style="font-size: 0.55rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Evaluation Phase</div>
+      </div>
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); text-align: center;">
+        <div style="font-size: 0.65rem; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+          REACHING TO A LEVEL
         </div>
       </div>
       {% else %}
-      <div style="padding:22px 10px; text-align:center;">
-        <div style="font-family:'Outfit',sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--green);">MAX LEVEL reached</div>
-        <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-top: 6px; text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px;">Congratulations 🎉</div>
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px 0;">
+        <div style="font-family:'Outfit',sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--teal);">MAX LEVEL</div>
+        <div style="font-size: 0.55rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px;">Congratulations 🎉</div>
       </div>
       {% endif %}
     </div>
-
     <!-- Box 4: Promotion Status -->
     <div style="padding:16px 8px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center;">
       {% if latest_promotion %}
