@@ -1,4 +1,6 @@
 from django.urls import path
+from django.views.decorators.cache import cache_control
+from django.views.generic import TemplateView
 from . import admin_views
 
 urlpatterns = [
@@ -97,4 +99,14 @@ urlpatterns = [
 
     # API
     path('api/invoice-items/',                     admin_views.api_get_invoice_items, name='admin_api_invoice_items'),
+
+    # Admin PWA manifest
+    path('manifest.json',
+         cache_control(no_cache=True, must_revalidate=True)(
+             TemplateView.as_view(
+                 template_name='admin/manifest.json',
+                 content_type='application/json'
+             )
+         ),
+         name='admin_manifest'),
 ]

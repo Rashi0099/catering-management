@@ -22,10 +22,9 @@ except ImportError:
         val = os.environ.get(key, default)
         return [v.strip() for v in val.split(',')] if val else ['*']
 
-SECRET_KEY        = env('SECRET_KEY', default='catrinboys-change-this-key-in-production-long-secure-string-1234')
-DEBUG             = env('DEBUG', default='True') in (True, 'True', 'true', '1')
-ALLOWED_HOSTS     = env_list('ALLOWED_HOSTS', default='*')
-MAINTENANCE_MODE  = env('MAINTENANCE_MODE', default='False') in (True, 'True', 'true', '1')
+SECRET_KEY    = env('SECRET_KEY', default='catrinboys-change-this-key-in-production-long-secure-string-1234')
+DEBUG         = env('DEBUG', default='True') in (True, 'True', 'true', '1')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default='*')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -51,8 +50,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # ── Maintenance mode — must be AFTER AuthenticationMiddleware ──
-    'core.maintenance.MaintenanceMiddleware',
 ]
 
 ROOT_URLCONF = 'catering_site.urls'
