@@ -21,5 +21,14 @@ urlpatterns = [
     path('terms/', views.staff_terms, name='staff_terms'),
     path('bookings/<int:pk>/attendance/ajax-update/', views.staff_ajax_update_attendance_field, name='staff_ajax_update_attendance_field'),
     path('save-fcm-token/', views.save_fcm_token, name='save_fcm_token'),
+    # Staff PWA manifest — static, no template vars, readable by PWABuilder
+    path('manifest.json',
+         cache_control(no_cache=True, must_revalidate=True)(
+             TemplateView.as_view(
+                 template_name='staff/manifest.json',
+                 content_type='application/json'
+             )
+         ),
+         name='staff_manifest'),
 ]
 
