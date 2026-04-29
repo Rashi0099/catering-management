@@ -5,7 +5,7 @@
       "namespace": "android_app",
       "package_name": "in.mastan.staff",
       "sha256_cert_fingerprints": [
-        "39:77:46:BC:08:39:B4:59:2D:C9:4A:F9:FE:BC:9F:EF:1A:C6:D6:3A:B0:18:D5:FF:6D:74:9F:E5:D7:D2:64:20"
+        "C4:CC:F2:DA:8C:63:31:2D:EA:8C:AD:1C:F6:83:BD:81:89:DA:A9:2F:79:1D:35:22:78:B3:44:FB:52:3D:75:40"
       ]
     }
   },
@@ -13,9 +13,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "in.mastan.admin",
+      "package_name": "in.mastan.twa",
       "sha256_cert_fingerprints": [
-        "39:77:46:BC:08:39:B4:59:2D:C9:4A:F9:FE:BC:9F:EF:1A:C6:D6:3A:B0:18:D5:FF:6D:74:9F:E5:D7:D2:64:20"
+        "1E:CD:F8:F9:11:62:EC:76:11:48:50:2D:2B:36:2E:9F:3C:64:94:8C:02:51:48:26:63:02:3E:97:A4:0B:C7:F0"
       ]
     }
   }

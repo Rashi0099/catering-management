@@ -1,0 +1,447 @@
+[
+{
+  "model": "core.termandcondition",
+  "pk": 1,
+  "fields": {
+    "text": "ജോലി ചെയ്യുന്ന കമ്പനിയോട് വിശ്വസ്തതയും കൂറും പുലർത്തുന്നവർ ആയിരിക്കണം. വർക്ക് ബുക്ക് ചെയ്താൽ നിർബന്ധമായും സൈറ്റിൽ എത്തണം. \"ക്യാൻസലേഷൻ അനുവദിക്കുകയില്ല\".",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.372"
+  }
+},
+{
+  "model": "core.termandcondition",
+  "pk": 2,
+  "fields": {
+    "text": "കൃത്യമായ സമയത്ത് സൈറ്റിൽ എത്തുകയും ക്യാപ്റ്റൻ/സീനിയേഴ്സ് പറഞ്ഞതനുസരിച്ച് വർക്ക് ചെയ്യുകയും ചെയ്താൽ താങ്കളിലുള്ള വിശ്വാസം വർദ്ധിപ്പിക്കാൻ അത് കാരണമാകും.",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.377"
+  }
+},
+{
+  "model": "core.termandcondition",
+  "pk": 3,
+  "fields": {
+    "text": "അച്ചടക്കമുള്ള നല്ല സ്റ്റാഫുകളെ വാർത്തെടുക്കാൻ മൂല്യനിർണയം നടത്തും. വർക്കിന് പ്രവേശിച്ചാൽ പിന്നീടുള്ള സമയങ്ങളിൽ മൊബൈലുകൾക്ക് ഏർപ്പെടുത്തിയ നിയന്ത്രണത്തിന് താങ്കൾ പൂർണ്ണമായും സഹകരിക്കണം.",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.382"
+  }
+},
+{
+  "model": "core.termandcondition",
+  "pk": 4,
+  "fields": {
+    "text": "റിപ്പോർട്ടിംഗ് മുതൽ ഡിസ്പോസൽ വരെ താങ്കളുടെ ഉത്തരവാദിത്വം കമ്പനിക്ക് ആയിരിക്കും.",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.385"
+  }
+},
+{
+  "model": "core.termandcondition",
+  "pk": 5,
+  "fields": {
+    "text": "കമ്പനി ഏൽപ്പിച്ച ക്യാപ്റ്റൻ ആയിരിക്കും സൈറ്റിനെ പൂർണ ചുമതല. ക്യാപ്റ്റൻ തരുന്ന നിർദ്ദേശങ്ങൾ പാലിക്കാൻ താങ്കൾ ബാധ്യസ്ഥനാണ്.",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.389"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 1,
+  "fields": {
+    "name": "Supervisor",
+    "default_price": "900.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.395"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 2,
+  "fields": {
+    "name": "Captain",
+    "default_price": "750.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.401"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 3,
+  "fields": {
+    "name": "Juice",
+    "default_price": "750.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.406"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 4,
+  "fields": {
+    "name": "Tea",
+    "default_price": "700.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.411"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 5,
+  "fields": {
+    "name": "Popcorn",
+    "default_price": "750.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.416"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 6,
+  "fields": {
+    "name": "Cotton Candy",
+    "default_price": "700.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.420"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 7,
+  "fields": {
+    "name": "Hosting Boys",
+    "default_price": "850.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.425"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 8,
+  "fields": {
+    "name": "Hosting Girls",
+    "default_price": "1500.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.430"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 9,
+  "fields": {
+    "name": "Service Girls",
+    "default_price": "750.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.435"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 10,
+  "fields": {
+    "name": "Boys",
+    "default_price": "600.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.440"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 11,
+  "fields": {
+    "name": "Travel Expense",
+    "default_price": "0.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.445"
+  }
+},
+{
+  "model": "core.invoiceitem",
+  "pk": 12,
+  "fields": {
+    "name": "TA",
+    "default_price": "0.00",
+    "order": 0,
+    "created_at": "2026-04-27T08:41:07.452"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 1,
+  "fields": {
+    "name": "Areekode",
+    "created_at": "2026-04-26T10:12:20.546"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 2,
+  "fields": {
+    "name": "Calicut",
+    "created_at": "2026-04-26T10:12:20.551"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 3,
+  "fields": {
+    "name": "Edavannappara",
+    "created_at": "2026-04-26T10:12:20.555"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 4,
+  "fields": {
+    "name": "Farook",
+    "created_at": "2026-04-26T10:12:20.559"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 5,
+  "fields": {
+    "name": "Kizhisseri",
+    "created_at": "2026-04-26T10:12:20.563"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 6,
+  "fields": {
+    "name": "Kondotty",
+    "created_at": "2026-04-26T10:12:20.567"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 7,
+  "fields": {
+    "name": "Kozhikode",
+    "created_at": "2026-04-26T10:12:20.572"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 8,
+  "fields": {
+    "name": "Manjeri",
+    "created_at": "2026-04-26T10:12:20.576"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 9,
+  "fields": {
+    "name": "Mavoor",
+    "created_at": "2026-04-26T10:12:20.581"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 10,
+  "fields": {
+    "name": "Ramanattukara",
+    "created_at": "2026-04-26T10:12:20.585"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 12,
+  "fields": {
+    "name": "Valluvambram",
+    "created_at": "2026-04-26T10:12:20.593"
+  }
+},
+{
+  "model": "staff.locality",
+  "pk": 13,
+  "fields": {
+    "name": "Kthiravattan",
+    "created_at": "2026-04-26T23:50:32.110"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 1,
+  "fields": {
+    "name": "Flora events",
+    "phone": "9747373502"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 2,
+  "fields": {
+    "name": "Evora events",
+    "phone": "+91 80868 52689"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 3,
+  "fields": {
+    "name": "Paradise events",
+    "phone": "+91 95268 55683"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 4,
+  "fields": {
+    "name": "Tasty events",
+    "phone": "+91 86066 33442"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 5,
+  "fields": {
+    "name": "Sea star",
+    "phone": "+91 98463 17155"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 6,
+  "fields": {
+    "name": "Dost events",
+    "phone": "+91 98462 62465"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 7,
+  "fields": {
+    "name": "Vp events",
+    "phone": "+91 98464 94991"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 8,
+  "fields": {
+    "name": "Sweets",
+    "phone": "+91 96339 61799"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 9,
+  "fields": {
+    "name": "Saukarayam events",
+    "phone": "+91 80861 17069"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 10,
+  "fields": {
+    "name": "Food world",
+    "phone": "96056 85288"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 11,
+  "fields": {
+    "name": "Elite events",
+    "phone": "+91 91882 30257"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 12,
+  "fields": {
+    "name": "Al Bakka",
+    "phone": "90487 56630"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 13,
+  "fields": {
+    "name": "Apsara events",
+    "phone": ""
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 14,
+  "fields": {
+    "name": "Safa events",
+    "phone": "90487 56630"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 15,
+  "fields": {
+    "name": "Mastan events",
+    "phone": "+91 80-75645207"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 16,
+  "fields": {
+    "name": "Aura events",
+    "phone": "+91 82810 17942"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 17,
+  "fields": {
+    "name": "Madeena event",
+    "phone": "+91 99475 63104"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 41,
+  "fields": {
+    "name": "Test Event",
+    "phone": ""
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 42,
+  "fields": {
+    "name": "aflah",
+    "phone": "9778106873"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 43,
+  "fields": {
+    "name": "flo",
+    "phone": "9778106863"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 44,
+  "fields": {
+    "name": "iyukterhgefwdqs",
+    "phone": "7025221609"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 45,
+  "fields": {
+    "name": "Test Event Unique",
+    "phone": "123"
+  }
+},
+{
+  "model": "bookings.client",
+  "pk": 46,
+  "fields": {
+    "name": "adnan",
+    "phone": "9778106873"
+  }
+}
+]
