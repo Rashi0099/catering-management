@@ -112,6 +112,8 @@ def staff_login(request):
         user = authenticate(request, username=staff_id, password=password)
         if user and user.is_active:
             login(request, user)
+            # Make session permanent (1 year)
+            request.session.set_expiry(60 * 60 * 24 * 365)
             # Force password change for new staff on first login
             if user.must_change_password:
                 messages.warning(request, 
@@ -240,8 +242,10 @@ def staff_dashboard(request):
     for b in available_bookings_qs:
         # 1. Level-specific Quota Check: Only show if there's a quota for user's level
         level_quota = 0
-        if me.level in ['captain', 'supervisor']:
+        if me.level == 'captain':
             level_quota = b.quota_captain
+        elif me.level == 'supervisor':
+            level_quota = b.quota_supervisor
         elif me.level == 'A':
             level_quota = b.quota_a
         elif me.level == 'B':
@@ -478,8 +482,11 @@ def staff_apply_booking(request, pk):
     approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
     is_full = False
     
-    if request.user.level in ['captain', 'supervisor']:
+    if request.user.level == 'captain':
         if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
+            is_full = True
+    elif request.user.level == 'supervisor':
+        if booking.quota_supervisor > 0 and approved_count >= booking.quota_supervisor:
             is_full = True
     elif request.user.level == 'A':
         if booking.quota_a > 0 and approved_count >= booking.quota_a:
@@ -531,8 +538,11 @@ def staff_apply_booking(request, pk):
                 approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
                 is_full = False
                 
-                if request.user.level in ['captain', 'supervisor']:
+                if request.user.level == 'captain':
                     if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
+                        is_full = True
+                elif request.user.level == 'supervisor':
+                    if booking.quota_supervisor > 0 and approved_count >= booking.quota_supervisor:
                         is_full = True
                 elif request.user.level == 'A':
                     if booking.quota_a > 0 and approved_count >= booking.quota_a:

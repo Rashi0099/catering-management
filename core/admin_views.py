@@ -27,6 +27,8 @@ def admin_login(request):
         user = authenticate(request, username=staff_id, password=password)
         if user and user.is_staff and user.is_active:
             login(request, user)
+            # Make session permanent (1 year)
+            request.session.set_expiry(60 * 60 * 24 * 365)
             # Optional: Force password change logic for admins too if needed
             if getattr(user, 'must_change_password', False):
                 messages.warning(request, '⚠️ You must change your default password.')

@@ -83,7 +83,7 @@ print(f"\nInvoice Items → {created_i} added, {skipped_i} skipped\n")
 # ── 3. TERMS & CONDITIONS ─────────────────────────────────────────────────────
 TERMS = [
     "ജോലി ചെയ്യുന്ന കമ്പനിയോട് വിശ്വസ്തതയും കൂറും പുലർത്തുന്നവർ ആയിരിക്കണം.",
-    "വർക്ക് ബുക്ക് ചെയ്താൽ നിർബന്ധമായും സൈറ്റിൽ എത്തണം. "ക്യാൻസലേഷൻ അനുവദിക്കുകയില്ല".",
+    "വർക്ക് ബുക്ക് ചെയ്താൽ നിർബന്ധമായും സൈറ്റിൽ എത്തണം. \"ക്യാൻസലേഷൻ അനുവദിക്കുകയില്ല\".",
     "കൃത്യമായ സമയത്ത് സൈറ്റിൽ എത്തുകയും ക്യാപ്റ്റൻ/സീനിയേഴ്സ് പറഞ്ഞതനുസരിച്ച് വർക്ക് ചെയ്യുകയും ചെയ്താൽ താങ്കളിലുള്ള വിശ്വാസം വർദ്ധിപ്പിക്കാൻ അത് കാരണമാകും.",
     "അച്ചടക്കമുള്ള നല്ല സ്റ്റാഫുകളെ വാർത്തെടുക്കാൻ മൂല്യനിർണയം നടത്തും.",
     "വർക്കിന് പ്രവേശിച്ചാൽ പിന്നീടുള്ള സമയങ്ങളിൽ മൊബൈലുകൾക്ക് ഏർപ്പെടുത്തിയ നിയന്ത്രണത്തിന് താങ്കൾ പൂർണ്ണമായും സഹകരിക്കണം.",
@@ -91,14 +91,17 @@ TERMS = [
     "കമ്പനി ഏൽപ്പിച്ച ക്യാപ്റ്റൻ ആയിരിക്കും സൈറ്റിനെ പൂർണ ചുമതല — ക്യാപ്റ്റൻ തരുന്ന നിർദ്ദേശങ്ങൾ പാലിക്കാൻ താങ്കൾ ബാധ്യസ്ഥനാണ്.",
 ]
 
-# Only add if no terms exist yet
-if TermAndCondition.objects.exists():
-    print(f"⏭  Terms already exist ({TermAndCondition.objects.count()} found), skipping.\n")
-else:
-    for i, text in enumerate(TERMS, start=1):
-        TermAndCondition.objects.create(text=text, order=i)
+created_t, skipped_t = 0, 0
+for i, text in enumerate(TERMS, start=1):
+    obj, created = TermAndCondition.objects.get_or_create(text=text, defaults={'order': i})
+    if created:
+        created_t += 1
         print(f"  ✅ Term {i}: {text[:60]}...")
-    print(f"\nTerms → {len(TERMS)} added\n")
+    else:
+        skipped_t += 1
+        print(f"  ⏭  Term already exists: {text[:60]}...")
+
+print(f"\nTerms → {created_t} added, {skipped_t} skipped\n")
 
 # ── 4. LOCALITIES ─────────────────────────────────────────────────────────────
 LOCALITIES = [

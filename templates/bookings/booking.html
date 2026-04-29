@@ -295,6 +295,11 @@
             <label>Service Area (Locality) *</label>
             <div style="position:relative;">
                 {{ staff_form.main_locality }}
+                <datalist id="locality-list">
+                  {% for loc in staff_form.localities %}
+                  <option value="{{ loc.name }}">
+                  {% endfor %}
+                </datalist>
             </div>
             <div class="invalid-feedback js-error-msg"></div>
           </div>

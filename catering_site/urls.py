@@ -18,4 +18,8 @@ urlpatterns = [
         template_name="firebase-messaging-sw.js", 
         content_type="application/javascript"
     ))),
+    path('sw.js', cache_control(no_cache=True, must_revalidate=True, max_age=0)(TemplateView.as_view(
+        template_name="sw.js", 
+        content_type="application/javascript"
+    ))),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

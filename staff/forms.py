@@ -24,7 +24,7 @@ class StaffApplicationForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (Optional)'}),
             'home_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Home Address / City'}),
             'education': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
-            'main_locality': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
+            'main_locality': forms.TextInput(attrs={'class': 'form-control', 'list': 'locality-list', 'placeholder': 'Select or type area'}),
             'coat_size': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
         }
 
@@ -35,10 +35,9 @@ class StaffApplicationForm(forms.ModelForm):
         
         from .models import Locality
         try:
-            locs = list(Locality.objects.values_list('name', 'name'))
+            self.localities = list(Locality.objects.all())
         except Exception:
-            locs = []
-        self.fields['main_locality'].choices = [('', 'Select Locality')] + locs
+            self.localities = []
 
     def clean_phone_1(self):
         phone = self.cleaned_data.get('phone_1')

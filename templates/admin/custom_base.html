@@ -341,6 +341,20 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body>
+  <div id="app-splash" style="position:fixed; inset:0; background:#0d0f14; z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity 0.5s ease, visibility 0.5s ease;">
+    <img src="{% static 'images/logo.png' %}" alt="Mastan Logo" style="width:110px; border-radius:15px; animation:splashPulse 1.2s infinite alternate;">
+    <h2 style="font-family:'Playfair Display',serif; color:#d4a852; margin-top:20px; font-size:1.4rem; letter-spacing:1px;">Mastan Admin</h2>
+  </div>
+  <style>
+    @keyframes splashPulse {
+      0% { transform: scale(0.95); opacity: 0.8; box-shadow: 0 0 0 rgba(212,168,82,0); }
+      100% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 25px rgba(212,168,82,0.3); }
+    }
+    body.app-loaded #app-splash { opacity: 0; visibility: hidden; pointer-events: none; }
+  </style>
+  <script>
+    window.addEventListener('load', function() { setTimeout(function() { document.body.classList.add('app-loaded'); }, 250); });
+  </script>
 <div id="nav-progress"></div>
 
 <!-- SIDEBAR OVERLAY -->
@@ -474,6 +488,19 @@
       <a href="{% static 'app/MastanAdmin.apk' %}" download id="pwa-install-btn" class="btn btn-secondary" style="display:inline-flex; font-size:0.78rem; padding:7px 14px; gap:6px;" title="Download Admin App">
         <i class="fas fa-download"></i> Download App
       </a>
+      <script>
+        // Hide download button when already running as installed app
+        (function(){
+          var isApp = window.matchMedia('(display-mode: standalone)').matches
+            || window.matchMedia('(display-mode: minimal-ui)').matches
+            || window.navigator.standalone === true
+            || document.referrer.startsWith('android-app://');
+          if (isApp) {
+            var btn = document.getElementById('pwa-install-btn');
+            if (btn) btn.style.display = 'none';
+          }
+        })();
+      </script>
       {% if request.resolver_match.url_name == 'admin_dashboard' or request.resolver_match.url_name == 'admin_bookings' %}
       <a href="{% url 'admin_create_booking' %}" class="btn btn-gold" id="global-new-booking-btn">
         <i class="fas fa-plus"></i> New Booking
@@ -584,9 +611,9 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register("{% url 'sw.js' %}")
-        .then(reg => console.log('SW Registered!', reg.scope))
-        .catch(err => console.error('SW Registration Failed!', err));
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('[SW] Admin SW registered', reg.scope))
+        .catch(err => console.warn('[SW] Admin SW registration failed', err));
     });
   }
 

@@ -148,16 +148,16 @@
   <div class="container">
     <div class="logo-wrap">
       <img src="{% static 'images/logo.png' %}" alt="Mastan Logo">
-      <h1>Mastan Staff App</h1>
-      <p>Mastan Catering & Services</p>
+      <h1>Mastan Apps</h1>
+      <p>Mastan Catering &amp; Services</p>
     </div>
 
-    <!-- Android -->
+    <!-- Android Staff App -->
     <div class="card">
       <div class="card-header">
         <div class="card-icon android-icon"><i class="fab fa-android"></i></div>
         <div>
-          <div class="card-title">Android</div>
+          <div class="card-title">Staff App — Android</div>
           <div class="card-sub">Native App — Browser-independent notifications</div>
         </div>
       </div>
@@ -168,21 +168,27 @@
         <li><span class="step-num">4</span> App open ചെയ്ത് login ചെയ്യൂ → <strong>Enable Notifications → Allow</strong></li>
       </ul>
       <a href="{% static 'app/MastanStaff.apk' %}" class="btn-download" download>
-        <i class="fab fa-android"></i> Download Android App (APK)
+        <i class="fab fa-android"></i> Download Staff App (APK)
       </a>
     </div>
 
-    <!-- Admin Android -->
+    <!-- Android Admin App -->
     <div class="card">
       <div class="card-header">
         <div class="card-icon android-icon" style="background: rgba(79, 70, 229, 0.15); color: #818cf8;"><i class="fas fa-user-shield"></i></div>
         <div>
-          <div class="card-title">Admin App</div>
-          <div class="card-sub">Management Portal</div>
+          <div class="card-title">Admin App — Android</div>
+          <div class="card-sub">Management Portal — Owners only</div>
         </div>
       </div>
-      <a href="{% static 'app/MastanAdmin.apk' %}" class="btn-download" download style="background: linear-gradient(135deg, #4f46e5, #3730a3);">
-        <i class="fab fa-android"></i> Download Admin APK
+      <ul class="steps">
+        <li><span class="step-num">1</span> Below ഉള്ള button tap ചെയ്ത് Admin APK download ചെയ്യൂ</li>
+        <li><span class="step-num">2</span> Downloaded file open ചെയ്ത് <strong>Install</strong> tap ചെയ്യൂ</li>
+        <li><span class="step-num">3</span> "Install anyway" വന്നാൽ confirm ചെയ്യൂ</li>
+        <li><span class="step-num">4</span> App open ചെയ്ത് Admin credentials ഉപയോഗിച്ച് login ചെയ്യൂ</li>
+      </ul>
+      <a href="{% static 'app/MastanAdmin.apk' %}" class="btn-download" download style="background: linear-gradient(135deg, #4f46e5, #3730a3); box-shadow: 0 4px 20px rgba(79,70,229,0.3);">
+        <i class="fab fa-android"></i> Download Admin App (APK)
       </a>
     </div>
 
@@ -191,13 +197,13 @@
       <div class="card-header">
         <div class="card-icon ios-icon"><i class="fab fa-apple"></i></div>
         <div>
-          <div class="card-title">iPhone</div>
+          <div class="card-title">iPhone — Staff App</div>
           <div class="card-sub">Add to Home Screen (iOS 16.4+)</div>
         </div>
       </div>
       <ul class="steps">
         <li><span class="step-num">1</span> iPhone-ൽ <strong>Safari</strong> browser open ചെയ്യൂ (Chrome ആകരുത്)</li>
-        <li><span class="step-num">2</span> <strong>mastan.in/staff/login/</strong> visit ചെയ്യൂ</li>
+        <li><span class="step-num">2</span> <a href="https://mastan.in/staff/login/" target="_blank" style="color:#d4a852; font-weight:600;">mastan.in/staff/login/</a> visit ചെയ്യൂ</li>
         <li><span class="step-num">3</span> Screen bottom-ൽ Share button <strong>📤</strong> tap ചെയ്യൂ</li>
         <li><span class="step-num">4</span> <strong>"Add to Home Screen"</strong> tap ചെയ്യൂ → Add</li>
         <li><span class="step-num">5</span> Home screen-ൽ app icon tap ചെയ്ത് open ചെയ്ത് <strong>Enable Notifications → Allow</strong></li>
@@ -209,7 +215,7 @@
     </div>
 
     <div class="footer">
-      Mastan Catering & Services &copy; 2024
+      Mastan Catering &amp; Services &copy; 2024
     </div>
   </div>
 </body>

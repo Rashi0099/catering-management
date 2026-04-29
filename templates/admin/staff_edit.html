@@ -104,12 +104,12 @@
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
           <label>Main Locality *</label>
-          <select name="main_locality" required>
-            <option value="" disabled {% if not member.main_locality %}selected{% endif %}>Select primary area</option>
+          <input type="text" name="main_locality" list="locality-list" value="{{ member.main_locality|default:'' }}" required placeholder="Select or type area"/>
+          <datalist id="locality-list">
             {% for loc in localities %}
-            <option value="{{ loc.name }}" {% if member.main_locality == loc.name %}selected{% endif %}>{{ loc.name }}</option>
+            <option value="{{ loc.name }}">
             {% endfor %}
-          </select>
+          </datalist>
         </div>
         <div class="form-group">
           <label>Home Address / City</label>

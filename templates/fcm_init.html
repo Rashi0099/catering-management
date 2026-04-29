@@ -151,9 +151,7 @@ function requestFCMToken(onDone) {
       if (perm !== 'granted') {
         // iOS/Android blocked by user
         showNotifToast(
-          '🔕 Notifications blocked. To enable them, go to your phone Settings → ' +
-          (/(iPhone|iPad|iPod)/.test(navigator.userAgent) ? 'Safari → Notifications' : 'App → Notifications') +
-          ' and allow for this site.',
+          '🔕 Notifications blocked. To enable them, go to your phone Settings → Apps → Mastan → Notifications and allow them.',
           'error', 10000
         );
         if (onDone) onDone(false);
@@ -207,7 +205,7 @@ function requestFCMToken(onDone) {
         let msg = '❌ Push setup failed.';
         const err = (e.message || e.code || '').toLowerCase();
         if (err.includes('permission') || err.includes('denied')) {
-          msg = '🔕 Notifications blocked — go to phone Settings → Chrome / Site → Allow Notifications, then retry.';
+          msg = '🔕 Notifications blocked — go to phone Settings → App Settings → Allow Notifications, then retry.';
         } else if (err.includes('network') || err.includes('fetch') || err.includes('offline')) {
           msg = '📶 No internet — check your connection and try again.';
         } else if (err.includes('service-worker') || err.includes('serviceworker') || err.includes('sw')) {
@@ -393,14 +391,8 @@ function requestFCMToken(onDone) {
   } else if (Notification.permission === 'default') {
     if (!isStandalone) {
 
-      // Wait 2s — if no install prompt fires, show Enable Notifications anyway
-
-      // (handles: app already installed but opened in browser, or unsupported browser)
-      setTimeout(() => {
-        if (!promptFired && !isStandalone) {
-          showEnableBtn();
-        }
-      }, 2000);
+      // No longer auto-showing button in browser to avoid confusion.
+      // Users should only see it when they are inside the App (standalone mode).
       return;
     }
     // Standalone mode — show Enable Notifications button safely after DOM is ready
