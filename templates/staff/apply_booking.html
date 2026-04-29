@@ -8,15 +8,18 @@
   .terms-modal {
     display: none; position: fixed; inset: 0; 
     background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-    z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+    z-index: 2000; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     animation: fadeIn 0.3s ease;
   }
   .terms-modal.active { display: flex; }
   .terms-modal-content {
     background: var(--surface); width: 100%; max-width: 600px;
-    max-height: 80vh; overflow-y: auto; border-radius: 16px;
+    border-radius: 16px; margin: auto;
     padding: 24px; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     position: relative; animation: slideUp 0.3s ease;
+    overscroll-behavior: contain;
   }
   .terms-close {
     position: absolute; top: 16px; right: 16px; cursor: pointer;
@@ -41,72 +44,109 @@
       <div class="panel-title">Event Details</div>
     </div>
     
-    <div style="margin-bottom:24px; padding:16px; background:var(--surface); border-radius:8px; border:1px solid var(--border);">
-      <h3 style="margin-bottom:12px; font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold);">{{ booking.get_event_type_display }}</h3>
-      <div style="display:flex; flex-direction:column; gap:8px; font-size:0.95rem;">
-        <div><i class="fas fa-calendar" style="width:20px; color:var(--muted);"></i> {{ booking.event_date|date:"D, d M Y" }}</div>
-        <div><i class="fas fa-clock" style="width:20px; color:var(--muted);"></i> {{ booking.event_time|default:"Time TBD"|time:"h:i A" }}</div>
-        <div><i class="fas fa-sun" style="width:20px; color:var(--muted);"></i> {{ booking.get_session_display }}</div>
-        <div>
-          <i class="fas fa-map-marker-alt" style="width:20px; color:var(--muted);"></i>
-          {% if booking.location_link %}
-            <a href="{{ booking.location_link }}" target="_blank" style="color:inherit; text-decoration:underline;">{{ booking.location_name|default:"Open Map Route" }}</a>
-          {% else %}
-            {{ booking.location_name|default:booking.venue|default:"Venue TBD" }}
-          {% endif %}
+    <div style="margin-bottom:24px;">
+      <!-- Event details card -->
+      <div style="margin-bottom:16px;">
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+          <!-- Date -->
+          <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
+            <i class="fas fa-calendar-alt" style="color:var(--teal); font-size:1.2rem; margin-bottom:8px;"></i>
+            <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Date</div>
+            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{{ booking.event_date|date:"d M y" }}</div>
+          </div>
+          
+          <!-- Time -->
+          <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
+            <i class="fas fa-clock" style="color:var(--blue); font-size:1.2rem; margin-bottom:8px;"></i>
+            <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Time</div>
+            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{% if booking.event_time %}{{ booking.event_time|time:"h:i A" }}{% else %}TBD{% endif %}</div>
+          </div>
+          
+          <!-- Session -->
+          <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
+            <i class="fas fa-sun" style="color:var(--orange); font-size:1.2rem; margin-bottom:8px;"></i>
+            <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Session</div>
+            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{{ booking.get_session_display }}</div>
+          </div>
         </div>
+      </div>
+
+      <!-- Location Box Simple -->
+      <div style="background:var(--surface); border-radius:12px; border:1px solid var(--border); padding:16px; margin-bottom:24px; display:flex; gap:16px; align-items:center;">
+        <div style="width:48px; height:48px; border-radius:12px; background:rgba(56, 201, 176, 0.1); border:1px solid rgba(56, 201, 176, 0.2); display:flex; align-items:center; justify-content:center; color:var(--teal); flex-shrink:0;">
+          <i class="fas fa-map-marker-alt" style="font-size:1.4rem;"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:2px;">Location</div>
+          <div style="font-size:1rem; font-weight:500; color:var(--text); line-height:1.4;">
+            {% if booking.location_link %}
+              <a href="{{ booking.location_link }}" target="_blank" style="color:var(--text); text-decoration:none;">
+                {{ booking.location_name|default:booking.venue|default:"Tap to open Map Route" }}
+              </a>
+            {% else %}
+              {{ booking.location_name|default:booking.venue|default:"Venue Details TBD" }}
+            {% endif %}
+          </div>
+        </div>
+        {% if booking.location_link %}
+        <a href="{{ booking.location_link }}" target="_blank" style="flex-shrink:0; background:rgba(56, 201, 176, 0.15); color:var(--teal); padding:10px 16px; border-radius:8px; border: 1px solid rgba(56, 201, 176, 0.3); text-decoration:none; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; transition:all 0.2s;">
+          <i class="fas fa-directions"></i> Direction
+        </a>
+        {% endif %}
       </div>
     </div>
 
     {% if booking.allow_direct_join %}
-    <div style="margin-bottom:20px; padding:16px; background:rgba(46, 204, 113, 0.1); border:1px solid rgba(46, 204, 113, 0.3); border-radius:8px; color:var(--green); text-align:center;">
-      <strong style="font-size:1.1rem; font-family:'Playfair Display',serif;">Direct Join Event</strong><br>
-      <span style="font-size:0.9rem;">Your application will be instantly approved! No waiting for admin confirmation.</span>
+    <div style="margin-bottom:20px; padding:12px; background:rgba(46, 204, 113, 0.1); border:1px solid rgba(46, 204, 113, 0.3); border-radius:12px; color:var(--green); text-align:center;">
+      <i class="fas fa-bolt" style="font-size:1.2rem; margin-bottom:6px; display:block;"></i>
+      <strong style="font-size:1.05rem; font-family:'Playfair Display',serif;">Direct Join Event</strong><br>
+      <span style="font-size:0.85rem; opacity:0.9; margin-top:2px; display:block;">Instant approval! No waiting for admin confirmation.</span>
     </div>
     {% else %}
-    <div style="margin-bottom:20px; padding:16px; background:rgba(66, 153, 225, 0.1); border:1px solid rgba(66, 153, 225, 0.3); border-radius:8px; color:var(--blue); text-align:center;">
-      <strong style="font-size:1.1rem; font-family:'Playfair Display',serif;">Admin Approval Required</strong><br>
-      <span style="font-size:0.9rem;">Your application will be reviewed by the office. You will see a "Confirmed" status on your dashboard once approved.</span>
+    <div style="margin-bottom:20px; padding:12px; background:rgba(66, 153, 225, 0.1); border:1px solid rgba(66, 153, 225, 0.3); border-radius:12px; color:var(--blue); text-align:center;">
+      <i class="fas fa-user-shield" style="font-size:1.2rem; margin-bottom:6px; display:block;"></i>
+      <strong style="font-size:1.05rem; font-family:'Playfair Display',serif;">Admin Approval Required</strong><br>
+      <span style="font-size:0.85rem; opacity:0.9; margin-top:2px; display:block;">Your application will be reviewed by the office.</span>
     </div>
     {% endif %}
 
-    <div class="panel-hdr">
-      <div class="panel-title">Your Application</div>
+    {% if is_double_work %}
+    <div style="margin-bottom:20px; padding:14px; background:rgba(251, 146, 60, 0.12); border:1px solid rgba(251, 146, 60, 0.4); border-radius:12px; color:#fb923c; text-align:center;">
+      <i class="fas fa-exclamation-triangle" style="font-size:1.3rem; margin-bottom:8px; display:block;"></i>
+      <strong style="font-size:1.05rem; font-family:'Playfair Display',serif;">⚠️ Double Work Detected!</strong><br>
+      <span style="font-size:0.85rem; opacity:0.95; margin-top:4px; display:block;">You already have another booking on <strong>{{ booking.event_date|date:"d M Y" }}</strong>. This application will be sent to <strong>Admin for review</strong> — you will not be auto-approved.</span>
     </div>
-    <form method="post">
+    {% endif %}
+
+    <div class="panel-hdr" style="margin-bottom:16px;">
+      <div class="panel-title" style="font-size:1.1rem;">Your Application</div>
+    </div>
+    <form method="post" style="background:var(--surface); border-radius:12px; border:1px solid var(--border); padding:20px;">
       {% csrf_token %}
-      <div class="form-group" style="margin-bottom:16px;">
-        <label style="display:block; margin-bottom:6px; font-weight:500;">Confirm Your Name *</label>
-        <input type="text" name="applicant_name" value="{{ user.full_name }}" required 
-               style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);"/>
-      </div>
-      
-      <div class="form-group" style="margin-bottom:16px;">
-        <label style="display:block; margin-bottom:6px; font-weight:500;">Active Phone Number *</label>
-        <input type="text" name="applicant_phone" value="{{ user.phone }}" required placeholder="e.g. 9744067400"
-               style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);"/>
+
+      <div class="form-group" style="margin-bottom:24px;">
+        <label style="display:block; margin-bottom:8px; font-weight:600; font-size:0.75rem; color:var(--muted); letter-spacing:0.05em;">NOTE FOR ADMIN (OPTIONAL)</label>
+        <div style="position:relative;">
+          <i class="fas fa-comment-dots" style="position:absolute; left:14px; top:16px; color:var(--muted); font-size:0.9rem;"></i>
+          <textarea name="note" rows="3" placeholder="Add a note here..."
+                    style="width:100%; padding:12px 12px 12px 40px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-size:0.95rem;"></textarea>
+        </div>
       </div>
 
-      <div class="form-group" style="margin-bottom:20px;">
-        <label style="display:block; margin-bottom:6px; font-weight:500;">Note for Admin (Optional)</label>
-        <textarea name="note" rows="3" placeholder="Add a note here..."
-                  style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);"></textarea>
-      </div>
-
-      <div class="form-group" style="margin-bottom:20px;">
-        <label style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
-          <input type="checkbox" name="agree_terms" required style="width:20px; height:20px; accent-color:var(--gold);">
-          <span style="font-size:0.9rem; font-weight:normal; text-transform:none; letter-spacing:normal;">
-            I agree to the <a href="{% url 'staff_terms' %}" onclick="openTermsModal(event)" style="color:var(--gold);text-decoration:underline;">Terms & Conditions</a>
+      <div class="form-group" style="margin-bottom:24px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:8px;">
+        <label style="display:flex; align-items:center; gap:12px; cursor:pointer; margin:0;">
+          <input type="checkbox" id="termsCheck" name="agree_terms" required style="width:20px; height:20px; accent-color:var(--gold); margin:0;">
+          <span style="font-size:0.88rem; font-weight:normal; text-transform:none; letter-spacing:normal; color:#ddd; line-height:1.4;">
+            I agree to the <a href="{% url 'staff_terms' %}" onclick="openTermsModal(event)" style="color:var(--gold);text-decoration:underline;font-weight:500;">Terms & Conditions</a>
           </span>
         </label>
       </div>
 
-      <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; padding:12px; font-size:1.05rem; {% if booking.allow_direct_join %}background:var(--green);border-color:var(--green);{% else %}background:var(--blue);border-color:var(--blue);{% endif %} color:white;">
+      <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; padding:14px; font-size:1.05rem; letter-spacing:0.05em; {% if booking.allow_direct_join %}background:linear-gradient(135deg, #10b981, #059669);border:none;{% else %}background:linear-gradient(135deg, #3b82f6, #2563eb);border:none;{% endif %} color:white; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.3);">
         {% if booking.allow_direct_join %}
-          Join Event
+          <i class="fas fa-check-circle" style="margin-right:6px;"></i> Join Event
         {% else %}
-          Submit Application for Approval
+          <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Apply for Event
         {% endif %}
       </button>
     </form>
@@ -115,43 +155,92 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Terms Modal -->
+<div id="termsModal" class="terms-modal">
+  <div class="terms-modal-content" style="max-height: 85vh; display: flex; flex-direction: column; padding: 20px;">
+    <div style="font-family:'Cormorant Garamond',serif; font-size:1.6rem; font-weight:600; color:var(--gold); margin-bottom:12px; line-height:1.3; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-shrink: 0;">
+      Terms & Conditions
+    </div>
+    
+    <div id="termsScrollBox" style="font-size:0.95rem; line-height:1.6; color:var(--text); overflow-y: auto; padding-right: 5px; flex-grow: 1; -webkit-overflow-scrolling: touch;">
+      <div style="margin-bottom:15px; font-weight:600; color:var(--gold);">MASTAN കാറ്ററിങ് മാനേജ്മെന്റിൽ.. പാർടൈമായും ജോലി ചെയ്യാനുള്ള "ഉപാധികളും നിബന്ധനകളും"</div>
+      {% if terms %}
+      <ol style="padding-left:18px; margin-bottom: 0;">
+        {% for term in terms %}
+        <li style="margin-bottom:10px;">{{ term.text }}</li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p style="color:var(--muted); font-style:italic;">No terms have been set yet. Please contact the admin.</p>
+      {% endif %}
+      <!-- Small spacer so they literally have to scroll to the very end -->
+      <div style="height: 30px;"></div>
+    </div>
+    
+    <div style="margin-top:12px; padding-top: 12px; border-top: 1px solid var(--border); text-align:right; display:flex; justify-content:flex-end; gap:10px; flex-shrink: 0;">
+      <button type="button" id="understandBtn" class="btn btn-gold" onclick="closeTermsModal()" disabled style="flex: 1; justify-content: center; font-size: 1.05rem; padding: 12px; opacity: 0.5; filter: grayscale(100%); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: not-allowed;">
+        <i class="fas fa-arrow-down" id="understandIcon" style="margin-right: 8px;"></i>
+        <span id="understandText" style="letter-spacing: 0.03em;">Scroll down to Agree</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
+let termsAccepted = false;
+const tb = document.getElementById('termsScrollBox');
+const uBtn = document.getElementById('understandBtn');
+const uIcon = document.getElementById('understandIcon');
+const uText = document.getElementById('understandText');
+
 function openTermsModal(e) {
   if (e) e.preventDefault();
   document.getElementById('termsModal').classList.add('active');
   document.body.style.overflow = 'hidden';
+  
+  // Re-check scroll on open in case it's a small screen that fits all
+  setTimeout(checkTermsScroll, 100);
 }
+
 function closeTermsModal() {
+  if (!termsAccepted) return; // Prevent closing if not accepted
   document.getElementById('termsModal').classList.remove('active');
   document.body.style.overflow = 'auto';
+  
+  // Auto-check terms checkbox if it exists on the main page form
+  const cb = document.getElementById('termsCheck');
+  if(cb) cb.checked = true;
 }
-// Close on click outside
+
+function checkTermsScroll() {
+  if (termsAccepted) return;
+  // If content height is smaller than container, auto accept
+  if (tb.scrollHeight <= tb.clientHeight + 1) {
+      acceptTerms();
+      return;
+  }
+  // If scrolled to bottom
+  if (tb.scrollHeight - tb.scrollTop <= tb.clientHeight + 20) {
+      acceptTerms();
+  }
+}
+
+function acceptTerms() {
+    termsAccepted = true;
+    uBtn.disabled = false;
+    uBtn.style.opacity = '1';
+    uBtn.style.filter = 'grayscale(0%)';
+    uBtn.style.cursor = 'pointer';
+    uBtn.classList.add('pulse-anim'); // Add a small visual bounce if needed
+    uIcon.className = 'fas fa-check-circle';
+    uText.innerText = 'I Understand & Agree';
+}
+
+tb.addEventListener('scroll', checkTermsScroll);
+
+// Close on click outside ONLY IF accepted
 document.getElementById('termsModal').addEventListener('click', function(e) {
-  if (e.target === this) closeTermsModal();
+  if (e.target === this && termsAccepted) closeTermsModal();
 });
 </script>
-
-<!-- Terms Modal -->
-<div id="termsModal" class="terms-modal">
-  <div class="terms-modal-content">
-    <div class="terms-close" onclick="closeTermsModal()"><i class="fas fa-times"></i></div>
-    <div style="font-family:'Cormorant Garamond',serif; font-size:1.6rem; font-weight:600; color:var(--gold); margin-bottom:18px; padding-right:40px; line-height:1.3;">
-      Terms & Conditions
-    </div>
-    <div style="font-size:0.95rem; line-height:1.6; color:var(--text);">
-      <div style="margin-bottom:15px; font-weight:600; color:var(--gold);">MASTAN'S കാറ്ററിങ് മാനേജ്മെന്റിൽ.. പാർടൈമായും ജോലി ചെയ്യാനുള്ള "ഉപാധികളും നിബന്ധനകളും"</div>
-      <ol style="padding-left:18px;">
-        <li style="margin-bottom:10px;">ജോലി ചെയ്യുന്ന കമ്പനിയോട് വിശ്വസ്തതയും കൂറും പുലർത്തുന്നവർ ആയിരിക്കണം. വർക്ക് ബുക്ക് ചെയ്താൽ നിർബന്ധമായും സൈറ്റിൽ എത്തണം. <b style="color:var(--red);">"ക്യാൻസലേഷൻ അനുവദിക്കുകയില്ല"</b>.</li>
-        <li style="margin-bottom:10px;">കൃത്യമായ സമയത്ത് സൈറ്റിൽ എത്തുകയും ക്യാപ്റ്റൻ/സീനിയേഴ്സ് പറഞ്ഞതനുസരിച്ച് വർക്ക് ചെയ്യുകയും ചെയ്താൽ താങ്കളിലുള്ള വിശ്വാസം വർദ്ധിപ്പിക്കാൻ അത് കാരണമാകും.</li>
-        <li style="margin-bottom:10px;">അച്ചടക്കമുള്ള നല്ല സ്റ്റാഫുകളെ വാർത്തെടുക്കാൻ മൂല്യനിർണയം നടത്തും. വർക്കിന് പ്രവേശിച്ചാൽ പിന്നീടുള്ള സമയങ്ങളിൽ മൊബൈലുകൾക്ക് ഏർപ്പെടുത്തിയ നിയന്ത്രണത്തിന് താങ്കൾ പൂർണ്ണമായും സഹകരിക്കണം.</li>
-        <li style="margin-bottom:10px;">റിപ്പോർട്ടിംഗ് മുതൽ ഡിസ്പോസൽ വരെ താങ്കളുടെ ഉത്തരവാദിത്വം കമ്പനിക്ക് ആയിരിക്കും.</li>
-        <li style="margin-bottom:10px;">കമ്പനി ഏൽപ്പിച്ച ക്യാപ്റ്റൻ ആയിരിക്കും സൈറ്റിനെ പൂർണ ചുമതല. ക്യാപ്റ്റൻ തരുന്ന നിർദ്ദേശങ്ങൾ പാലിക്കാൻ താങ്കൾ ബാധ്യസ്ഥനാണ്.</li>
-      </ol>
-    </div>
-    <div style="margin-top:24px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
-      <button type="button" class="btn btn-ghost btn-sm" onclick="closeTermsModal()" style="color:var(--muted);">← Back</button>
-      <button type="button" class="btn btn-gold btn-sm" onclick="closeTermsModal()">I Understand</button>
-    </div>
-  </div>
-</div>
 {% endblock %}

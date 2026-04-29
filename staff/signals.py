@@ -11,13 +11,14 @@ def notify_admin_new_application(sender, instance, created, **kwargs):
     """Notify Admin via Email when a new staff application is received."""
     if created:
         subject = f"🆕 New Staff Application: {instance.full_name}"
+        dob = instance.date_of_birth.strftime('%Y-%m-%d') if instance.date_of_birth else 'N/A'
         message = (
             f"A new staff application has been received.\n\n"
             f"Name: {instance.full_name}\n"
             f"Phone: {instance.phone_1}\n"
             f"Locality: {instance.main_locality}\n"
-            f"Age: {instance.age}\n\n"
-            f"Review in Admin: /admin/staff/staffapplication/{instance.pk}/change/"
+            f"DOB: {dob}\n\n"
+            f"Review in Admin: /admin-panel/staff-applications/"
         )
         send_mail(
             subject, message, settings.EMAIL_HOST_USER, 
@@ -33,7 +34,7 @@ def notify_admin_promotion_request(sender, instance, created, **kwargs):
             f"{instance.staff.full_name} has requested a promotion.\n"
             f"Current Level: {instance.current_level}\n"
             f"Requested Level: {instance.requested_level}\n\n"
-            f"Review in Admin: /admin/staff/promotionrequest/{instance.pk}/change/"
+            f"Review in Admin: /admin-panel/staff-promotions/"
         )
         send_mail(
             subject, message, settings.EMAIL_HOST_USER, 
@@ -47,8 +48,8 @@ def notify_admin_on_staff_application(sender, instance, created, **kwargs):
     if created:
         notify_admins(
             title="👤 New Staff Application",
-            body=f"{instance.full_name} applied to join the team from {instance.place}.",
-            link="/admin-panel/staff/applications/"
+            body=f"{instance.full_name} applied to join the team from {instance.home_address}.",
+            link="/admin-panel/staff-applications/"
         )
 
 @receiver(post_save, sender=PromotionRequest)
@@ -56,8 +57,8 @@ def notify_admin_on_promotion_request(sender, instance, created, **kwargs):
     if created:
         notify_admins(
             title="⭐ Promotion Request",
-            body=f"{instance.staff.first_name} wants to upgrade from {instance.get_current_level_display()} to {instance.get_requested_level_display()}.",
-            link="/admin-panel/staff/promotions/"
+            body=f"{instance.staff.first_name} wants to upgrade from {instance.current_level} to {instance.requested_level}.",
+            link="/admin-panel/staff-promotions/"
         )
 
 @receiver(post_save, sender=StaffNotice)

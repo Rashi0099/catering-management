@@ -1,0 +1,2874 @@
+diff --git a/bookings/models.py b/bookings/models.py
+index b6063d7..5bae47f 100644
+--- a/bookings/models.py
++++ b/bookings/models.py
+@@ -5,6 +5,14 @@ from django.dispatch import receiver
+ from django.core.cache import cache
+ 
+ 
++class Client(models.Model):
++    name = models.CharField(max_length=255, unique=True)
++    phone = models.CharField(max_length=20, blank=True)
++
++    def __str__(self):
++        return self.name
++
++
+ class Booking(models.Model):
+     STATUS_CHOICES = [
+         ('pending',     'Pending'),
+@@ -61,10 +69,11 @@ class Booking(models.Model):
+     amount_pending  = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+ 
+     # Quotas & Visibility
+-    quota_captain = models.PositiveIntegerField(default=0, help_text="Number of Captains needed")
+-    quota_a       = models.PositiveIntegerField(default=0, help_text="Number of A-Level staff needed")
+-    quota_b       = models.PositiveIntegerField(default=0, help_text="Number of B-Level staff needed")
+-    quota_c       = models.PositiveIntegerField(default=0, help_text="Number of C-Level staff needed")
++    quota_captain    = models.PositiveIntegerField(default=0, help_text="Number of Captains needed")
++    quota_supervisor = models.PositiveIntegerField(default=0, help_text="Number of Supervisors needed")
++    quota_a          = models.PositiveIntegerField(default=0, help_text="Number of A-Level staff needed")
++    quota_b          = models.PositiveIntegerField(default=0, help_text="Number of B-Level staff needed")
++    quota_c          = models.PositiveIntegerField(default=0, help_text="Number of C-Level staff needed")
+     is_long_work  = models.BooleanField(default=False, help_text="Checked if the venue is >20km from the main office")
+     is_published  = models.BooleanField(default=False, help_text="If True, staff can see and apply for this event")
+     allow_direct_join = models.BooleanField(default=False, help_text="If True, staff can join instantly without admin approval.")
+@@ -115,6 +124,14 @@ class Booking(models.Model):
+ 
+         super().save(*args, **kwargs)
+         
++        # Sync to Client model to keep autocomplete populated
++        if self.name:
++            from bookings.models import Client
++            client, created = Client.objects.get_or_create(name=self.name)
++            if self.phone and client.phone != self.phone:
++                client.phone = self.phone
++                client.save(update_fields=['phone'])
++        
+         if newly_published:
+             self._notify_staff_published()
+         elif details_updated:
+@@ -213,7 +230,7 @@ class Booking(models.Model):
+             {"name": "Closing responsibility", "desc": ""}
+         ]
+         
+-        from .models import EventTask
++        # EventTask is defined in this module
+         for task in default_tasks:
+             EventTask.objects.create(booking=self, task_name=task["name"], description=task["desc"])
+ 
+diff --git a/core/admin_urls.py b/core/admin_urls.py
+index fb5551d..05e1919 100644
+--- a/core/admin_urls.py
++++ b/core/admin_urls.py
+@@ -12,6 +12,9 @@ urlpatterns = [
+     path('bookings/<int:pk>/',            admin_views.booking_detail,        name='admin_booking_detail'),
+     path('bookings/<int:pk>/edit/',       admin_views.admin_edit_booking,    name='admin_edit_booking'),
+     path('bookings/<int:pk>/publish/',    admin_views.admin_publish_booking, name='admin_publish_booking'),
++    path('bookings/<int:pk>/ajax-update/', admin_views.admin_ajax_update_booking_field, name='admin_ajax_update_booking_field'),
++    path('bookings/<int:pk>/quick-update-quota/', admin_views.admin_quick_update_quota, name='admin_quick_update_quota'),
++    path('bookings/<int:pk>/attendance/ajax-update/', admin_views.admin_ajax_update_attendance_field, name='admin_ajax_update_attendance_field'),
+     path('bookings/<int:pk>/download-attendance/', admin_views.download_attendance, name='admin_download_attendance'),
+     path('bookings/<int:pk>/status/',     admin_views.update_booking_status, name='admin_update_status'),
+ 
+@@ -47,6 +50,7 @@ urlpatterns = [
+ 
+     # Reports & Invoice
+     path('reports/',                      admin_views.admin_reports,         name='admin_reports'),
++    path('reports/pdf/',                  admin_views.admin_reports_pdf,     name='admin_reports_pdf'),
+     path('reports/event-reports/',        admin_views.event_reports_list,    name='admin_event_reports'),
+     path('reports/event-reports/<int:pk>/', admin_views.event_report_detail,  name='admin_event_report_detail'),
+     path('reports/add/',                  admin_views.admin_report_add,      name='admin_report_add'),
+@@ -54,4 +58,5 @@ urlpatterns = [
+     path('reports/<int:pk>/delete/',      admin_views.admin_report_delete,   name='admin_report_delete'),
+     path('invoice/manual/',               admin_views.manual_invoice,         name='admin_manual_invoice'),
+     path('invoice/download/',             admin_views.download_invoice_pdf,   name='admin_download_invoice_pdf'),
++    path('api/clients/',                  admin_views.api_get_clients,      name='admin_api_clients'),
+ ]
+diff --git a/core/admin_views.py b/core/admin_views.py
+index 7b1cf6b..6260715 100644
+--- a/core/admin_views.py
++++ b/core/admin_views.py
+@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
+ def admin_required(view_func):
+     return user_passes_test(lambda u: u.is_authenticated and u.is_staff, login_url='/admin-panel/login/')(view_func)
+ from django.http import JsonResponse, HttpResponse
++from django.views.decorators.http import require_POST
+ from django.db.models import Count, Sum, Q
+ from django.utils import timezone
+ from datetime import timedelta
+@@ -161,13 +162,53 @@ def booking_detail(request, pk):
+             # Fix 3: If quoted_price changed, recalculate payment totals immediately
+             if booking.quoted_price != old_quoted_price:
+                 BookingPayment._recalc_booking_totals_for(booking)
+-            # Assign staff
+-            staff_ids = request.POST.getlist('assigned_to')
+-            booking.assigned_to.set(staff_ids)
++            # Assign staff & Dynamic Quota Adjustment
++            old_assigned_ids = set(booking.assigned_to.values_list('id', flat=True))
++            new_assigned_ids = set(map(int, request.POST.getlist('assigned_to')))
++            
++            added_ids = new_assigned_ids - old_assigned_ids
++            removed_ids = old_assigned_ids - new_assigned_ids
++            
++            quota_changed = False
++            if added_ids:
++                added_staff = Staff.objects.filter(id__in=added_ids)
++                for s in added_staff:
++                    role_key = s.level
++                    if role_key == 'supervisor':
++                        filled = booking.assigned_to.filter(level='supervisor').count() + 1
++                        if (booking.quota_supervisor or 0) < filled: booking.quota_supervisor = filled
++                    elif role_key == 'captain':
++                        filled = booking.assigned_to.filter(level='captain').count() + 1
++                        if (booking.quota_captain or 0) < filled: booking.quota_captain = filled
++                    elif role_key == 'A':
++                        filled = booking.assigned_to.filter(level='A').count() + 1
++                        if (booking.quota_a or 0) < filled: booking.quota_a = filled
++                    elif role_key == 'B':
++                        filled = booking.assigned_to.filter(level='B').count() + 1
++                        if (booking.quota_b or 0) < filled: booking.quota_b = filled
++                    elif role_key == 'C':
++                        filled = booking.assigned_to.filter(level='C').count() + 1
++                        if (booking.quota_c or 0) < filled: booking.quota_c = filled
++                quota_changed = True
++            
++            if removed_ids:
++                removed_staff = Staff.objects.filter(id__in=removed_ids)
++                for s in removed_staff:
++                    if s.level == 'captain': booking.quota_captain = max(0, (booking.quota_captain or 0) - 1)
++                    elif s.level == 'supervisor': booking.quota_supervisor = max(0, (booking.quota_supervisor or 0) - 1)
++                    elif s.level == 'A': booking.quota_a = max(0, (booking.quota_a or 0) - 1)
++                    elif s.level == 'B': booking.quota_b = max(0, (booking.quota_b or 0) - 1)
++                    elif s.level == 'C': booking.quota_c = max(0, (booking.quota_c or 0) - 1)
++                quota_changed = True
++            
++            if quota_changed:
++                booking.save(update_fields=['quota_captain', 'quota_supervisor', 'quota_a', 'quota_b', 'quota_c'])
++                
++            booking.assigned_to.set(new_assigned_ids)
+             
+             # Event completion tracking
+             if old_status != 'completed' and booking.status == 'completed':
+-                for staff_id in staff_ids:
++                for staff_id in new_assigned_ids:
+                     s = Staff.objects.get(id=staff_id)
+                     # Use .count() to stay in sync — never += 1 which can drift
+                     s.total_events_completed = s.bookings.filter(status='completed').count()
+@@ -188,9 +229,9 @@ def booking_detail(request, pk):
+             # Sync EventApplication statuses based on manual assignment changes
+             from bookings.models import EventApplication
+             # If manually added to event, mark any pending app as approved
+-            EventApplication.objects.filter(booking=booking, staff_id__in=staff_ids, status='pending').update(status='approved')
++            EventApplication.objects.filter(booking=booking, staff_id__in=new_assigned_ids, status='pending').update(status='approved')
+             # If manually removed from event, mark any cancel_request as cancelled
+-            EventApplication.objects.filter(booking=booking, status='cancel_requested').exclude(staff_id__in=staff_ids).update(status='cancelled')
++            EventApplication.objects.filter(booking=booking, status='cancel_requested').exclude(staff_id__in=new_assigned_ids).update(status='cancelled')
+             
+             messages.success(request, 'Booking updated!')
+         elif action == 'add_payment':
+@@ -204,35 +245,10 @@ def booking_detail(request, pk):
+                 notes       = request.POST.get('notes', ''),
+             )
+             messages.success(request, f'Payment of Rs.{request.POST["amount"]} recorded!')
+-        
+         elif action == 'mark_attendance':
+-            from staff.models import StaffAttendance
+-            staff_ids = request.POST.getlist('attendance_staff_id')
+-            for sid in staff_ids:
+-                status = request.POST.get(f'attendance_status_{sid}', 'present')
+-                r_time = request.POST.get(f'reaching_time_{sid}') or None
+-                on_time = request.POST.get(f'on_time_{sid}') == 'on'
+-                shoes = request.POST.get(f'shoes_{sid}') == 'on'
+-                uniform = request.POST.get(f'uniform_{sid}') == 'on'
+-                grooming = request.POST.get(f'grooming_{sid}') == 'on'
+-                payment_given = request.POST.get(f'payment_given_{sid}') == 'on'
+-                
+-                att, created = StaffAttendance.objects.get_or_create(
+-                    booking=booking,
+-                    staff_id=sid,
+-                    date=booking.event_date,
+-                    defaults={'status': status, 'reaching_time': r_time, 'on_time': on_time, 'shoes': shoes, 'uniform': uniform, 'grooming': grooming, 'payment_given': payment_given}
+-                )
+-                if not created:
+-                    att.status = status
+-                    att.reaching_time = r_time
+-                    att.on_time = on_time
+-                    att.shoes = shoes
+-                    att.uniform = uniform
+-                    att.grooming = grooming
+-                    att.payment_given = payment_given
+-                    att.save()
+-            messages.success(request, 'Attendance and fines saved successfully!')
++            # Attendance is now handled via AJAX. 
++            # Keeping this block empty to prevent errors if a legacy POST occurs.
++            pass
+ 
+         return redirect('admin_booking_detail', pk=pk)
+ 
+@@ -255,17 +271,32 @@ def booking_detail(request, pk):
+     
+     assigned_staff_with_att = []
+     coat_counts = {'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0}
+-    filled_counts = {'captain': 0, 'A': 0, 'B': 0, 'C': 0}
++    filled_counts = {'supervisor': 0, 'captain': 0, 'A': 0, 'B': 0, 'C': 0}
++    total_quota = (booking.quota_supervisor or 0) + (booking.quota_captain or 0) + \
++                  (booking.quota_a or 0) + (booking.quota_b or 0) + (booking.quota_c or 0)
++    total_filled = 0
+ 
+     for s in booking.assigned_to.all():
+-        if s.coat_size and s.coat_size in coat_counts:
+-            coat_counts[s.coat_size] += 1
++        if s.level not in ['captain', 'supervisor']:
++            if s.coat_size and s.coat_size in coat_counts:
++                coat_counts[s.coat_size] += 1
+         
+         # Calculate filled counts by level
+-        if s.level == 'captain': filled_counts['captain'] += 1
+-        elif s.level == 'A': filled_counts['A'] += 1
+-        elif s.level == 'B': filled_counts['B'] += 1
+-        elif s.level == 'C': filled_counts['C'] += 1
++        if s.level == 'supervisor': 
++            filled_counts['supervisor'] += 1
++            total_filled += 1
++        elif s.level == 'captain': 
++            filled_counts['captain'] += 1
++            total_filled += 1
++        elif s.level == 'A': 
++            filled_counts['A'] += 1
++            total_filled += 1
++        elif s.level == 'B': 
++            filled_counts['B'] += 1
++            total_filled += 1
++        elif s.level == 'C': 
++            filled_counts['C'] += 1
++            total_filled += 1
+ 
+         app = applications_map.get(s.id)
+         phone = app.applicant_phone if app and app.applicant_phone else s.phone
+@@ -284,6 +315,7 @@ def booking_detail(request, pk):
+         'grouped_staff': grouped_staff,
+         'coat_counts': coat_counts,
+         'filled_counts': filled_counts,
++        'total_quota': total_quota,
+         'total_filled': len(assigned_staff_with_att),
+         'attendance_map': attendance_map,
+         'assigned_staff_with_att': assigned_staff_with_att,
+@@ -315,6 +347,250 @@ def download_attendance(request, pk):
+     return response
+ 
+ 
++@admin_required
++def admin_quick_update_quota(request, pk):
++    from django.http import JsonResponse
++    if request.method != 'POST':
++        return JsonResponse({'status': 'error', 'message': 'Only POST allowed'}, status=405)
++    
++    booking = get_object_or_404(Booking, pk=pk)
++    role = request.POST.get('role')
++    delta = request.POST.get('delta') # +1 or -1
++    
++    if not role or delta is None:
++        return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
++    
++    try:
++        d = int(delta)
++        
++        # Current DB value
++        if role == 'captain':
++            current_quota = booking.quota_captain
++            filled = booking.assigned_to.filter(level='captain').count()
++        elif role == 'supervisor':
++            current_quota = booking.quota_supervisor
++            filled = booking.assigned_to.filter(level='supervisor').count()
++        elif role in ['a', 'b', 'c']:
++            current_quota = getattr(booking, f'quota_{role}')
++            filled = booking.assigned_to.filter(level=role.upper()).count()
++        else: 
++            return JsonResponse({'status': 'error', 'message': 'Invalid role'}, status=400)
++            
++        new_val = current_quota + d
++        
++        # Floor check
++        if d < 0 and new_val < filled:
++            return JsonResponse({
++                'status': 'error', 
++                'message': f'Cannot decrease {role.upper()} quota below {filled} (currently assigned).'
++            }, status=400)
++        
++        if d > 0 and new_val < filled + 1:
++            new_val = filled + 1
++            
++        if role == 'captain': booking.quota_captain = new_val
++        elif role == 'supervisor': booking.quota_supervisor = new_val
++        else: setattr(booking, f'quota_{role}', new_val)
++        
++        update_field = f'quota_{role}' if role != 'captain' else 'quota_captain'
++        booking.save(update_fields=[update_field])
++        
++        total = (booking.quota_captain or 0) + (booking.quota_supervisor or 0) + \
++                (booking.quota_a or 0) + (booking.quota_b or 0) + (booking.quota_c or 0)
++        return JsonResponse({'status': 'success', 'new_val': new_val, 'total': total})
++    except Exception as e:
++        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
++
++
++@admin_required
++@require_POST
++def admin_ajax_update_booking_field(request, pk):
++    booking = get_object_or_404(Booking, pk=pk)
++    field_name = request.POST.get('field')
++    value = request.POST.get('value')
++    
++    allowed_fields = [
++        'status', 'quoted_price', 'admin_notes', 
++        'dietary_requirements', 'message', 'venue', 
++        'event_time', 'budget', 'guest_count', 'assigned_to'
++    ]
++    
++    if field_name not in allowed_fields:
++        return JsonResponse({'status': 'error', 'message': f'Field {field_name} not allowed'}, status=400)
++    
++    try:
++        msg = "Updated successfully"
++        if field_name == 'quoted_price':
++            setattr(booking, field_name, float(value) if value else None)
++        elif field_name in ['budget', 'guest_count']:
++            setattr(booking, field_name, int(value) if value else 0)
++        elif field_name == 'assigned_to':
++            sub_action = request.POST.get('sub_action', 'add')
++            staff_id = value
++            if staff_id:
++                try:
++                    from bookings.models import EventApplication
++                    s = Staff.objects.get(id=staff_id)
++                    if sub_action == 'add':
++                        booking.assigned_to.add(s)
++                        msg = f"Added {s.full_name} to event!"
++                        
++                        # Auto-adjust quota if it's exceeded
++                        role_key = s.level
++                        if role_key == 'supervisor':
++                            filled = booking.assigned_to.filter(level='supervisor').count()
++                            if (booking.quota_supervisor or 0) < filled: booking.quota_supervisor = filled
++                        elif role_key == 'captain':
++                            filled = booking.assigned_to.filter(level='captain').count()
++                            if (booking.quota_captain or 0) < filled: booking.quota_captain = filled
++                        elif role_key == 'A':
++                            filled = booking.assigned_to.filter(level='A').count()
++                            if (booking.quota_a or 0) < filled: booking.quota_a = filled
++                        elif role_key == 'B':
++                            filled = booking.assigned_to.filter(level='B').count()
++                            if (booking.quota_b or 0) < filled: booking.quota_b = filled
++                        elif role_key == 'C':
++                            filled = booking.assigned_to.filter(level='C').count()
++                            if (booking.quota_c or 0) < filled: booking.quota_c = filled
++                        
++                        booking.save(update_fields=['quota_captain', 'quota_supervisor', 'quota_a', 'quota_b', 'quota_c'])
++                        
++                        # Mark pending apps as approved
++                        EventApplication.objects.filter(booking=booking, staff=s, status='pending').update(status='approved')
++                        
++                    else:
++                        booking.assigned_to.remove(s)
++                        msg = f"Removed {s.full_name} from event"
++                        
++                        # Auto-decrease quota
++                        if s.level == 'captain': booking.quota_captain = max(0, (booking.quota_captain or 0) - 1)
++                        elif s.level == 'supervisor': booking.quota_supervisor = max(0, (booking.quota_supervisor or 0) - 1)
++                        elif s.level == 'A': booking.quota_a = max(0, (booking.quota_a or 0) - 1)
++                        elif s.level == 'B': booking.quota_b = max(0, (booking.quota_b or 0) - 1)
++                        elif s.level == 'C': booking.quota_c = max(0, (booking.quota_c or 0) - 1)
++                        
++                        booking.save(update_fields=['quota_captain', 'quota_supervisor', 'quota_a', 'quota_b', 'quota_c'])
++                        
++                        # Mark cancel requests as cancelled
++                        EventApplication.objects.filter(booking=booking, staff=s, status='cancel_requested').update(status='cancelled')
++                        
++                except Staff.DoesNotExist:
++                    return JsonResponse({'status': 'error', 'message': 'Staff not found'}, status=404)
++            else:
++                return JsonResponse({'status': 'error', 'message': 'No staff ID provided'}, status=400)
++        else:
++            setattr(booking, field_name, value)
++            
++        if field_name == 'assigned_to':
++            pass # Already saved through model relations and update_fields above
++        else:
++            booking.save(update_fields=[field_name])
++            
++        # Recalculate filled counts for response
++        counts = {
++            'supervisor': booking.assigned_to.filter(level='supervisor').count(),
++            'captain': booking.assigned_to.filter(level='captain').count(),
++            'a': booking.assigned_to.filter(level='A').count(),
++            'b': booking.assigned_to.filter(level='B').count(),
++            'c': booking.assigned_to.filter(level='C').count(),
++        }
++        total_filled = sum(counts.values())
++        total_quota = (booking.quota_captain or 0) + (booking.quota_supervisor or 0) + \
++                      (booking.quota_a or 0) + (booking.quota_b or 0) + (booking.quota_c or 0)
++        
++        return JsonResponse({
++            'status': 'success', 
++            'message': msg,
++            'filled': counts, 
++            'total_filled': total_filled, 
++            'total_quota': total_quota
++        })
++    except Exception as e:
++        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
++
++@admin_required
++@require_POST
++def admin_ajax_update_attendance_field(request, pk):
++    from staff.models import StaffAttendance
++    booking = get_object_or_404(Booking, pk=pk)
++    staff_id = request.POST.get('staff_id')
++    field = request.POST.get('field')
++    value = request.POST.get('value')
++
++    if not staff_id or not field:
++        print(f"Attendance Update Error: Missing staff_id or field. Received: staff_id={staff_id}, field={field}")
++        return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
++
++    print(f"Attendance Update: Booking {booking.pk}, Staff {staff_id}, Field {field}, Value {value}")
++
++    try:
++        att, created = StaffAttendance.objects.get_or_create(
++            booking=booking,
++            staff_id=staff_id,
++            date=booking.event_date
++        )
++
++        from decimal import Decimal
++        if field == 'status':
++            att.status = value.strip().lower()
++        elif field == 'payment_given':
++            att.payment_given = (value == 'true')
++        elif field == 'bonus':
++            att.bonus = Decimal(str(value or 0))
++        elif field == 'deduction':
++            att.deduction = Decimal(str(value or 0))
++        elif field == 'reaching_time':
++            att.reaching_time = value if value and value != 'None' else None
++        elif field in ['on_time', 'shoes', 'uniform', 'grooming']:
++            setattr(att, field, (value == 'true'))
++        else:
++            return JsonResponse({'status': 'error', 'message': 'Invalid field'}, status=400)
++
++        att.save()
++        print(f"Attendance Saved: {att}")
++
++        # Real-time counts for ribbon
++        from staff.models import StaffAttendance
++        present_counts = {
++            'supervisor': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='supervisor').count(),
++            'captain': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='captain').count(),
++            'A': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='A').count(),
++            'B': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='B').count(),
++            'C': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='C').count(),
++        }
++        total_present = StaffAttendance.objects.filter(booking=booking, status='present').count()
++
++        # Send push if status changed
++        if field == 'status' and value in ['present', 'absent']:
++            try:
++                from core.utils import send_push_notification
++                staff = att.staff
++                title = "Attendance Updated"
++                msg = f"Your attendance for {booking.name} has been marked as {value.capitalize()} ✅" if value == 'present' else f"Your attendance for {booking.name} has been marked as Absent ❌"
++                send_push_notification(staff, title, msg)
++            except Exception as e:
++                print(f"Push Notification Error: {e}")
++
++        return JsonResponse({
++            'status': 'success', 
++            'message': 'Attendance updated',
++            'present_counts': {
++                'supervisor': present_counts.get('supervisor', 0),
++                'captain': present_counts.get('captain', 0),
++                'a': present_counts.get('A', 0),
++                'b': present_counts.get('B', 0),
++                'c': present_counts.get('C', 0),
++            },
++            'total_present': total_present,
++            'booking_id': booking.pk
++        })
++    except Exception as e:
++        import traceback
++        print(f"CRITICAL AJAX ERROR: {e}")
++        traceback.print_exc()
++        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
++
++
+ @admin_required
+ def handle_application(request, pk, app_id, action):
+     from django.core.cache import cache
+@@ -362,23 +638,20 @@ def handle_application(request, pk, app_id, action):
+     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+         # Return updated quota counts so the frontend can refresh counts without page reload
+         booking = application.booking
++        # Count staff at each level from the assigned_to list (source of truth)
++        assigned_staff = booking.assigned_to.all()
++        counts = {
++            'captain': len([s for s in assigned_staff if s.level in ['captain', 'supervisor']]),
++            'a': len([s for s in assigned_staff if s.level == 'A']),
++            'b': len([s for s in assigned_staff if s.level == 'B']),
++            'c': len([s for s in assigned_staff if s.level == 'C']),
++        }
++
+         quota_data = {
+-            'captain': {
+-                'q': booking.quota_captain,
+-                'c': booking.applications.filter(status='approved', staff__level='captain').count()
+-            },
+-            'a': {
+-                'q': booking.quota_a,
+-                'c': booking.applications.filter(status='approved', staff__level='A').count()
+-            },
+-            'b': {
+-                'q': booking.quota_b,
+-                'c': booking.applications.filter(status='approved', staff__level='B').count()
+-            },
+-            'c': {
+-                'q': booking.quota_c,
+-                'c': booking.applications.filter(status='approved', staff__level='C').count()
+-            },
++            'captain': {'q': booking.quota_captain, 'c': counts['captain']},
++            'a': {'q': booking.quota_a, 'c': counts['a']},
++            'b': {'q': booking.quota_b, 'c': counts['b']},
++            'c': {'q': booking.quota_c, 'c': counts['c']},
+         }
+         return JsonResponse({'status': 'success', 'quota': quota_data})
+ 
+@@ -423,7 +696,12 @@ def admin_create_booking(request):
+                 status               = 'confirmed',  # Manual admin entry defaults to confirmed
+                 # Note: quoted_price is NOT set from budget — set it separately in booking detail
+                 allow_direct_join    = request.POST.get('allow_direct_join') == 'on',
+-                is_long_work         = request.POST.get('is_long_work') == 'on'
++                is_long_work         = request.POST.get('is_long_work') == 'on',
++                quota_captain        = int(request.POST.get('quota_captain') or 0),
++                quota_supervisor     = int(request.POST.get('quota_supervisor') or 0),
++                quota_a              = int(request.POST.get('quota_a') or 0),
++                quota_b              = int(request.POST.get('quota_b') or 0),
++                quota_c              = int(request.POST.get('quota_c') or 0),
+             )
+             # Admin creating booking is not necessarily assigning themselves, but we can assign later
+             messages.success(request, f'Booking for {booking.name} created successfully!')
+@@ -458,10 +736,28 @@ def admin_edit_booking(request, pk):
+             booking.message = request.POST.get('message', '')
+             
+             # Quotas & Locality
+-            booking.quota_captain = int(request.POST.get('quota_captain') or 0)
+-            booking.quota_a = int(request.POST.get('quota_a') or 0)
+-            booking.quota_b = int(request.POST.get('quota_b') or 0)
+-            booking.quota_c = int(request.POST.get('quota_c') or 0)
++            # Floor check validation
++            q_capt = int(request.POST.get('quota_captain') or 0)
++            q_supr = int(request.POST.get('quota_supervisor') or 0)
++            q_a = int(request.POST.get('quota_a') or 0)
++            q_b = int(request.POST.get('quota_b') or 0)
++            q_c = int(request.POST.get('quota_c') or 0)
++            
++            f_capt = booking.assigned_to.filter(level='captain').count()
++            f_supr = booking.assigned_to.filter(level='supervisor').count()
++            f_a = booking.assigned_to.filter(level='A').count()
++            f_b = booking.assigned_to.filter(level='B').count()
++            f_c = booking.assigned_to.filter(level='C').count()
++            
++            if q_capt < f_capt or q_supr < f_supr or q_a < f_a or q_b < f_b or q_c < f_c:
++                messages.error(request, "Cannot set quota lower than currently assigned staff count.")
++                return redirect('admin_edit_booking', pk=booking.pk)
++
++            booking.quota_captain = q_capt
++            booking.quota_supervisor = q_supr
++            booking.quota_a = q_a
++            booking.quota_b = q_b
++            booking.quota_c = q_c
+             booking.publish_locality = request.POST.get('publish_locality', 'all')
+             booking.allow_direct_join = request.POST.get('allow_direct_join') == 'on'
+             booking.is_long_work = request.POST.get('is_long_work') == 'on'
+@@ -485,6 +781,12 @@ def admin_publish_booking(request, pk):
+         action = request.POST.get('action', 'publish')
+         
+         if action == 'publish':
++            total_quota = (booking.quota_captain or 0) + (booking.quota_a or 0) + \
++                          (booking.quota_b or 0) + (booking.quota_c or 0)
++            if total_quota <= 0:
++                messages.error(request, "Cannot publish event with zero quotas. Please set the required staff counts first.")
++                return redirect('admin_booking_detail', pk=booking.pk)
++
+             booking.is_published = True
+             booking.publish_locality = request.POST.get('publish_locality', 'all')
+             booking.save(update_fields=['is_published', 'publish_locality'])
+@@ -547,7 +849,7 @@ def staff_requests(request):
+         
+         selected_booking_obj = Booking.objects.get(pk=booking_id)
+         live_quota_data = {
+-            'captain': {'q': selected_booking_obj.quota_captain, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='captain').count()},
++            'captain': {'q': selected_booking_obj.quota_captain, 'c': selected_booking_obj.applications.filter(status='approved', staff__level__in=['captain', 'supervisor']).count()},
+             'a': {'q': selected_booking_obj.quota_a, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='A').count()},
+             'b': {'q': selected_booking_obj.quota_b, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='B').count()},
+             'c': {'q': selected_booking_obj.quota_c, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='C').count()},
+@@ -1153,6 +1455,7 @@ def admin_reports(request):
+     import calendar
+     month_filter = request.GET.get('month', '')
+     year_filter = request.GET.get('year', '')
++    client_filter = request.GET.get('client', '')
+     
+     reports = ManualReport.objects.all()
+     
+@@ -1166,6 +1469,10 @@ def admin_reports(request):
+             
+     if year_filter:
+         reports = reports.filter(event_date__year=year_filter)
++
++    if client_filter:
++        from django.db.models import Q
++        reports = reports.filter(Q(site_name=client_filter) | Q(event_name=client_filter))
+         
+     totals = reports.aggregate(
+         t_boys=Sum('boys_count'),
+@@ -1174,6 +1481,9 @@ def admin_reports(request):
+         t_profit=Sum('profit')
+     )
+         
++    from bookings.models import Client
++    all_clients = Client.objects.all().order_by('name')
++        
+     context = {
+         'reports': reports,
+         'totals': totals,
+@@ -1181,9 +1491,60 @@ def admin_reports(request):
+         'month_filter': month_filter,
+         'month_name': month_name,
+         'year_filter': year_filter,
++        'client_filter': client_filter,
++        'clients': all_clients,
+     }
++
++    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
++        return render(request, 'admin/reports.html', context)
+     return render(request, 'admin/reports.html', context)
+ 
++@admin_required
++def admin_reports_pdf(request):
++    from bookings.models import ManualReport
++    from django.db.models import Sum
++    from django.http import HttpResponse
++    import calendar
++    from .pdf_utils import generate_financial_reports_pdf
++    
++    month_filter = request.GET.get('month', '')
++    year_filter = request.GET.get('year', '')
++    client_filter = request.GET.get('client', '')
++    
++    reports = ManualReport.objects.all().order_by('event_date')
++    
++    month_name = ''
++    if month_filter:
++        reports = reports.filter(event_date__month=month_filter)
++        try:
++            month_name = calendar.month_name[int(month_filter)]
++        except:
++            pass
++            
++    if year_filter:
++        reports = reports.filter(event_date__year=year_filter)
++
++    if client_filter:
++        from django.db.models import Q
++        reports = reports.filter(Q(site_name=client_filter) | Q(event_name=client_filter))
++        
++    totals = reports.aggregate(
++        t_boys=Sum('boys_count'),
++        t_bill=Sum('bill_amount'),
++        t_received=Sum('amount_received'),
++        t_profit=Sum('profit')
++    )
++    
++
++    pdf_bytes = generate_financial_reports_pdf(reports, totals, month_name, year_filter, client_filter)
++    
++    response = HttpResponse(pdf_bytes, content_type='application/pdf')
++    filename = "Financial_Reports"
++    if month_name: filename += f"_{month_name}"
++    if year_filter: filename += f"_{year_filter}"
++    response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
++    return response
++
+ @admin_required
+ def admin_report_add(request):
+     from bookings.models import ManualReport
+@@ -1360,17 +1721,41 @@ def manual_invoice(request):
+ @admin_required
+ def event_reports_list(request):
+     from django.core.paginator import Paginator
+-    from bookings.models import EventReport
+-    reports = EventReport.objects.all().select_related('booking', 'submitted_by')
++    from bookings.models import EventReport, Client
++    
++    month_filter = request.GET.get('month', '')
++    year_filter = request.GET.get('year', '')
++    client_filter = request.GET.get('client', '')
++    
++    reports_qs = EventReport.objects.all().select_related('booking', 'submitted_by')
++    
++    if month_filter:
++        reports_qs = reports_qs.filter(booking__event_date__month=month_filter)
++    if year_filter:
++        reports_qs = reports_qs.filter(booking__event_date__year=year_filter)
++    if client_filter:
++        reports_qs = reports_qs.filter(booking__name=client_filter)
++    
++    reports_qs = reports_qs.order_by('-booking__event_date', '-created_at')
++    
++    all_clients = Client.objects.all().order_by('name')
+     
+     # Simple pagination
+-    paginator = Paginator(reports, 30)
++    paginator = Paginator(reports_qs, 40)
+     page_obj = paginator.get_page(request.GET.get('page'))
+     
+-    return render(request, 'admin/event_reports_list.html', {
++    context = {
+         'reports': page_obj,
+         'page': 'reports',
+-    })
++        'month_filter': month_filter,
++        'year_filter': year_filter,
++        'client_filter': client_filter,
++        'clients': all_clients,
++    }
++    
++    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
++        return render(request, 'admin/event_reports_list.html', context)
++    return render(request, 'admin/event_reports_list.html', context)
+ 
+ @admin_required
+ def event_report_detail(request, pk):
+@@ -1402,3 +1787,11 @@ def download_invoice_pdf(request):
+         except Exception as e:
+             return JsonResponse({'error': str(e)}, status=400)
+     return redirect('admin_manual_invoice')
++
++def api_get_clients(request):
++    """
++    Returns a list of all clients for autocomplete.
++    """
++    from bookings.models import Client
++    clients = Client.objects.all().values('name', 'phone')
++    return JsonResponse(list(clients), safe=False)
+diff --git a/core/pdf_utils.py b/core/pdf_utils.py
+index 83adb95..fe5cdfc 100644
+--- a/core/pdf_utils.py
++++ b/core/pdf_utils.py
+@@ -151,7 +151,11 @@ def _build_staff_table(assigned_staff, attendance_map, applications_map):
+             0 if unif_ok  else 30,
+             0 if groom_ok else 30,
+         ])
+-        wage = staff.daily_rate - penalty
++        
++        bonus_val = float(att.bonus) if att and getattr(att, 'bonus', 0) else 0.0
++        deduction_val = float(att.deduction) if att and getattr(att, 'deduction', 0) else 0.0
++        
++        wage = float(staff.daily_rate) + bonus_val - penalty - deduction_val
+         if raw_status in ('present', 'half_day'):
+             total_wage += wage
+ 
+@@ -163,6 +167,14 @@ def _build_staff_table(assigned_staff, attendance_map, applications_map):
+         # StaffID — prevent wrapping on hyphens by replacing with non-breaking hyphen
+         sid = (staff.staff_id or '—').replace('-', '\u2011')
+ 
++        wage_details = [f'<b>Rs.{wage:,.0f}</b>']
++        if bonus_val > 0:
++            wage_details.append(f'<font size="7" color="#2ecc85">+{bonus_val:g} Bns</font>')
++        if (penalty + deduction_val) > 0:
++            wage_details.append(f'<font size="7" color="#e05c5c">-{penalty + deduction_val:g} Ded</font>')
++
++        wage_display = _p('<br/>'.join(wage_details), size=9, bold=False, color=DARK_BG, align=2)
++
+         data.append([
+             _p(sid, size=8),
+             _p(staff.full_name, size=8.5, bold=True, color=DARK_BG),
+@@ -174,7 +186,7 @@ def _build_staff_table(assigned_staff, attendance_map, applications_map):
+             _tick() if unif_ok  else _cross(),
+             _tick() if groom_ok else _cross(),
+             paid_p,
+-            _p(f'<b>Rs.{wage:,}</b>', size=9, bold=True, color=DARK_BG, align=2),
++            wage_display,
+         ])
+ 
+     # Total row — label spans cols 0-9, value in col 10
+@@ -412,3 +424,149 @@ def build_invoice_pdf(invoice_data):
+ 
+     doc.build(el)
+     return buffer
++
++
++def generate_financial_reports_pdf(reports, totals, month_name, year_filter, client_filter=''):
++    """
++    Premium financial reports PDF styled like the attendance PDF:
++    dark header, gold separator, dark table with gold headers.
++    """
++    buffer = BytesIO()
++    from reportlab.lib.pagesizes import landscape, A4
++    doc = SimpleDocTemplate(
++        buffer,
++        pagesize=landscape(A4),
++        leftMargin=22, rightMargin=22,
++        topMargin=22,  bottomMargin=22,
++    )
++    el = []
++    FIN_W = 801  # landscape A4 usable = 841 - 22*2
++
++    # 1 — Dark branded header
++    date_str   = timezone.now().strftime('%d %b %Y  \u00b7  %I:%M %p')
++    title_text = 'Financial Reports'
++    if month_name or year_filter:
++        title_text += f'  \u2014  {str(month_name).upper()} {str(year_filter)}'.strip()
++    if client_filter:
++        title_text += f' ({client_filter})'
++
++    left = [
++        _p("MASTAN'S CATERING &amp; SERVICES", size=7, bold=True, color=GOLD),
++        Spacer(1, 3),
++        _p(title_text, size=16, bold=True, color=WHITE),
++        Spacer(1, 3),
++        _p('Manual Financial Summary Report', size=9, color=colors.HexColor('#9ba3ba')),
++    ]
++    right_items = [_p(date_str, size=8, color=colors.HexColor('#9ba3ba'), align=2)]
++    if os.path.exists(_LOGO_PATH):
++        right_items.append(RLImage(_LOGO_PATH, width=46, height=46))
++
++    hdr = Table([[left, right_items]], colWidths=[FIN_W * 0.66, FIN_W * 0.34])
++    hdr.setStyle(TableStyle([
++        ('BACKGROUND',    (0, 0), (-1, -1), DARK_BG),
++        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
++        ('ALIGN',         (1, 0), (1, -1),  'RIGHT'),
++        ('TOPPADDING',    (0, 0), (-1, -1), 14),
++        ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
++        ('LEFTPADDING',   (0, 0), (-1, -1), 18),
++        ('RIGHTPADDING',  (0, 0), (-1, -1), 18),
++    ]))
++    el.append(hdr)
++
++    # 2 — Gold separator
++    el.append(HRFlowable(width='100%', thickness=3, color=GOLD, spaceAfter=0, spaceBefore=0))
++
++    # 3 — Data starts directly after header
++    reports_list = list(reports)
++    t_boys     = totals.get('t_boys') or 0
++    t_bill     = float(totals.get('t_bill') or 0)
++    t_received = float(totals.get('t_received') or 0)
++    t_profit   = float(totals.get('t_profit') or 0)
++    el.append(Spacer(1, 14))
++
++    # 4 — Main data table (col widths sum = 797)
++    COL_FIN = [22, 55, 106, 126, 35, 78, 70, 70, 62, 58, 68, 47]
++    headers  = ['SL','DATE','SITE NAME','EVENT NAME','BOYS',
++                'INCHARGE','BILL (Rs)','RECEIVED (Rs)','PAID ON','PENDING','PROFIT','SETTLED']
++    data = [[_p(h, size=8, bold=True, color=GOLD) for h in headers]]
++
++    for i, r in enumerate(reports_list):
++        paid_on   = r.payment_received_on.strftime('%d %b %Y') if r.payment_received_on else '\u2014'
++        settled_p = _p(
++            '<font color="#2ecc85"><b>YES</b></font>' if r.is_settled
++            else '<font color="#e05c5c">NO</font>', size=8
++        )
++        pending = float(r.pending_amount or 0)
++        profit  = float(r.profit or 0)
++        data.append([
++            _p(str(i+1), size=8, color=colors.HexColor('#999')),
++            _p(r.event_date.strftime('%d-%m-%Y') if r.event_date else '\u2014', size=8),
++            _p(r.site_name or '\u2014', size=8, bold=True, color=DARK_BG),
++            _p(r.event_name or '\u2014', size=8),
++            _p(str(r.boys_count or 0), size=8),
++            _p(r.bill_incharge or '\u2014', size=8),
++            _p(f'{float(r.bill_amount or 0):,.0f}', size=9, bold=True, color=DARK_BG),
++            _p(f'{float(r.amount_received or 0):,.0f}', size=9, bold=True,
++               color=colors.HexColor('#2ecc85')),
++            _p(paid_on, size=8),
++            _p(f'{pending:,.0f}' if pending else '\u2014', size=8,
++               color=colors.HexColor('#e67e22') if pending else GREY_TEXT),
++            _p(f'{profit:,.0f}', size=9, bold=True,
++               color=colors.HexColor('#2ecc85') if profit >= 0 else RED),
++            settled_p,
++        ])
++
++    data.append([
++        _p('<b>TOTALS</b>', size=9, bold=True, color=DARK_BG), '', '', '',
++        _p(f'<b>{t_boys}</b>', size=9, bold=True), '',
++        _p(f'<b>{t_bill:,.0f}</b>', size=10, bold=True, color=DARK_BG),
++        _p(f'<b>{t_received:,.0f}</b>', size=10, bold=True, color=DARK_BG),
++        '', '',
++        _p(f'<b>{t_profit:,.0f}</b>', size=10, bold=True,
++           color=colors.HexColor('#2ecc85')), '',
++    ])
++
++    tbl = Table(data, colWidths=COL_FIN, repeatRows=1)
++    tbl.setStyle(TableStyle([
++        ('BACKGROUND',    (0, 0),  (-1, 0),  DARK_BG),
++        ('TOPPADDING',    (0, 0),  (-1, 0),  9),
++        ('BOTTOMPADDING', (0, 0),  (-1, 0),  9),
++        ('LEFTPADDING',   (0, 0),  (-1, -1), 6),
++        ('RIGHTPADDING',  (0, 0),  (-1, -1), 6),
++        ('ROWBACKGROUNDS',(0, 1),  (-1, -2), [WHITE, CREAM]),
++        ('TOPPADDING',    (0, 1),  (-1, -2), 7),
++        ('BOTTOMPADDING', (0, 1),  (-1, -2), 7),
++        ('VALIGN',        (0, 0),  (-1, -2), 'MIDDLE'),
++        ('LINEBELOW',     (0, 0),  (-1, -2), 0.4, LINE),
++        ('BOX',           (0, 0),  (-1, -2), 0.5, LINE),
++        ('SPAN',          (0, -1), (3, -1)),
++        ('BACKGROUND',    (0, -1), (-1, -1), TOTAL_BG),
++        ('LINEABOVE',     (0, -1), (-1, -1), 2,   GOLD),
++        ('LINEBELOW',     (0, -1), (-1, -1), 0.5, LINE),
++        ('TOPPADDING',    (0, -1), (-1, -1), 10),
++        ('BOTTOMPADDING', (0, -1), (-1, -1), 10),
++        ('VALIGN',        (0, -1), (-1, -1), 'MIDDLE'),
++    ]))
++    el.append(tbl)
++
++    # 5 — Footer
++    el.append(Spacer(1, 14))
++    el.append(HRFlowable(width='100%', thickness=0.5, color=LINE))
++    el.append(Spacer(1, 6))
++    gen_str = timezone.now().strftime('%d %b %Y  \u00b7  %I:%M %p')
++    ft = Table([[
++        _p("MASTAN'S CATERING &amp; SERVICES", size=8, bold=True,
++           color=colors.HexColor('#aaa')),
++        _p(f'Generated: {gen_str}', size=8, color=colors.HexColor('#bbb'), align=2),
++    ]], colWidths=[FIN_W * 0.5, FIN_W * 0.5])
++    ft.setStyle(TableStyle([
++        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
++        ('TOPPADDING',    (0, 0), (-1, -1), 0),
++        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
++    ]))
++    el.append(ft)
++
++    doc.build(el)
++    pdf = buffer.getvalue()
++    buffer.close()
++    return pdf
+diff --git a/staff/models.py b/staff/models.py
+index 7ff9ab9..1e883c4 100644
+--- a/staff/models.py
++++ b/staff/models.py
+@@ -57,6 +57,7 @@ class Staff(AbstractBaseUser, PermissionsMixin):
+         ('A', 'A Level'),
+         ('B', 'B Level'),
+         ('C', 'C Level'),
++        ('supervisor', 'Supervisor'),
+         ('captain', 'Captain'),
+         ('admin', 'Admin'),
+     ]
+@@ -185,6 +186,25 @@ class Staff(AbstractBaseUser, PermissionsMixin):
+         result = self.payouts.filter(status='pending').aggregate(total=Sum('amount'))
+         return result['total'] or 0
+ 
++    def total_earned(self):
++        from django.db.models import Sum
++        result = self.payouts.filter(status='paid').aggregate(total=Sum('amount'))
++        return result['total'] or 0
++
++    def pending_payout_amount(self):
++        from django.db.models import Sum
++        result = self.payouts.filter(status='pending').aggregate(total=Sum('amount'))
++        return result['total'] or 0
++
++    def this_month_earnings(self):
++        from django.db.models import Sum
++        result = self.payouts.filter(
++            status='paid',
++            paid_on__month=timezone.now().month,
++            paid_on__year=timezone.now().year
++        ).aggregate(total=Sum('amount'))
++        return result['total'] or 0
++
+     # Fix 11: Staff financial metrics
+     def events_this_month(self):
+         return self.bookings.filter(
+@@ -221,6 +241,8 @@ class StaffAttendance(models.Model):
+     shoes      = models.BooleanField(default=True)
+     uniform    = models.BooleanField(default=True)
+     grooming   = models.BooleanField(default=True)
++    bonus      = models.DecimalField(max_digits=8, decimal_places=2, default=0, help_text="Extra money given")
++    deduction  = models.DecimalField(max_digits=8, decimal_places=2, default=0, help_text="Amount deducted")
+     hours      = models.DecimalField(max_digits=4, decimal_places=1, default=8)
+     payment_given = models.BooleanField(default=False)
+ 
+diff --git a/staff/urls.py b/staff/urls.py
+index a774e04..03e9a98 100644
+--- a/staff/urls.py
++++ b/staff/urls.py
+@@ -18,6 +18,6 @@ urlpatterns = [
+     path('profile/', views.staff_profile, name='staff_profile'),
+     path('profile/upload-photo/', views.upload_profile_photo, name='upload_profile_photo'),
+     path('terms/', views.staff_terms, name='staff_terms'),
+-    path('save-fcm-token/', views.save_fcm_token, name='save_fcm_token'),
++    path('bookings/<int:pk>/attendance/ajax-update/', views.staff_ajax_update_attendance_field, name='staff_ajax_update_attendance_field'),
+ ]
+ 
+diff --git a/staff/views.py b/staff/views.py
+index 5fe0966..6d613b6 100644
+--- a/staff/views.py
++++ b/staff/views.py
+@@ -19,8 +19,7 @@ from core.utils import notify_admins
+ 
+ 
+ from django.views.decorators.csrf import csrf_exempt
+-
+-# ── Firebase ────────────────────────────────────────────────────────────────
++from django.views.decorators.http import require_POST# ── Firebase ────────────────────────────────────────────────────────────────
+ @csrf_exempt
+ @login_required
+ def save_fcm_token(request):
+@@ -135,7 +134,7 @@ def staff_download_attendance(request, pk):
+     from core.pdf_utils import build_attendance_pdf
+ 
+     me = request.user
+-    if me.level != 'captain':
++    if me.level not in ['captain', 'supervisor']:
+         messages.error(request, 'Only Captains can download PDF reports.')
+         return redirect('staff_booking_detail', pk=pk)
+ 
+@@ -234,10 +233,25 @@ def staff_dashboard(request):
+         status__in=['pending', 'confirmed'], 
+         event_date__gte=today,
+         is_published=True
+-    ).exclude(assigned_to=me).prefetch_related('applications__staff').order_by('event_date')
++    ).exclude(assigned_to=me).prefetch_related('applications__staff', 'assigned_to').order_by('event_date')
+     
+     available_bookings = []
+     for b in available_bookings_qs:
++        # 1. Level-specific Quota Check: Only show if there's a quota for user's level
++        level_quota = 0
++        if me.level in ['captain', 'supervisor']:
++            level_quota = b.quota_captain
++        elif me.level == 'A':
++            level_quota = b.quota_a
++        elif me.level == 'B':
++            level_quota = b.quota_b
++        elif me.level == 'C':
++            level_quota = b.quota_c
++        
++        # If no quota is set for this staff's level, hide the event (as per user's "mandatory quota" logic)
++        if level_quota <= 0:
++            continue
++
+         # Locality filter
+         if b.publish_locality != 'all' and me.main_locality != b.publish_locality:
+             continue
+@@ -245,19 +259,13 @@ def staff_dashboard(request):
+         if len(available_bookings) >= 20:
+             break
+             
+-        # Use Python list comprehension to use prefetched data and avoid N+1 DB hit
+-        approved_count = len([app for app in b.applications.all() if app.status == 'approved' and app.staff.level == me.level])
++        # 2. Accurate Filled Count: Include both approved apps AND manual assignments
++        # Use sets to avoid double counting if a staff is in both
++        working_staff_ids = set([s.id for s in b.assigned_to.all() if s.level == me.level])
++        approved_app_staff_ids = set([app.staff_id for app in b.applications.all() if app.status == 'approved' and app.staff.level == me.level])
++        total_filled_for_level = len(working_staff_ids | approved_app_staff_ids)
+         
+-        is_full = False
+-        if me.level == 'captain' and b.quota_captain > 0 and approved_count >= b.quota_captain:
+-            is_full = True
+-        elif me.level == 'A' and b.quota_a > 0 and approved_count >= b.quota_a:
+-            is_full = True
+-        elif me.level == 'B' and b.quota_b > 0 and approved_count >= b.quota_b:
+-            is_full = True
+-        elif me.level == 'C' and b.quota_c > 0 and approved_count >= b.quota_c:
+-            is_full = True
+-            
++        is_full = total_filled_for_level >= level_quota
+         b.is_level_full = is_full
+         available_bookings.append(b)
+ 
+@@ -406,52 +414,8 @@ def staff_booking_detail(request, pk):
+             messages.error(request, f'Error recording payment: {e}')
+ 
+     if request.method == 'POST' and request.POST.get('action') == 'mark_attendance':
+-        if me.level != 'captain' and not me.is_staff:
+-            messages.error(request, 'Only Captains can mark attendance.')
+-            return redirect('staff_booking_detail', pk=pk)
+-            
+-        staff_ids = request.POST.getlist('staff_ids[]')
+-        date_str = request.POST.get('attendance_date', booking.event_date.strftime('%Y-%m-%d'))
+-        
+-        with transaction.atomic():
+-            for sid in staff_ids:
+-                status = request.POST.get(f'attendance_status_{sid}', 'present')
+-                reaching_time_str = request.POST.get(f'reaching_time_{sid}')
+-                
+-                on_time = request.POST.get(f'on_time_{sid}') == 'on'
+-                shoes = request.POST.get(f'shoes_{sid}') == 'on'
+-                uniform = request.POST.get(f'uniform_{sid}') == 'on'
+-                grooming = request.POST.get(f'grooming_{sid}') == 'on'
+-                payment_given = request.POST.get(f'payment_given_{sid}') == 'on'
+-                
+-                try:
+-                    staff_member = Staff.objects.get(id=sid)
+-                except Staff.DoesNotExist:
+-                    continue
+-                
+-                reaching_time = None
+-                if reaching_time_str:
+-                    try:
+-                        reaching_time = datetime.strptime(reaching_time_str, '%H:%M').time()
+-                    except ValueError:
+-                        pass
+-                
+-                StaffAttendance.objects.update_or_create(
+-                    staff=staff_member,
+-                    date=date_str,
+-                    booking=booking,
+-                    defaults={
+-                        'status': status,
+-                        'reaching_time': reaching_time,
+-                        'on_time': on_time,
+-                        'shoes': shoes,
+-                        'uniform': uniform,
+-                        'grooming': grooming,
+-                        'payment_given': payment_given
+-                    }
+-                )
+-        messages.success(request, f'Attendance marked for {len(staff_ids)} staff members.')
+-        return redirect('staff_booking_detail', pk=pk)
++        # Attendance is now handled via AJAX in staff/booking_detail.html
++        pass
+ 
+     assigned_staff_list = []
+     attendances = StaffAttendance.objects.filter(booking=booking, date=booking.event_date)
+@@ -493,7 +457,7 @@ def staff_apply_booking(request, pk):
+     approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
+     is_full = False
+     
+-    if request.user.level == 'captain':
++    if request.user.level in ['captain', 'supervisor']:
+         if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
+             is_full = True
+     elif request.user.level == 'A':
+@@ -524,7 +488,7 @@ def staff_apply_booking(request, pk):
+                 approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
+                 is_full = False
+                 
+-                if request.user.level == 'captain':
++                if request.user.level in ['captain', 'supervisor']:
+                     if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
+                         is_full = True
+                 elif request.user.level == 'A':
+@@ -892,3 +856,71 @@ def staff_complete_task(request, pk):
+         'completed_by': task.completed_by.full_name if task.completed_by else 'Unknown'
+     })
+ 
++
++@login_required(login_url='/staff/login/')
++@require_POST
++def staff_ajax_update_attendance_field(request, pk):
++    """AJAX endpoint for Captains/Supervisors to update attendance fields."""
++    me = request.user
++    booking = get_object_or_404(Booking, pk=pk)
++    
++    # Permission check: Must be admin or high-level staff assigned to this booking
++    is_assigned = booking.assigned_to.filter(id=me.id).exists()
++    has_perm = me.is_staff or (is_assigned and me.level in ['captain', 'supervisor'])
++    
++    if not has_perm:
++        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
++
++    staff_id = request.POST.get('staff_id')
++    field    = request.POST.get('field')
++    value    = request.POST.get('value')
++
++    if not all([staff_id, field]):
++        return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
++
++    try:
++        from staff.models import StaffAttendance, Staff
++        att, created = StaffAttendance.objects.get_or_create(
++            booking=booking,
++            staff_id=staff_id,
++            date=booking.event_date
++        )
++
++        from decimal import Decimal
++        if field == 'status':
++            att.status = value.strip().lower()
++        elif field == 'payment_given':
++            att.payment_given = (value == 'true')
++        elif field == 'bonus':
++            att.bonus = Decimal(str(value or 0))
++        elif field == 'deduction':
++            att.deduction = Decimal(str(value or 0))
++        elif field == 'reaching_time':
++            att.reaching_time = value if value and value != 'None' else None
++        elif field in ['on_time', 'shoes', 'uniform', 'grooming']:
++            setattr(att, field, (value == 'true'))
++        else:
++            return JsonResponse({'status': 'error', 'message': 'Invalid field'}, status=400)
++
++        att.save()
++
++        # Send push if status changed to Present
++        if field == 'status' and value == 'present':
++            try:
++                from core.utils import send_push_notification
++                staff_member = att.staff
++                title = "Attendance Marked ✅"
++                msg = f"Your attendance for {booking.name} has been marked as Present by {me.full_name}."
++                send_push_notification(staff_member, title, msg)
++            except Exception as e:
++                print(f"Staff Push Error: {e}")
++
++        return JsonResponse({
++            'status': 'success', 
++            'message': 'Updated successfully'
++        })
++    except Exception as e:
++        import traceback
++        traceback.print_exc()
++        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
++
+diff --git a/templates/admin/booking_detail.html b/templates/admin/booking_detail.html
+index bfe305a..ce1a0ed 100644
+--- a/templates/admin/booking_detail.html
++++ b/templates/admin/booking_detail.html
+@@ -1,38 +1,10 @@
+ {% extends 'admin/custom_base.html' %}
+-{% block title %}Booking #{{ booking.pk }} — Admin
+-  <style>
+-    @media (min-width: 901px) {
+-      .admin-booking-layout {
+-        display: grid;
+-        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+-        gap: 24px;
+-        align-items: start;
+-      }
+-      .p-client { grid-column: 1; grid-row: 1; }
+-      
+-      .p-staff { grid-column: 1; grid-row: 2; margin-top:0 !important; }
+-      .p-attendance { grid-column: 1; grid-row: 3; margin-top:0 !important; }
+-      
+-      .p-update { grid-column: 2; grid-row: 1; }
+-      .p-captain { grid-column: 2; grid-row: 2; margin-top:0 !important; }
+-    }
+-    @media (max-width: 900px) {
+-      .admin-booking-layout {
+-        display: flex;
+-        flex-direction: column;
+-        gap: 24px;
+-      }
+-      .p-client { order: 1; }
+-      .p-update { order: 2; margin-top:0 !important; margin-bottom:0 !important; }
+-      .p-captain { order: 3; }
+-      .p-staff { order: 4; margin-top:0 !important; margin-bottom:0 !important; }
+-      .p-attendance { order: 5; margin-top:0 !important; }
+-    }
+-  </style>
++{% block title %}Booking #{{ booking.pk }} — Admin{% endblock %}
+ 
+-{% endblock %}
+-{% block page_title %}Booking #{{ booking.pk }}
+-  <style>
++{% block page_title %}Booking #{{ booking.pk }}{% endblock %}
++
++{% block content %}
++<style>
+     @media (min-width: 901px) {
+       .admin-booking-layout {
+         display: grid;
+@@ -41,10 +13,8 @@
+         align-items: start;
+       }
+       .p-client { grid-column: 1; grid-row: 1; }
+-      
+       .p-staff { grid-column: 1; grid-row: 2; margin-top:0 !important; }
+       .p-attendance { grid-column: 1; grid-row: 3; margin-top:0 !important; }
+-      
+       .p-update { grid-column: 2; grid-row: 1; }
+       .p-captain { grid-column: 2; grid-row: 2; margin-top:0 !important; }
+     }
+@@ -60,11 +30,8 @@
+       .p-staff { order: 4; margin-top:0 !important; margin-bottom:0 !important; }
+       .p-attendance { order: 5; margin-top:0 !important; }
+     }
+-  </style>
+-
+-{% endblock %}
++</style>
+ 
+-{% block content %}
+ <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+   <!-- Left Side Badges -->
+   <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+@@ -113,7 +80,11 @@
+           </select>
+           <i class="fas fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:0.7rem; pointer-events:none;"></i>
+         </div>
+-        <button type="submit" name="action" value="publish" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(46,204,133,0.1); color:var(--green); border:1px solid rgba(46,204,133,0.4); font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
++        {% if total_quota > 0 %}
++            <button type="submit" name="action" value="publish" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(46,204,133,0.1); color:var(--green); border:1px solid rgba(46,204,133,0.4); font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
++          {% else %}
++            <button type="button" onclick="alert('Cannot publish event with zero quotas. Please click Edit Details to set the required staff counts first.')" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; font-weight:500; cursor:not-allowed;"><i class="fas fa-lock"></i> Publish Restricted</button>
++          {% endif %}
+       {% endif %}
+     </form>
+     <a href="{% url 'admin_edit_booking' booking.pk %}" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; text-decoration:none; font-weight:500; transition:background 0.2s;"><i class="fa-regular fa-pen-to-square"></i> Edit Details</a>
+@@ -122,11 +93,19 @@
+ 
+ <!-- 4 TOP STAT CARDS -->
+ <style>
+-  .stat-ribbon { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:28px; }
+-  .ribbon-card { background:rgba(28, 33, 44, 0.4); padding:20px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); display:flex; flex-direction:column; justify-content:center; }
+-  .rb-label { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600; }
+-  .rb-val { font-size:1.6rem; font-weight:600; color:var(--text); display:flex; align-items:baseline; gap:6px; }
+-  .rb-sub { font-size:0.9rem; color:var(--muted); font-weight:400; }
++  .stat-ribbon { display:grid; grid-template-columns: 0.8fr 0.8fr 1.2fr 2fr; gap:16px; margin-bottom:28px; }
++  @media (max-width: 1100px) {
++    .stat-ribbon { grid-template-columns: 1fr 1fr; }
++    .stat-ribbon > div:last-child { grid-column: span 2; }
++  }
++  @media (max-width: 600px) {
++    .stat-ribbon { grid-template-columns: 1fr; }
++    .stat-ribbon > div:last-child { grid-column: span 1; }
++  }
++  .ribbon-card { background:rgba(28, 33, 44, 0.4); padding:16px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); display:flex; flex-direction:column; justify-content:center; }
++  .rb-label { font-size:0.6rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600; }
++  .rb-val { font-size:1.4rem; font-weight:600; color:var(--text); display:flex; align-items:baseline; gap:4px; }
++  .rb-sub { font-size:0.8rem; color:var(--muted); font-weight:400; }
+ </style>
+ <div class="stat-ribbon">
+   <div class="ribbon-card" style="border-left:2px solid var(--gold);">
+@@ -156,28 +135,115 @@
+   <div class="ribbon-card" style="border-left:2px solid var(--green); padding:0; overflow:hidden; background:rgba(10, 25, 47, 0.4); border-radius:12px; border:1px solid #1a2c4e;">
+     <div style="padding:12px 16px; border-bottom:1px solid #1a2c4e; background:rgba(10, 25, 47, 0.6); display:flex; justify-content:space-between; align-items:center;">
+       <div class="rb-label" style="margin-bottom:0; color:#7a849a;">STAFF REQUIRED</div>
+-      <div style="font-size:0.85rem; font-weight:700; color:{% if total_filled >= booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c %}var(--green){% else %}#fff{% endif %}; letter-spacing:0.5px;">
+-        {{ total_filled }} / {{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }} <span style="font-size:0.65rem; color:var(--muted); margin-left:4px;">TOTAL</span>
++      <div id="quota-total-display" style="font-size:0.85rem; font-weight:700; color:{% if total_filled >= total_quota %}var(--green){% else %}#fff{% endif %}; letter-spacing:0.5px;">
++        <span id="total-filled-num">{{ total_filled }}</span> / <span id="total-quota-num">{{ total_quota }}</span> <span style="font-size:0.65rem; color:var(--muted); margin-left:4px;">TOTAL</span>
++      </div>
++    </div>
++    <div style="display:grid; grid-template-columns: repeat(5, 1fr); text-align:center; border-bottom:1px solid #1a2c4e;">
++      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
++        <div style="font-size:0.55rem; color:#aaddff; font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">Supr</div>
++        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-supervisor">{{ filled_counts.supervisor }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-supervisor">{{ booking.quota_supervisor|default:0 }}</span></div>
++      </div>
++      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
++        <div style="font-size:0.55rem; color:var(--gold); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">Capt</div>
++        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-captain">{{ filled_counts.captain }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-captain">{{ booking.quota_captain|default:0 }}</span></div>
++      </div>
++      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
++        <div style="font-size:0.55rem; color:var(--text); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">A-Lvl</div>
++        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-a">{{ filled_counts.A }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-a">{{ booking.quota_a|default:0 }}</span></div>
++      </div>
++      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
++        <div style="font-size:0.55rem; color:var(--blue); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">B-Lvl</div>
++        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-b">{{ filled_counts.B }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-b">{{ booking.quota_b|default:0 }}</span></div>
++      </div>
++      <div style="padding:10px 4px;">
++        <div style="font-size:0.55rem; color:var(--green); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">C-Lvl</div>
++        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-c">{{ filled_counts.C }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-c">{{ booking.quota_c|default:0 }}</span></div>
+       </div>
+     </div>
+-    <div style="display:grid; grid-template-columns: repeat(4, 1fr); text-align:center;">
+-      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
+-        <div style="font-size:0.65rem; color:var(--gold); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">Capt</div>
+-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.captain }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_captain }}</div>
++    
++    <!-- Quick Quota Controls for Mobile/Desktop -->
++    <div style="display:grid; grid-template-columns: repeat(5, 1fr); padding:8px 0; background:rgba(255,255,255,0.02);">
++      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
++        <button type="button" title="Supervisor" onclick="changeQuota('supervisor', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
++        <button type="button" title="Supervisor" onclick="changeQuota('supervisor', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid #4facfe; background:rgba(79,172,254,0.1); color:#4facfe; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
++      </div>
++      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
++        <button type="button" title="Captain" onclick="changeQuota('captain', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
++        <button type="button" title="Captain" onclick="changeQuota('captain', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid var(--gold); background:rgba(212,168,82,0.1); color:var(--gold); display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+       </div>
+-      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
+-        <div style="font-size:0.65rem; color:var(--text); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">A-Lvl</div>
+-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.A }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_a }}</div>
++      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
++        <button type="button" onclick="changeQuota('a', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
++        <button type="button" onclick="changeQuota('a', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+       </div>
+-      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
+-        <div style="font-size:0.65rem; color:var(--blue); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">B-Lvl</div>
+-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.B }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_b }}</div>
++      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
++        <button type="button" onclick="changeQuota('b', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
++        <button type="button" onclick="changeQuota('b', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid var(--blue); background:rgba(64,153,255,0.1); color:var(--blue); display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+       </div>
+-      <div style="padding:12px 8px;">
+-        <div style="font-size:0.65rem; color:var(--green); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">C-Lvl</div>
+-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.C }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_c }}</div>
++      <div style="display:flex; justify-content:center; gap:6px;">
++        <button type="button" onclick="changeQuota('c', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
++        <button type="button" onclick="changeQuota('c', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid var(--green); background:rgba(46,204,133,0.1); color:var(--green); display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+       </div>
+     </div>
++
++    <script>
++      function changeQuota(role, delta) {
++          const span = document.getElementById(`q-val-${role}`);
++          // AJAX Save with Delta
++          fetch("{% url 'admin_quick_update_quota' booking.pk %}", {
++              method: 'POST',
++              headers: {
++                  'Content-Type': 'application/x-www-form-urlencoded',
++                  'X-CSRFToken': '{{ csrf_token }}',
++                  'X-Requested-With': 'XMLHttpRequest'
++              },
++              body: `role=${role}&delta=${delta}`
++          })
++          .then(async r => {
++              const data = await r.json();
++              if (r.ok && data.status === 'success') {
++                  span.innerText = data.new_val;
++                  document.getElementById('total-quota-num').innerText = data.total;
++                  
++                  const pubBtn = document.querySelector('button[name="action"][value="publish"]');
++                  const lockBtn = document.querySelector('button[onclick*="Cannot publish"]');
++                  
++                  if ((data.total > 0 && lockBtn) || (data.total === 0 && pubBtn)) {
++                      location.reload(); 
++                  }
++
++                  // Dynamic color update
++                  const totalFilled = parseInt(document.getElementById('total-filled-num').innerText);
++                  const displayEl = document.getElementById('quota-total-display');
++                  if (totalFilled >= data.total) {
++                      displayEl.style.color = 'var(--green)';
++                  } else {
++                      displayEl.style.color = '#fff';
++                  }
++                  
++                  if(typeof showNotifToast !== 'undefined') {
++                    showNotifToast("Quota updated successfully", "success");
++                  }
++              } else {
++                  if(typeof showNotifToast !== 'undefined') {
++                    showNotifToast("⚠️ " + (data.message || "Error updating quota"), "error");
++                  } else {
++                    alert(data.message || "Error updating quota");
++                  }
++              }
++          })
++          .catch(err => {
++              console.error(err);
++              if(typeof showNotifToast !== 'undefined') {
++                showNotifToast("❌ Request failed. Check connection.", "error");
++              }
++          });
++      }
++    </script>
++    <style>
++      .quick-quota-box:hover { background: rgba(255,255,255,0.05); }
++      .quick-quota-box:hover i { color: var(--gold) !important; opacity:0.8; }
++    </style>
+   </div>
+ </div>
+ 
+@@ -220,6 +286,13 @@
+             <div class="detail-txt"><i class="fas fa-map-marker-alt" style="color:var(--gold);"></i> {{ booking.venue|default:"kk auditorium" }}</div>
+           </div>
+           
++          {% if booking.budget %}
++          <div class="detail-box">
++            <div class="detail-lbl">Approx. Boys</div>
++            <div class="detail-txt"><i class="fas fa-users" style="color:var(--gold);"></i> {{ booking.budget|stringformat:"i" }} Boys</div>
++          </div>
++          {% endif %}
++          
+           {% if booking.message %}
+           <div class="detail-box" style="grid-column: 1 / -1;">
+             <div class="detail-lbl">Client Message</div>
+@@ -333,6 +406,14 @@
+                   </div>
+                 </div>
+               </div>
++              <div style="display:flex; align-items:center; gap:8px;">
++                <button type="button" class="att-ajax-trigger" data-staff="{{ item.staff.pk }}" style="background:var(--green); border:none; color:#000; font-weight:700; font-size:0.7rem; padding:6px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;" title="Save All Changes">
++                  <i class="fas fa-save"></i> SAVE
++                </button>
++                <a href="tel:{{ item.phone }}" style="width:32px; height:32px; border-radius:8px; background:rgba(46,204,113,0.1); color:var(--green); display:flex; align-items:center; justify-content:center; text-decoration:none; transition:all 0.2s;">
++                  <i class="fas fa-phone-alt" style="font-size:0.85rem;"></i>
++                </a>
++              </div>
+             </div>
+ 
+             <!-- Inputs Section -->
+@@ -342,46 +423,58 @@
+               <div style="display:grid; grid-template-columns: 1fr auto; gap:14px;">
+                 <div>
+                   <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
+-                  <select name="attendance_status_{{ item.staff.pk }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
+-                    <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
+-                    <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+-                    <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
+-                  </select>
++                    <select name="attendance_status_{{ item.staff.pk }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="status" style="cursor:pointer; padding-left:10px;">
++                      <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
++                      <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
++                      <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
++                    </select>
+                 </div>
+                 <div style="display:flex; flex-direction:column; align-items:center;">
+                   <label class="prm-label" style="text-align:center;"><i class="fas fa-rupee-sign" style="margin-right:2px;"></i> Paid</label>
+                   <label class="prm-checkbox-wrap">
+-                    <input type="checkbox" class="prm-checkbox" name="payment_given_{{ item.staff.pk }}" {% if item.attendance.payment_given %}checked{% endif %} />
++                    <input type="checkbox" class="prm-checkbox att-ajax" data-staff="{{ item.staff.pk }}" data-field="payment_given" name="payment_given_{{ item.staff.pk }}" {% if item.attendance.payment_given %}checked{% endif %} />
+                     <div class="prm-box"></div>
+                   </label>
+                 </div>
+               </div>
+ 
++              <!-- Bonus & Deduction Row -->
++              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-bottom: 4px;">
++                <div>
++                  <label class="prm-label"><i class="fas fa-plus-circle" style="color:var(--green); margin-right:4px;"></i> Bonus (₹)</label>
++                  <input type="number" step="1" name="bonus_{{ item.staff.pk }}" data-staff="{{ item.staff.pk }}" data-field="bonus" value="{{ item.attendance.bonus|default:'0' }}" class="prm-input att-ajax" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
++                </div>
++                <div>
++                  <label class="prm-label"><i class="fas fa-minus-circle" style="color:var(--orange); margin-right:4px;"></i> Minus (₹)</label>
++                  <input type="number" step="1" name="deduction_{{ item.staff.pk }}" data-staff="{{ item.staff.pk }}" data-field="deduction" value="{{ item.attendance.deduction|default:'0' }}" class="prm-input att-ajax" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
++                </div>
++              </div>
++
+               <!-- Time & Checkboxes Row -->
+               <div style="display:flex; flex-direction:column; gap:10px; padding-top:4px;">
+                 <div style="display:flex; justify-content:space-between; align-items:center;">
+                   <div style="display:flex; align-items:center; gap:10px;">
+                     <label class="prm-label" style="margin-bottom:0;"><i class="far fa-clock"></i> Time</label>
+-                    <input type="time" name="reaching_time_{{ item.staff.pk }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
++                    <input type="time" name="attendance_reaching_time_{{ item.staff.pk }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="reaching_time" value="{{ item.attendance.reaching_time|time:'H:i' }}">
+                   </div>
+                 </div>
+ 
+                 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="On Time">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">On Time</span>
+-                    <input type="checkbox" name="on_time_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="on_time" name="on_time_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Shoe">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Shoe</span>
+-                    <input type="checkbox" name="shoes_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="shoes" name="shoes_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Uniform">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Uniform</span>
+-                    <input type="checkbox" name="uniform_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="uniform" name="uniform_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Grooming">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Grooming</span>
+-                    <input type="checkbox" name="grooming_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="grooming" name="grooming_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                 </div>
+               </div>
+@@ -391,28 +484,98 @@
+           {% endfor %}
+         </div>
+         
++        <!-- Legacy Save Button Removed (Auto-save implemented) -->
+         <div style="margin-top:24px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:16px;">
+-          {% if attendance_map %}
+           <span style="font-size:0.8rem; color:var(--gold); display:flex; align-items:center; gap:6px;">
+-            <i class="fas fa-check-circle"></i> Attendance already saved — you can still update
++            <i class="fas fa-magic"></i> Attendance auto-saves instantly
+           </span>
+-          {% endif %}
+-          <button type="submit" id="att-submit-btn" class="btn" style="background:linear-gradient(135deg, var(--gold) 0%, #aa843a 100%); color:#12161c; padding:12px 28px; font-size:1rem; font-weight:700; border-radius:12px; border:none; box-shadow:0 6px 20px rgba(212,168,82,0.3); transition:all 0.3s ease; cursor:pointer;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 25px rgba(212,168,82,0.4)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 20px rgba(212,168,82,0.3)';">
+-            <i class="fas fa-check-circle" style="margin-right:8px;"></i> Save Event Attendance
+-          </button>
+         </div>
++
+         <script>
+-        document.querySelector('form [name=action][value=mark_attendance]')?.closest('form')?.addEventListener('submit', function(e) {
+-          var btn = document.getElementById('att-submit-btn');
+-          if (btn.dataset.submitted === 'true') {
+-            e.preventDefault();
+-            return false;
+-          }
+-          btn.dataset.submitted = 'true';
+-          btn.disabled = true;
+-          btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Saving...';
+-          btn.style.opacity = '0.7';
+-          btn.style.cursor = 'not-allowed';
++        // Attendance Auto-Save Logic
++        function saveAttField(el) {
++            const staffId = el.dataset.staff;
++            const field = el.dataset.field;
++            let value = el.type === 'checkbox' ? (el.checked ? 'true' : 'false') : el.value;
++            
++            console.log(`Saving Attendance: Staff ${staffId}, Field ${field}, Value ${value}`);
++            
++            const card = el.closest('.prm-att-card');
++            if (card) {
++                card.style.opacity = '0.5';
++                card.style.transform = 'scale(0.99)';
++            }
++
++            fetch("{% url 'admin_ajax_update_attendance_field' booking.pk %}", {
++                method: 'POST',
++                headers: {
++                    'Content-Type': 'application/x-www-form-urlencoded',
++                    'X-CSRFToken': '{{ csrf_token }}'
++                },
++                body: `staff_id=${staffId}&field=${field}&value=${encodeURIComponent(value)}`
++            })
++            .then(r => r.json())
++            .then(data => {
++                if (card) {
++                    card.style.opacity = '1';
++                    card.style.transform = 'scale(1)';
++                }
++                if (data.status === 'success') {
++                    if (card) {
++                        card.style.borderColor = 'var(--green)';
++                        setTimeout(() => card.style.borderColor = '#1a2c4e', 1000);
++                    }
++                    if(typeof showNotifToast !== 'undefined') {
++                         showNotifToast(`✅ ${field.replace('_',' ')} saved`, "success");
++                    }
++                    if (data.present_counts) {
++                        const pc = data.present_counts;
++                        if (document.getElementById('f-val-supervisor')) document.getElementById('f-val-supervisor').innerText = pc.supervisor;
++                        if (document.getElementById('f-val-captain')) document.getElementById('f-val-captain').innerText = pc.captain;
++                        if (document.getElementById('f-val-a')) document.getElementById('f-val-a').innerText = pc.a;
++                        if (document.getElementById('f-val-b')) document.getElementById('f-val-b').innerText = pc.b;
++                        if (document.getElementById('f-val-c')) document.getElementById('f-val-c').innerText = pc.c;
++                        if (document.getElementById('total-filled-num')) document.getElementById('total-filled-num').innerText = data.total_present;
++                        
++                        const totalQuota = parseInt(document.getElementById('total-quota-num')?.innerText || '0');
++                        const totalDisplay = document.getElementById('quota-total-display');
++                        if (totalDisplay) totalDisplay.style.color = (data.total_present >= totalQuota) ? 'var(--green)' : '#fff';
++                    }
++                } else {
++                    if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Save failed", "error");
++                    if (el.type === 'checkbox') el.checked = !el.checked;
++                }
++            })
++            .catch(err => {
++                if (card) {
++                    card.style.opacity = '1';
++                    card.style.transform = 'scale(1)';
++                    card.style.borderColor = 'var(--red)';
++                    setTimeout(() => card.style.borderColor = '#1a2c4e', 2000);
++                }
++                if(typeof showNotifToast !== 'undefined') showNotifToast("Connection Error", "error");
++            });
++        }
++
++        // Bind events
++        document.querySelectorAll('.att-ajax').forEach(el => {
++            const eventType = el.tagName === 'SELECT' ? 'change' : 'blur';
++            el.addEventListener(eventType, function(e) {
++                e.stopPropagation();
++                saveAttField(this);
++            });
++        });
++
++        document.querySelectorAll('.att-ajax-trigger').forEach(btn => {
++            btn.addEventListener('click', function(e) {
++                e.preventDefault();
++                e.stopPropagation();
++                const card = this.closest('.prm-att-card');
++                if (card) {
++                    card.querySelectorAll('.att-ajax').forEach(input => saveAttField(input));
++                    if(typeof showNotifToast !== 'undefined') showNotifToast("Saving staff data...", "info");
++                }
++            });
+         });
+         </script>
+       </form>
+@@ -430,14 +593,12 @@
+   <div class="desktop-right-col">
+     <div class="panel p-update" style="margin-bottom:16px;">
+       <div class="panel-hdr">
+-        <div class="panel-title"><i class="fas fa-edit" style="color:var(--gold);"></i> Update Booking</div>
++        <div class="panel-title"><i class="fas fa-magic" style="color:var(--gold);"></i> Quick Details (Auto-save)</div>
+       </div>
+-      <form method="post">
+-        {% csrf_token %}
+-        <input type="hidden" name="action" value="update_booking"/>
++      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+         <div class="form-group">
+-          <label>Status</label>
+-          <select name="status">
++          <label class="prm-label">Event Status</label>
++          <select class="ajax-update" data-field="status">
+             <option value="pending"     {% if booking.status == 'pending'     %}selected{% endif %}>⏳ Pending</option>
+             <option value="confirmed"   {% if booking.status == 'confirmed'   %}selected{% endif %}>✅ Confirmed</option>
+             <option value="completed"   {% if booking.status == 'completed'   %}selected{% endif %}>🏁 Completed</option>
+@@ -445,8 +606,8 @@
+           </select>
+         </div>
+         <div class="form-group">
+-          <label>Quoted Price (₹)</label>
+-          <input type="number" name="quoted_price" step="0.01" value="{{ booking.quoted_price|default:'' }}" placeholder="Enter quote..."/>
++          <label class="prm-label">Quoted Price (₹)</label>
++          <input type="number" class="ajax-update" data-field="quoted_price" step="0.01" value="{{ booking.quoted_price|default:'' }}" placeholder="Enter quote..."/>
+         </div>
+         <div class="form-group">
+           <label>Assign Staff</label>
+@@ -456,6 +617,7 @@
+               <option value="A">A Level</option>
+               <option value="B">B Level</option>
+               <option value="C">C Level</option>
++              <option value="supervisor">Supervisor</option>
+               <option value="captain">Captain</option>
+             </select>
+             <select id="staffLocalityFilter" onchange="filterStaff()" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
+@@ -476,7 +638,7 @@
+               <div style="display:flex; flex-direction:column; gap:8px;">
+                 {% for s in staff_list %}
+                 <label class="staff-item" data-level="{{ s.level }}" data-locality="{{ s.main_locality|default:'' }}" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px 8px; border-radius:4px; transition: background 0.2s;">
+-                  <input type="checkbox" name="assigned_to" value="{{ s.pk }}" {% if s in booking.assigned_to.all %}checked{% endif %} style="accent-color:var(--gold); width:16px; height:16px; flex-shrink: 0;">
++                  <input type="checkbox" class="assigned-to-ajax" name="assigned_to" value="{{ s.pk }}" {% if s in booking.assigned_to.all %}checked{% endif %} style="accent-color:var(--gold); width:16px; height:16px; flex-shrink: 0;">
+                   <div style="flex:1;">
+                     <div style="display:flex; justify-content:space-between; align-items:center;">
+                       <span class="staff-name" style="font-weight:500; font-size:0.92rem;">{{ s.full_name }}</span>
+@@ -527,15 +689,19 @@
+               });
+             }
+           </script>
++        <div class="form-group">
++          <label class="prm-label">Dietary Requirements</label>
++          <textarea class="ajax-update" data-field="dietary_requirements" rows="2" placeholder="Veg/Non-veg counts...">{{ booking.dietary_requirements }}</textarea>
+         </div>
+         <div class="form-group">
+-          <label>Admin Notes</label>
+-          <textarea name="admin_notes" rows="3">{{ booking.admin_notes }}</textarea>
++          <label class="prm-label">Additional Notes (Client)</label>
++          <textarea class="ajax-update" data-field="message" rows="2" placeholder="Client instructions...">{{ booking.message }}</textarea>
+         </div>
+-        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
+-          <i class="fas fa-save"></i> Save Changes
+-        </button>
+-      </form>
++        <div class="form-group">
++          <label class="prm-label">Admin Notes</label>
++          <textarea class="ajax-update" data-field="admin_notes" rows="3" placeholder="Private admin notes...">{{ booking.admin_notes }}</textarea>
++        </div>
++      </div>
+     </div>
+ 
+     <div class="panel p-captain" style="margin-bottom:16px;">
+@@ -638,6 +804,104 @@ function forceDownloadAttendance(url, filename, btn) {
+         if(typeof showNotifToast !== 'undefined') showNotifToast("❌ Download Failed", "error");
+     });
+ }
++
++// AJAX Field Auto-save
++document.querySelectorAll('.ajax-update').forEach(el => {
++    let timeout = null;
++    el.addEventListener('input', () => {
++        clearTimeout(timeout);
++        timeout = setTimeout(() => {
++            const field = el.getAttribute('data-field');
++            const val = el.value;
++            
++            fetch("{% url 'admin_ajax_update_booking_field' booking.pk %}", {
++                method: 'POST',
++                headers: {
++                    'Content-Type': 'application/x-www-form-urlencoded',
++                    'X-CSRFToken': '{{ csrf_token }}'
++                },
++                body: `field=${field}&value=${encodeURIComponent(val)}`
++            })
++            .then(r => r.json())
++            .then(data => {
++                if(data.status === 'success') {
++                    el.style.borderColor = 'var(--green)';
++                    setTimeout(() => el.style.borderColor = '', 1000);
++                } else {
++                    if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Update Failed", "error");
++                }
++            });
++        }, 800);
++    });
++    
++    // For selects, update immediately
++    if (el.tagName === 'SELECT') {
++        el.addEventListener('change', () => {
++            const field = el.getAttribute('data-field');
++            const val = el.value;
++            fetch("{% url 'admin_ajax_update_booking_field' booking.pk %}", {
++                method: 'POST',
++                headers: {
++                    'Content-Type': 'application/x-www-form-urlencoded',
++                    'X-CSRFToken': '{{ csrf_token }}'
++                },
++                body: `field=${field}&value=${encodeURIComponent(val)}`
++            })
++            .then(r => r.json())
++            .then(data => {
++                if(data.status === 'success') {
++                    if(typeof showNotifToast !== 'undefined') showNotifToast("✅ Updated Successfully", "success");
++                }
++            });
++        });
++    }
++});
++
++// Staff Assignment Auto-save
++document.querySelectorAll('.assigned-to-ajax').forEach(cb => {
++    cb.addEventListener('change', function() {
++        const staffId = this.value;
++        const subAction = this.checked ? 'add' : 'remove';
++        
++        fetch("{% url 'admin_ajax_update_booking_field' booking.pk %}", {
++            method: 'POST',
++            headers: {
++                'Content-Type': 'application/x-www-form-urlencoded',
++                'X-CSRFToken': '{{ csrf_token }}'
++            },
++            body: `field=assigned_to&value=${staffId}&sub_action=${subAction}`
++        })
++        .then(r => r.json())
++        .then(data => {
++            if(data.status === 'success') {
++                if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Assignment Updated", "success");
++                
++                // Update Ribbon Counts
++                if (data.filled) {
++                    for (const [role, count] of Object.entries(data.filled)) {
++                        const el = document.getElementById(`q-val-${role.toLowerCase()}`);
++                        if (el) el.innerText = count;
++                    }
++                }
++                if (data.total_filled !== undefined) {
++                    const filledEl = document.getElementById('total-filled-num');
++                    if (filledEl) {
++                        filledEl.innerText = data.total_filled;
++                        const totalQuota = parseInt(document.getElementById('total-quota-num').innerText) || 0;
++                        const displayEl = document.getElementById('quota-total-display');
++                        if (displayEl) {
++                            displayEl.style.color = (data.total_filled >= totalQuota) ? 'var(--green)' : '#fff';
++                        }
++                    }
++                }
++            } else {
++                if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Assignment Failed", "error");
++                // Revert checkbox state on failure
++                this.checked = !this.checked;
++            }
++        });
++    });
++});
+ </script>
+ 
+ {% endblock %}
+diff --git a/templates/admin/create_booking.html b/templates/admin/create_booking.html
+index 204d3ea..7ffbbc1 100644
+--- a/templates/admin/create_booking.html
++++ b/templates/admin/create_booking.html
+@@ -20,12 +20,15 @@
+       <div class="responsive-grid cols-2" style="gap:16px; margin-bottom:24px;">
+         <div class="form-group">
+           <label>Full Name *</label>
+-          <input type="text" name="name" placeholder="Client Name" required style="max-width: 100%;" />
++          <input type="text" name="name" id="client_name" placeholder="Client Name" required style="max-width: 100%;" list="client-list" />
++          <datalist id="client-list"></datalist>
+         </div>
+         <div class="form-group">
+           <label>Phone Number *</label>
+-          <input type="text" name="phone" placeholder="e.g. 9744067400" required style="max-width: 100%;" />
++          <input type="text" name="phone" id="client_phone" placeholder="e.g. 9744067400" required style="max-width: 100%;" />
+         </div>
++      </div>
++
+         <div class="form-group">
+           <label>Email Address</label>
+           <input type="email" name="email" placeholder="client@example.com" style="max-width: 100%;" />
+@@ -36,6 +39,43 @@
+         </div>
+       </div>
+ 
++      <!-- Section: Staff Quotas -->
++      <div style="background:rgba(212,168,82,0.04); border:1px solid rgba(212,168,82,0.4); padding:20px; border-radius:8px; margin-bottom:24px">
++        <div class="panel-title" style="margin-bottom:16px;font-size:0.95rem;color:var(--gold)"><i class="fas fa-users" style="margin-right:6px"></i> Staff Quotas</div>
++        <div class="responsive-grid cols-5" style="gap:12px;margin-bottom:12px">
++          <div class="form-group">
++            <label style="color:#aaddff; font-size:0.75rem;">Supr</label>
++            <input type="number" name="quota_supervisor" value="0" class="quota-input"/>
++          </div>
++          <div class="form-group">
++            <label style="color:var(--gold); font-size:0.75rem;">Capts</label>
++            <input type="number" name="quota_captain" value="0" class="quota-input"/>
++          </div>
++          <div class="form-group">
++            <label style="color:var(--teal); font-size:0.75rem;">A-Lvl</label>
++            <input type="number" name="quota_a" value="0" class="quota-input"/>
++          </div>
++          <div class="form-group">
++            <label style="color:var(--blue); font-size:0.75rem;">B-Lvl</label>
++            <input type="number" name="quota_b" value="0" class="quota-input"/>
++          </div>
++          <div class="form-group">
++            <label style="color:var(--green); font-size:0.75rem;">C-Lvl</label>
++            <input type="number" name="quota_c" value="0" class="quota-input"/>
++          </div>
++        </div>
++        <div id="quotaTotalDisplay" style="font-size:0.85rem; color:var(--muted); margin-top:8px; text-align:right;">Total Staff Requested: <span id="quotaTotalCount" style="font-weight:600; color:var(--gold);">0</span></div>
++        <div class="form-group" style="padding-top: 15px; border-top:1px solid rgba(212,168,82,0.1); margin-top:5px;">
++          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
++            <input type="checkbox" name="allow_direct_join" style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold);">
++            <div>
++              <strong style="font-size:0.9rem;">Enable Direct Join</strong>
++              <span style="font-size:0.8rem;color:var(--muted);font-weight:normal;"> (Staff can join instantly)</span>
++            </div>
++          </label>
++        </div>
++      </div>
++
+       <!-- Section 2: Event Details -->
+       <div style="border-top:1px solid var(--border); padding-top:20px; margin-bottom:24px;">
+         <div class="panel-title" style="margin-bottom:16px; font-size:0.95rem; color:var(--gold);">Event Specifications</div>
+@@ -76,8 +116,8 @@
+             <input type="number" name="guest_count" value="50" required style="max-width: 100%;" />
+           </div>
+           <div class="form-group">
+-            <label>Expected Budget (₹)</label>
+-            <input type="number" name="budget" step="100" placeholder="e.g. 150000" style="max-width: 100%;" />
++            <label>Approx. Boys Count</label>
++            <input type="number" name="budget" step="1" min="1" placeholder="e.g. 15" style="max-width: 100%;" />
+           </div>
+         </div>
+       </div>
+@@ -116,14 +156,6 @@
+       <div style="border-top:1px solid var(--border); padding-top:20px; margin-bottom:24px;">
+         <div class="panel-title" style="margin-bottom:16px; font-size:0.95rem; color:var(--gold);">Additional Details</div>
+         
+-        <div class="form-group">
+-          <label>Dietary Requirements &amp; Special Requests</label>
+-          <textarea name="dietary_requirements" rows="2" placeholder="e.g. 20 veg meals, 5 vegan..." style="max-width: 100%;"></textarea>
+-        </div>
+-        <div class="form-group">
+-          <label>Internal Admin Notes</label>
+-          <textarea name="message" rows="2" placeholder="Specific client requests..." style="max-width: 100%;"></textarea>
+-        </div>
+         <div class="form-group" style="padding-top: 5px;">
+           <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom: 0;">
+             <input type="checkbox" name="allow_direct_join" style="width:18px; height:18px; cursor:pointer; accent-color:var(--gold);">
+@@ -142,4 +174,41 @@
+   </div>
+ </div>
+ 
++<script>
++  document.addEventListener('DOMContentLoaded', function() {
++    const inputs = document.querySelectorAll('.quota-input');
++    const totalDisplay = document.getElementById('quotaTotalCount');
++    function updateTotal() {
++        let sum = 0;
++        inputs.forEach(input => {
++            const val = parseInt(input.value);
++            if (!isNaN(val)) sum += val;
++        });
++        totalDisplay.innerText = sum;
++    }
++    inputs.forEach(input => input.addEventListener('input', updateTotal));
++    updateTotal();
++  });
++
++  // Client Autocomplete Logic
++  let allClients = [];
++  fetch("{% url 'admin_api_clients' %}")
++    .then(r => r.json())
++    .then(data => {
++      allClients = data;
++      const dl = document.getElementById('client-list');
++      data.forEach(c => {
++        const opt = document.createElement('option');
++        opt.value = c.name;
++        dl.appendChild(opt);
++      });
++    });
++
++  document.getElementById('client_name').addEventListener('change', function() {
++    const selected = allClients.find(c => c.name === this.value);
++    if (selected && selected.phone) {
++      document.getElementById('client_phone').value = selected.phone;
++    }
++  });
++</script>
+ {% endblock %}
+diff --git a/templates/admin/edit_booking.html b/templates/admin/edit_booking.html
+index edb7528..82f1994 100644
+--- a/templates/admin/edit_booking.html
++++ b/templates/admin/edit_booking.html
+@@ -18,21 +18,25 @@
+       
+       <div style="background:rgba(212,168,82,0.04); border:1px solid rgba(212,168,82,0.4); padding:20px; border-radius:8px; margin-bottom:24px">
+         <div class="panel-title" style="margin-bottom:16px;font-size:1rem;color:var(--gold)"><i class="fas fa-users" style="margin-right:6px"></i> Staff Quotas & Direct Join</div>
+-        <div class="responsive-grid cols-4" style="gap:16px;margin-bottom:16px">
++        <div class="responsive-grid cols-5" style="gap:16px;margin-bottom:16px">
+           <div class="form-group">
+-            <label style="color:var(--gold)">Captains Needed</label>
++            <label style="color:#aaddff">Supervisors</label>
++            <input type="number" name="quota_supervisor" value="{{ booking.quota_supervisor }}"/>
++          </div>
++          <div class="form-group">
++            <label style="color:var(--gold)">Captains</label>
+             <input type="number" name="quota_captain" value="{{ booking.quota_captain }}"/>
+           </div>
+           <div class="form-group">
+-            <label style="color:var(--teal)">A-Level Needed</label>
++            <label style="color:var(--teal)">A-Level</label>
+             <input type="number" name="quota_a" value="{{ booking.quota_a }}"/>
+           </div>
+           <div class="form-group">
+-            <label style="color:var(--blue)">B-Level Needed</label>
++            <label style="color:var(--blue)">B-Level</label>
+             <input type="number" name="quota_b" value="{{ booking.quota_b }}"/>
+           </div>
+           <div class="form-group">
+-            <label style="color:var(--green)">C-Level Needed</label>
++            <label style="color:var(--green)">C-Level</label>
+             <input type="number" name="quota_c" value="{{ booking.quota_c }}"/>
+           </div>
+         </div>
+@@ -50,11 +54,12 @@
+       <div class="responsive-grid cols-2" style="gap:16px;margin-bottom:20px">
+         <div class="form-group">
+           <label>Full Name *</label>
+-          <input type="text" name="name" value="{{ booking.name }}" placeholder="Client Name"/>
++          <input type="text" id="client_name" name="name" value="{{ booking.name }}" placeholder="Client Name" list="client-list"/>
++          <datalist id="client-list"></datalist>
+         </div>
+         <div class="form-group">
+           <label>Phone Number *</label>
+-          <input type="text" name="phone" value="{{ booking.phone }}" placeholder="e.g. 9744067400"/>
++          <input type="text" id="client_phone" name="phone" value="{{ booking.phone }}" placeholder="e.g. 9744067400"/>
+         </div>
+         <div class="form-group">
+           <label>Email Address</label>
+@@ -100,8 +105,8 @@
+             <input type="time" name="event_time" value="{{ booking.event_time|time:'H:i' }}"/>
+           </div>
+           <div class="form-group">
+-            <label>Expected Budget (₹)</label>
+-            <input type="number" name="budget" step="100" value="{{ booking.budget|default:'' }}" placeholder="e.g. 150000"/>
++            <label>Approx. Boys Count</label>
++            <input type="number" name="budget" step="1" min="1" value="{{ booking.budget|stringformat:'i'|default:'' }}" placeholder="e.g. 15"/>
+           </div>
+         </div>
+ 
+@@ -129,14 +134,6 @@
+             </div>
+           </label>
+         </div>
+-        <div class="form-group">
+-          <label>Dietary Requirements &amp; Special Requests</label>
+-          <textarea name="dietary_requirements" rows="2" placeholder="e.g. 20 veg meals, 5 vegan...">{{ booking.dietary_requirements }}</textarea>
+-        </div>
+-        <div class="form-group">
+-          <label>Additional Notes</label>
+-          <textarea name="message" rows="2" placeholder="Internal admin notes or specific client requests...">{{ booking.message }}</textarea>
+-        </div>
+       </div>
+ 
+ 
+@@ -155,6 +152,27 @@
+             }
+             inputs.forEach(input => input.addEventListener('input', updateTotal));
+             updateTotal();
++
++            // Client Autocomplete Logic
++            let allClients = [];
++            fetch("{% url 'admin_api_clients' %}")
++              .then(r => r.json())
++              .then(data => {
++                allClients = data;
++                const dl = document.getElementById('client-list');
++                data.forEach(c => {
++                  const opt = document.createElement('option');
++                  opt.value = c.name;
++                  dl.appendChild(opt);
++                });
++              });
++
++            document.getElementById('client_name').addEventListener('change', function() {
++              const selected = allClients.find(c => c.name === this.value);
++              if (selected && selected.phone) {
++                document.getElementById('client_phone').value = selected.phone;
++              }
++            });
+         });
+       </script>
+ 
+diff --git a/templates/admin/event_reports_list.html b/templates/admin/event_reports_list.html
+index 4539e17..b56b2cb 100644
+--- a/templates/admin/event_reports_list.html
++++ b/templates/admin/event_reports_list.html
+@@ -3,7 +3,40 @@
+ {% block page_title %}Captain Event Reports{% endblock %}
+ 
+ {% block content %}
+-<div class="panel">
++<div class="search-bar" style="justify-content:space-between; margin-bottom:20px;">
++  <form id="report-filter-form" method="get" style="display:flex; gap:10px; align-items:center;">
++    <select name="month" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);">
++      <option value="">Month (All)</option>
++      <option value="1" {% if month_filter == '1' %}selected{% endif %}>Jan</option>
++      <option value="2" {% if month_filter == '2' %}selected{% endif %}>Feb</option>
++      <option value="3" {% if month_filter == '3' %}selected{% endif %}>Mar</option>
++      <option value="4" {% if month_filter == '4' %}selected{% endif %}>Apr</option>
++      <option value="5" {% if month_filter == '5' %}selected{% endif %}>May</option>
++      <option value="6" {% if month_filter == '6' %}selected{% endif %}>Jun</option>
++      <option value="7" {% if month_filter == '7' %}selected{% endif %}>Jul</option>
++      <option value="8" {% if month_filter == '8' %}selected{% endif %}>Aug</option>
++      <option value="9" {% if month_filter == '9' %}selected{% endif %}>Sep</option>
++      <option value="10" {% if month_filter == '10' %}selected{% endif %}>Oct</option>
++      <option value="11" {% if month_filter == '11' %}selected{% endif %}>Nov</option>
++      <option value="12" {% if month_filter == '12' %}selected{% endif %}>Dec</option>
++    </select>
++    <select name="year" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);">
++      <option value="">Year (All)</option>
++      <option value="2024" {% if year_filter == '2024' %}selected{% endif %}>2024</option>
++      <option value="2025" {% if year_filter == '2025' %}selected{% endif %}>2025</option>
++      <option value="2026" {% if year_filter == '2026' %}selected{% endif %}>2026</option>
++      <option value="2027" {% if year_filter == '2027' %}selected{% endif %}>2027</option>
++    </select>
++    <select name="client" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); min-width:150px;">
++      <option value="">Client (All)</option>
++      {% for c in clients %}
++        <option value="{{ c.name }}" {% if client_filter == c.name %}selected{% endif %}>{{ c.name }}</option>
++      {% endfor %}
++    </select>
++  </form>
++</div>
++
++<div class="panel" id="reports-container">
+   <div class="panel-hdr"><div class="panel-title">Submitted Settlement Reports</div></div>
+ 
+   <div class="table-responsive">
+@@ -12,9 +45,8 @@
+         <tr>
+           <th>Date</th>
+           <th>Event Location</th>
++          <th>Client Name</th>
+           <th>Captain</th>
+-          <th>Total Billed</th>
+-          <th>Pending</th>
+           <th>Actions</th>
+         </tr>
+       </thead>
+@@ -22,23 +54,16 @@
+         {% for report in reports %}
+         <tr>
+           <td><div style="font-weight:500;">{{ report.booking.event_date|date:"d M Y" }}</div></td>
+-          <td>{{ report.booking.name }}<div class="caption">{{ report.booking.venue|default:"-" }}</div></td>
++          <td>{{ report.booking.venue|default:"-" }}</td>
++          <td style="color:var(--gold); font-weight:600;">{{ report.booking.name }}</td>
+           <td>{{ report.submitted_by.full_name }}<div class="caption">{{ report.submitted_by.staff_id }}</div></td>
+-          <td>{{ report.total_amount }}</td>
+-          <td>
+-            {% if report.pending != 'NIL' and report.pending != '0' and report.pending != '-' %}
+-              <span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;">{{ report.pending }}</span>
+-            {% else %}
+-              <span class="badge" style="background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;">NIL</span>
+-            {% endif %}
+-          </td>
+           <td>
+             <a href="{% url 'admin_event_report_detail' report.pk %}" class="btn btn-ghost btn-sm" style="color:var(--gold)">View Full Report</a>
+           </td>
+         </tr>
+         {% empty %}
+         <tr>
+-          <td colspan="6" style="text-align:center; padding:30px; color:var(--muted)">No reports have been submitted yet.</td>
++          <td colspan="5" style="text-align:center; padding:30px; color:var(--muted)">No reports have been submitted yet.</td>
+         </tr>
+         {% endfor %}
+       </tbody>
+@@ -48,13 +73,47 @@
+   {% if reports.has_other_pages %}
+   <div class="pagination">
+     {% if reports.has_previous %}
+-      <a href="?page={{ reports.previous_page_number }}">Previous</a>
++      <a href="#" onclick="fetchFilteredData('{{ reports.previous_page_number }}'); return false;">Previous</a>
+     {% endif %}
+     <span class="current">Page {{ reports.number }} of {{ reports.paginator.num_pages }}</span>
+     {% if reports.has_next %}
+-      <a href="?page={{ reports.next_page_number }}">Next</a>
++      <a href="#" onclick="fetchFilteredData('{{ reports.next_page_number }}'); return false;">Next</a>
+     {% endif %}
+   </div>
+   {% endif %}
+ </div>
+ {% endblock %}
++
++{% block extra_js %}
++<script>
++  function fetchFilteredData(page = 1) {
++    const filterForm = document.getElementById('report-filter-form');
++    const url = new URL(window.location.href);
++    const formData = new FormData(filterForm);
++    for (let [key, value] of formData.entries()) {
++      url.searchParams.set(key, value);
++    }
++    url.searchParams.set('page', page);
++    
++    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
++      .then(res => res.text())
++      .then(html => {
++        const parser = new DOMParser();
++        const doc = parser.parseFromString(html, 'text/html');
++        
++        const newContent = doc.getElementById('reports-container');
++        if (newContent) {
++           document.getElementById('reports-container').innerHTML = newContent.innerHTML;
++        }
++        window.history.pushState({}, '', url);
++      })
++      .catch(err => console.error('AJAX Error:', err));
++  }
++
++  document.addEventListener('DOMContentLoaded', function() {
++    document.querySelectorAll('.filter-select').forEach(select => {
++      select.addEventListener('change', () => fetchFilteredData(1));
++    });
++  });
++</script>
++{% endblock %}
+diff --git a/templates/admin/manual_invoice.html b/templates/admin/manual_invoice.html
+index e6d45f3..e9c250e 100644
+--- a/templates/admin/manual_invoice.html
++++ b/templates/admin/manual_invoice.html
+@@ -52,7 +52,8 @@
+     <div class="grid-2" style="gap:12px;">
+       <div class="form-group">
+         <label>Client Name</label>
+-        <input type="text" id="inp-bill-to" placeholder="e.g. Flora Events">
++        <input type="text" id="inp-bill-to" placeholder="e.g. Flora Events" list="client-list">
++        <datalist id="client-list"></datalist>
+       </div>
+       <div class="form-group">
+         <label>Contact No.</label>
+@@ -163,5 +164,26 @@
+ 
+   initDefaults();
+   renderInputTable();
++
++  // Client Autocomplete Logic
++  let allClients = [];
++  fetch("{% url 'admin_api_clients' %}")
++    .then(r => r.json())
++    .then(data => {
++      allClients = data;
++      const dl = document.getElementById('client-list');
++      data.forEach(c => {
++        const opt = document.createElement('option');
++        opt.value = c.name;
++        dl.appendChild(opt);
++      });
++    });
++
++  document.getElementById('inp-bill-to').addEventListener('change', function() {
++    const selected = allClients.find(c => c.name === this.value);
++    if (selected && selected.phone) {
++      document.getElementById('inp-contact').value = selected.phone;
++    }
++  });
+ </script>
+ {% endblock %}
+diff --git a/templates/admin/report_add.html b/templates/admin/report_add.html
+index 13daa6d..d5341a7 100644
+--- a/templates/admin/report_add.html
++++ b/templates/admin/report_add.html
+@@ -17,11 +17,12 @@
+       </div>
+       <div class="form-group">
+         <label>Site Name</label>
+-        <input type="text" name="site_name" required>
++        <input type="text" name="site_name" required list="client-list">
+       </div>
+       <div class="form-group">
+         <label>Event Name</label>
+-        <input type="text" name="event_name" required>
++        <input type="text" name="event_name" required list="client-list">
++        <datalist id="client-list"></datalist>
+       </div>
+       <div class="form-group">
+         <label>No. of Boys</label>
+@@ -80,6 +81,18 @@
+         billInput.addEventListener('input', autoCalcProfit);
+         recvInput.addEventListener('input', autoCalcProfit);
+     }
++
++    // Client Autocomplete Logic
++    fetch("{% url 'admin_api_clients' %}")
++      .then(r => r.json())
++      .then(data => {
++        const dl = document.getElementById('client-list');
++        data.forEach(c => {
++          const opt = document.createElement('option');
++          opt.value = c.name;
++          dl.appendChild(opt);
++        });
++      });
+   });
+ </script>
+ {% endblock %}
+diff --git a/templates/admin/report_edit.html b/templates/admin/report_edit.html
+index 1ccd931..13bf0aa 100644
+--- a/templates/admin/report_edit.html
++++ b/templates/admin/report_edit.html
+@@ -17,11 +17,12 @@
+       </div>
+       <div class="form-group">
+         <label>Site Name</label>
+-        <input type="text" name="site_name" value="{{ report.site_name }}" required>
++        <input type="text" name="site_name" value="{{ report.site_name }}" required list="client-list">
+       </div>
+       <div class="form-group">
+         <label>Event Name</label>
+-        <input type="text" name="event_name" value="{{ report.event_name }}" required>
++        <input type="text" name="event_name" value="{{ report.event_name }}" required list="client-list">
++        <datalist id="client-list"></datalist>
+       </div>
+       <div class="form-group">
+         <label>No. of Boys</label>
+@@ -82,6 +83,18 @@
+         billInput.addEventListener('input', autoCalcProfit);
+         recvInput.addEventListener('input', autoCalcProfit);
+     }
++
++    // Client Autocomplete Logic
++    fetch("{% url 'admin_api_clients' %}")
++      .then(r => r.json())
++      .then(data => {
++        const dl = document.getElementById('client-list');
++        data.forEach(c => {
++          const opt = document.createElement('option');
++          opt.value = c.name;
++          dl.appendChild(opt);
++        });
++      });
+   });
+ </script>
+ {% endblock %}
+diff --git a/templates/admin/reports.html b/templates/admin/reports.html
+index fd18119..86f13f7 100644
+--- a/templates/admin/reports.html
++++ b/templates/admin/reports.html
+@@ -20,17 +20,26 @@
+       <option value="11" {% if month_filter == '11' %}selected{% endif %}>Nov</option>
+       <option value="12" {% if month_filter == '12' %}selected{% endif %}>Dec</option>
+     </select>
+-    <select name="year" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);" onchange="this.form.submit()">
++    <select name="year" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);">
+       <option value="">Year (All)</option>
+       <option value="2024" {% if year_filter == '2024' %}selected{% endif %}>2024</option>
+       <option value="2025" {% if year_filter == '2025' %}selected{% endif %}>2025</option>
+       <option value="2026" {% if year_filter == '2026' %}selected{% endif %}>2026</option>
+       <option value="2027" {% if year_filter == '2027' %}selected{% endif %}>2027</option>
+     </select>
++    <select name="client" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); min-width:150px;">
++      <option value="">Client (All)</option>
++      {% for c in clients %}
++        <option value="{{ c.name }}" {% if client_filter == c.name %}selected{% endif %}>{{ c.name }}</option>
++      {% endfor %}
++    </select>
+   </form>
+-  <a href="{% url 'admin_report_add' %}" class="btn btn-gold" style="height:42px; display:inline-flex; align-items:center;">
+-    <i class="fas fa-plus"></i> Add Report
+-  </a>
++  <div style="display:flex; gap:10px; align-items:center;">
++    <button type="button" class="btn btn-ghost" style="height:42px; display:inline-flex; align-items:center;" onclick="forceDownloadReport(this)"><i class="fas fa-file-pdf"></i> Download PDF</button>
++    <a href="{% url 'admin_report_add' %}" class="btn btn-gold" style="height:42px; display:inline-flex; align-items:center;">
++      <i class="fas fa-plus"></i> Add Report
++    </a>
++  </div>
+ </div>
+ 
+ <style>
+@@ -89,7 +98,10 @@
+         </td>
+         <td>
+           <a href="{% url 'admin_report_edit' r.pk %}" class="btn btn-ghost"><i class="fas fa-pencil-alt"></i> Edit</a>
+-          <a href="{% url 'admin_report_delete' r.pk %}" class="btn btn-danger" onclick="return handleCustomConfirm(this, 'Delete this report?', event);"><i class="fas fa-trash"></i> Delete</a>
++          <form method="post" action="{% url 'admin_report_delete' r.pk %}" style="display:inline;">
++            {% csrf_token %}
++            <button type="submit" class="btn btn-danger" onclick="return handleCustomConfirm(this, 'Delete this report?', event);"><i class="fas fa-trash"></i> Delete</button>
++          </form>
+         </td>
+       </tr>
+       {% empty %}
+@@ -122,6 +134,52 @@
+ 
+ {% block extra_js %}
+ <script>
++  function forceDownloadReport(btn) {
++    const month = document.querySelector('select[name=month]').value;
++    const year  = document.querySelector('select[name=year]').value;
++    const client = document.querySelector('select[name=client]').value;
++    const url   = "{% url 'admin_reports_pdf' %}?month=" + month + "&year=" + year + "&client=" + encodeURIComponent(client);
++
++    // iOS Safari does not support blob anchor downloads — open in new tab instead
++    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
++    if (isIOS) {
++      window.open(url, '_blank');
++      return;
++    }
++
++    const oldHtml = btn.innerHTML;
++    btn.disabled  = true;
++    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
++
++    // Android / desktop: force blob download
++    fetch(url, { credentials: 'same-origin' })
++      .then(r => {
++        if (!r.ok) throw new Error('Server error ' + r.status);
++        return r.blob();
++      })
++      .then(blob => {
++        const blobUrl = window.URL.createObjectURL(blob);
++        const a = document.createElement('a');
++        a.style.display = 'none';
++        a.href     = blobUrl;
++        let name   = 'Financial_Reports';
++        if (month) name += '_' + month;
++        if (year)  name += '_' + year;
++        a.download = name + '.pdf';
++        document.body.appendChild(a);
++        a.click();
++        setTimeout(() => { window.URL.revokeObjectURL(blobUrl); a.remove(); }, 300);
++        btn.disabled  = false;
++        btn.innerHTML = oldHtml;
++      })
++      .catch(() => {
++        btn.disabled  = false;
++        btn.innerHTML = oldHtml;
++        // Last resort fallback: just navigate
++        window.open(url, '_blank');
++      });
++  }
++
+   document.addEventListener('DOMContentLoaded', function() {
+     const filterForm = document.getElementById('report-filter-form');
+     
+@@ -139,11 +197,6 @@
+       });
+       
+       const fetchFilteredData = () => {
+-        // Change button to indicate loading
+-        const btn = filterForm.querySelector('button[type="submit"]');
+-        const origText = btn.innerHTML;
+-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+-        
+         const url = new URL(window.location.href);
+         const formData = new FormData(filterForm);
+         for (let [key, value] of formData.entries()) {
+@@ -156,24 +209,20 @@
+             const parser = new DOMParser();
+             const doc = parser.parseFromString(html, 'text/html');
+             
+-            // Replace Table
+             const newTable = doc.getElementById('reports-table-container');
+             if (newTable) {
+                document.getElementById('reports-table-container').innerHTML = newTable.innerHTML;
+             }
+             
+-            // Replace Title
+             const newTitleElem = doc.querySelector('.topbar-title');
+             if (newTitleElem) {
+                document.querySelector('.topbar-title').innerHTML = newTitleElem.innerHTML;
+             }
+             
+-            btn.innerHTML = origText;
+             window.history.pushState({}, '', url);
+           })
+           .catch(err => {
+              console.error('AJAX Error:', err);
+-             btn.innerHTML = origText;
+           });
+       };
+     }
+diff --git a/templates/admin/staff_add.html b/templates/admin/staff_add.html
+index 32a7425..ae1658a 100644
+--- a/templates/admin/staff_add.html
++++ b/templates/admin/staff_add.html
+@@ -24,16 +24,25 @@
+       <div class="responsive-grid cols-2" style="gap:16px">
+         <div class="form-group">
+           <label>Level *</label>
+-          <select name="level" required>
++          <select name="level" required onchange="updateDailyRate(this)">
+             <option value="C" {% if form_data.level == 'C' or not form_data.level %}selected{% endif %}>C Level</option>
+             <option value="B" {% if form_data.level == 'B' %}selected{% endif %}>B Level</option>
+             <option value="A" {% if form_data.level == 'A' %}selected{% endif %}>A Level</option>
++            <option value="supervisor" {% if form_data.level == 'supervisor' %}selected{% endif %}>Supervisor</option>
+             <option value="captain" {% if form_data.level == 'captain' %}selected{% endif %}>Captain</option>
+           </select>
+         </div>
+         <div class="form-group">
+           <label>Daily Rate (₹) *</label>
+-          <input type="number" name="daily_rate" value="{{ form_data.daily_rate|default:'0' }}" required step="1" min="0"/>
++          <input type="number" name="daily_rate" value="{{ form_data.daily_rate|default:'450' }}" required step="1" min="0"/>
++          <script>
++            function updateDailyRate(selectObj) {
++              var w = document.querySelector('input[name="daily_rate"]');
++              if(selectObj.value === 'A') w.value = 500;
++              else if(selectObj.value === 'B') w.value = 480;
++              else if(selectObj.value === 'C') w.value = 450;
++            }
++          </script>
+         </div>
+       </div>
+ 
+diff --git a/templates/admin/staff_edit.html b/templates/admin/staff_edit.html
+index 360a28b..369660c 100644
+--- a/templates/admin/staff_edit.html
++++ b/templates/admin/staff_edit.html
+@@ -24,16 +24,25 @@
+       <div class="responsive-grid cols-2" style="gap:16px">
+         <div class="form-group">
+           <label>Level *</label>
+-          <select name="level" required>
++          <select name="level" required onchange="updateDailyRate(this)">
+             <option value="C" {% if member.level == 'C' %}selected{% endif %}>C Level</option>
+             <option value="B" {% if member.level == 'B' %}selected{% endif %}>B Level</option>
+             <option value="A" {% if member.level == 'A' %}selected{% endif %}>A Level</option>
++            <option value="supervisor" {% if member.level == 'supervisor' %}selected{% endif %}>Supervisor</option>
+             <option value="captain" {% if member.level == 'captain' %}selected{% endif %}>Captain</option>
+           </select>
+         </div>
+         <div class="form-group">
+           <label>Daily Rate (₹) *</label>
+           <input type="number" name="daily_rate" required step="1" value="{{ member.daily_rate|stringformat:"i" }}"/>
++          <script>
++            function updateDailyRate(selectObj) {
++              var w = document.querySelector('input[name="daily_rate"]');
++              if(selectObj.value === 'A') w.value = 500;
++              else if(selectObj.value === 'B') w.value = 480;
++              else if(selectObj.value === 'C') w.value = 450;
++            }
++          </script>
+         </div>
+       </div>
+ 
+diff --git a/templates/admin/staff_list.html b/templates/admin/staff_list.html
+index 6d3ee09..c35cac7 100644
+--- a/templates/admin/staff_list.html
++++ b/templates/admin/staff_list.html
+@@ -24,6 +24,7 @@
+       <option value="A" {% if request.GET.level == 'A' %}selected{% endif %}>A Level</option>
+       <option value="B" {% if request.GET.level == 'B' %}selected{% endif %}>B Level</option>
+       <option value="C" {% if request.GET.level == 'C' %}selected{% endif %}>C Level</option>
++      <option value="supervisor" {% if request.GET.level == 'supervisor' %}selected{% endif %}>Supervisor</option>
+       <option value="captain" {% if request.GET.level == 'captain' %}selected{% endif %}>Captain</option>
+     </select>
+     <select name="locality" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);" onchange="this.form.submit()">
+diff --git a/templates/staff/apply_booking.html b/templates/staff/apply_booking.html
+index a33bf6f..3078d2e 100644
+--- a/templates/staff/apply_booking.html
++++ b/templates/staff/apply_booking.html
+@@ -115,22 +115,6 @@
+ {% endblock %}
+ 
+ {% block extra_js %}
+-<script>
+-function openTermsModal(e) {
+-  if (e) e.preventDefault();
+-  document.getElementById('termsModal').classList.add('active');
+-  document.body.style.overflow = 'hidden';
+-}
+-function closeTermsModal() {
+-  document.getElementById('termsModal').classList.remove('active');
+-  document.body.style.overflow = 'auto';
+-}
+-// Close on click outside
+-document.getElementById('termsModal').addEventListener('click', function(e) {
+-  if (e.target === this) closeTermsModal();
+-});
+-</script>
+-
+ <!-- Terms Modal -->
+ <div id="termsModal" class="terms-modal">
+   <div class="terms-modal-content">
+@@ -149,9 +133,24 @@ document.getElementById('termsModal').addEventListener('click', function(e) {
+       </ol>
+     </div>
+     <div style="margin-top:24px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
+-      <button type="button" class="btn btn-ghost btn-sm" onclick="closeTermsModal()" style="color:var(--muted);">← Back</button>
+       <button type="button" class="btn btn-gold btn-sm" onclick="closeTermsModal()">I Understand</button>
+     </div>
+   </div>
+ </div>
++
++<script>
++function openTermsModal(e) {
++  if (e) e.preventDefault();
++  document.getElementById('termsModal').classList.add('active');
++  document.body.style.overflow = 'hidden';
++}
++function closeTermsModal() {
++  document.getElementById('termsModal').classList.remove('active');
++  document.body.style.overflow = 'auto';
++}
++// Close on click outside
++document.getElementById('termsModal').addEventListener('click', function(e) {
++  if (e.target === this) closeTermsModal();
++});
++</script>
+ {% endblock %}
+diff --git a/templates/staff/booking_detail.html b/templates/staff/booking_detail.html
+index 4913125..405d4a9 100644
+--- a/templates/staff/booking_detail.html
++++ b/templates/staff/booking_detail.html
+@@ -34,6 +34,9 @@
+         <div><label>Date</label><div>{{ booking.event_date|date:"d M Y" }}</div></div>
+         <div><label>Time</label><div>{{ booking.event_time|default:"Time TBD"|time:"h:i A" }}</div></div>
+         <div style="grid-column:1/-1"><label>Venue Approximations</label><div>{{ booking.venue|default:"Venue TBD" }}</div></div>
++        {% if booking.budget %}
++        <div style="grid-column:1/-1"><label>Approx. Boys</label><div style="font-weight:500; color:var(--gold);">{{ booking.budget|stringformat:"i" }} Boys</div></div>
++        {% endif %}
+         {% if booking.location_name %}
+         <div style="grid-column:1/-1"><label>Map Location Name</label><div style="font-weight:500; color:var(--gold);">{{ booking.location_name }}</div></div>
+         {% endif %}
+@@ -46,7 +49,7 @@
+     </div>
+ 
+     <!-- Attendance Marking (For Captain) -->
+-    {% if me.level == 'captain' or me.is_staff %}
++    {% if me.level == 'captain' or me.level == 'supervisor' or me.is_staff %}
+     <div class="panel" id="panel-attendance" style="margin-bottom:16px">
+       <div class="panel-hdr"><div class="panel-title">Mark Attendance</div>
+         <div>
+@@ -54,10 +57,8 @@
+           <button type="button" onclick="forceDownloadAttendance('{% url 'staff_download_attendance' booking.pk %}', 'Attendance_Booking_{{ booking.pk }}.pdf', this)" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem; margin-left:10px;"><i class="fas fa-file-pdf"></i> Download PDF</button>
+         </div>
+       </div>
+-      <form method="post" action="{% url 'staff_booking_detail' booking.pk %}">
+-        {% csrf_token %}
+-        <input type="hidden" name="action" value="mark_attendance">
+-        <input type="hidden" name="attendance_date" value="{{ booking.event_date|date:'Y-m-d' }}">
++      
++      <div id="attendance-section-wrap">
+         
+         <style>
+           .prm-att-card { background: rgba(22, 29, 45, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 22px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px; }
+@@ -112,25 +113,28 @@
+             <input type="hidden" name="staff_ids[]" value="{{ item.staff.id }}"/>
+             
+             <!-- Header Section -->
+-            <div style="display:flex; justify-content:space-between; align-items:center; z-index: 1;">
+-              <div style="display:flex; align-items:center; gap:16px;">
+-                <div style="width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg, rgba(212,168,82,0.25) 0%, rgba(212,168,82,0.05) 100%); border:2px solid rgba(212,168,82,0.4); display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(212,168,82,0.2), inset 0 0 10px rgba(212,168,82,0.1); overflow:hidden; flex-shrink:0;">
++            <div style="background:rgba(255,255,255,0.03); padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
++              <div style="display:flex; align-items:center; gap:10px;">
++                <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, rgba(212,168,82,0.2) 0%, rgba(212,168,82,0.05) 100%); border:1px solid rgba(212,168,82,0.3); display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                   {% if item.staff.photo %}
+-                    <img src="{{ item.staff.photo.url }}" alt="{{ item.staff.full_name }}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
++                    <img src="{{ item.staff.photo.url }}" alt="{{ item.staff.full_name }}" style="width:100%; height:100%; object-fit:cover;">
+                   {% else %}
+-                    <div style="font-weight:800; font-size:1.5rem; color:var(--gold); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">{{ item.staff.first_name|slice:":1"|upper }}</div>
++                    <span style="font-weight:700; font-size:0.8rem; color:var(--gold);">{{ item.staff.first_name|slice:":1"|upper }}</span>
+                   {% endif %}
+                 </div>
+                 <div>
+-                  <div style="font-weight:800; font-size:1.1rem; color:#fff; letter-spacing:0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.4);">
+-                    {{ item.staff.full_name }}
+-                  </div>
+-                  <div style="font-size:0.75rem; color:var(--gold); margin-top:4px; font-family:monospace; letter-spacing:0.8px;">
+-                    <i class="fas fa-id-badge" style="font-size:0.65rem; opacity:0.8; margin-right:3px;"></i>{{ item.staff.staff_id }} 
+-                    <span style="color:rgba(255,255,255,0.4); font-family:sans-serif; margin-left:4px; letter-spacing:0;">• {{ item.staff.get_level_display }}</span>
+-                  </div>
++                  <div style="font-size:0.9rem; font-weight:700; color:#fff;">{{ item.staff.full_name }}</div>
++                  <div style="font-size:0.7rem; color:var(--gold); opacity:0.8;">{{ item.staff.get_level_display }}</div>
+                 </div>
+               </div>
++              <div style="display:flex; align-items:center; gap:8px;">
++                <button type="button" class="att-ajax-trigger" data-staff="{{ item.staff.pk }}" style="background:var(--green); border:none; color:#000; font-weight:700; font-size:0.7rem; padding:6px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;" title="Save All Changes">
++                  <i class="fas fa-save"></i> SAVE
++                </button>
++                <a href="tel:{{ item.phone }}" style="width:28px; height:28px; border-radius:6px; background:rgba(46,204,113,0.1); color:var(--green); display:flex; align-items:center; justify-content:center; text-decoration:none;">
++                  <i class="fas fa-phone-alt" style="font-size:0.75rem;"></i>
++                </a>
++              </div>
+             </div>
+ 
+             <!-- Inputs Section -->
+@@ -140,7 +144,7 @@
+               <div style="display:grid; grid-template-columns: 1fr auto; gap:14px;">
+                 <div>
+                   <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
+-                  <select name="attendance_status_{{ item.staff.id }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
++                  <select name="attendance_status_{{ item.staff.id }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="status" style="cursor:pointer; padding-left:10px;">
+                     <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
+                     <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+                     <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
+@@ -149,37 +153,49 @@
+                 <div style="display:flex; flex-direction:column; align-items:center;">
+                   <label class="prm-label" style="text-align:center;"><i class="fas fa-rupee-sign" style="margin-right:2px;"></i> Paid</label>
+                   <label class="prm-checkbox-wrap">
+-                    <input type="checkbox" class="prm-checkbox" name="payment_given_{{ item.staff.id }}" {% if item.attendance.payment_given %}checked{% endif %} />
++                    <input type="checkbox" class="prm-checkbox att-ajax" data-staff="{{ item.staff.pk }}" data-field="payment_given" name="payment_given_{{ item.staff.id }}" {% if item.attendance.payment_given %}checked{% endif %} />
+                     <div class="prm-box"></div>
+                   </label>
+                 </div>
+               </div>
+ 
++              <!-- Bonus & Deduction Row -->
++              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-bottom: 4px;">
++                <div>
++                  <label class="prm-label"><i class="fas fa-plus-circle" style="color:var(--green); margin-right:4px;"></i> Bonus (₹)</label>
++                  <input type="number" step="1" name="bonus_{{ item.staff.id }}" value="{{ item.attendance.bonus|default:'0' }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="bonus" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
++                </div>
++                <div>
++                  <label class="prm-label"><i class="fas fa-minus-circle" style="color:var(--orange); margin-right:4px;"></i> Minus (₹)</label>
++                  <input type="number" step="1" name="deduction_{{ item.staff.id }}" value="{{ item.attendance.deduction|default:'0' }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="deduction" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
++                </div>
++              </div>
++
+               <!-- Time & Checkboxes Row -->
+               <div style="display:flex; flex-direction:column; gap:10px; padding-top:4px;">
+                 <div style="display:flex; justify-content:space-between; align-items:center;">
+                   <div style="display:flex; align-items:center; gap:10px;">
+                     <label class="prm-label" style="margin-bottom:0;"><i class="far fa-clock"></i> Time</label>
+-                    <input type="time" name="reaching_time_{{ item.staff.id }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
++                    <input type="time" name="reaching_time_{{ item.staff.id }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="reaching_time" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
+                   </div>
+                 </div>
+ 
+                 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="On Time">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">On Time</span>
+-                    <input type="checkbox" name="on_time_{{ item.staff.id }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="on_time" name="on_time_{{ item.staff.id }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Shoe">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Shoe</span>
+-                    <input type="checkbox" name="shoes_{{ item.staff.id }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="shoes" name="shoes_{{ item.staff.id }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Uniform">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Uniform</span>
+-                    <input type="checkbox" name="uniform_{{ item.staff.id }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="uniform" name="uniform_{{ item.staff.id }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Grooming">
+                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Grooming</span>
+-                    <input type="checkbox" name="grooming_{{ item.staff.id }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
++                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="grooming" name="grooming_{{ item.staff.id }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                   </label>
+                 </div>
+               </div>
+@@ -194,14 +210,79 @@
+           {% endfor %}
+         </div>
+         
+-        {% if assigned_staff_list %}
+-        <div style="margin-top:20px; text-align:right;">
+-          <button type="submit" class="btn btn-gold" style="padding:10px 24px; font-size:0.95rem; border-radius:8px; box-shadow:0 4px 10px rgba(212,168,82,0.2); transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 14px rgba(212,168,82,0.3)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 10px rgba(212,168,82,0.2)';">
+-            <i class="fas fa-check-circle" style="margin-right:6px;"></i> Save Attendance Update
+-          </button>
+         </div>
+-        {% endif %}
+-      </form>
++      </div>
++      
++      <script>
++      // Attendance AJAX for Staff Portal
++      function saveAttField(el) {
++          const staffId = el.dataset.staff;
++          const field = el.dataset.field;
++          let value = el.type === 'checkbox' ? (el.checked ? 'true' : 'false') : el.value;
++          
++          const card = el.closest('.prm-att-card');
++          if (card) {
++              card.style.opacity = '0.6';
++              card.style.transform = 'scale(0.99)';
++          }
++
++          const formData = new FormData();
++          formData.append('staff_id', staffId);
++          formData.append('field', field);
++          formData.append('value', value);
++          formData.append('csrfmiddlewaretoken', document.querySelector('input[name="csrfmiddlewaretoken"]').value);
++
++          fetch("{% url 'staff_ajax_update_attendance_field' booking.pk %}", {
++              method: 'POST',
++              body: new URLSearchParams(formData)
++          })
++          .then(r => r.json())
++          .then(data => {
++              if (card) {
++                  card.style.opacity = '1';
++                  card.style.transform = 'scale(1)';
++              }
++              if (data.status === 'success') {
++                  if (card) {
++                      card.style.borderColor = 'var(--green)';
++                      setTimeout(() => card.style.borderColor = 'rgba(255,255,255,0.05)', 1000);
++                  }
++                  if(typeof showNotifToast !== 'undefined') showNotifToast(`✅ ${field.replace('_',' ')} saved`, "success");
++              } else {
++                  if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Save failed", "error");
++                  if (el.type === 'checkbox') el.checked = !el.checked;
++              }
++          })
++          .catch(err => {
++              if (card) {
++                  card.style.opacity = '1';
++                  card.style.transform = 'scale(1)';
++                  card.style.borderColor = 'var(--red)';
++              }
++              if(typeof showNotifToast !== 'undefined') showNotifToast("Connection Error", "error");
++          });
++      }
++
++      document.querySelectorAll('.att-ajax').forEach(el => {
++          const eventType = el.tagName === 'SELECT' ? 'change' : 'blur';
++          el.addEventListener(eventType, function(e) {
++              e.stopPropagation();
++              saveAttField(this);
++          });
++      });
++
++      document.querySelectorAll('.att-ajax-trigger').forEach(btn => {
++          btn.addEventListener('click', function(e) {
++              e.preventDefault();
++              e.stopPropagation();
++              const card = this.closest('.prm-att-card');
++              if (card) {
++                  card.querySelectorAll('.att-ajax').forEach(input => saveAttField(input));
++                  if(typeof showNotifToast !== 'undefined') showNotifToast("Saving staff data...", "info");
++              }
++          });
++      });
++      </script>
+     </div>
+     {% endif %}
+ 
+@@ -210,7 +291,7 @@
+   <!-- RIGHT -->
+   <div class="staff-booking-col">
+ 
+-    {% if me.level == 'captain' or me.is_staff %}
++    {% if me.level == 'captain' or me.level == 'supervisor' or me.is_staff %}
+     <!-- Post-Event Report -->
+     <div class="panel" id="panel-report" style="margin-bottom:16px;">
+       <div class="panel-hdr"><div class="panel-title">Post-Event Report</div></div>
+diff --git a/templates/staff/create_booking.html b/templates/staff/create_booking.html
+index 0603fd1..1d1449a 100644
+--- a/templates/staff/create_booking.html
++++ b/templates/staff/create_booking.html
+@@ -65,8 +65,8 @@
+           <input type="text" name="venue" placeholder="Hall name or address"/>
+         </div>
+         <div class="form-group">
+-          <label>Client's Budget (₹)</label>
+-          <input type="number" name="budget" placeholder="e.g. 75000"/>
++          <label>Approx. Boys Count</label>
++          <input type="number" name="budget" step="1" min="1" placeholder="e.g. 15"/>
+         </div>
+       </div>
+ 

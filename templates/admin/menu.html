@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Menu — Mastan's Catering & Services{% endblock %}
+{% block title %}Menu — Mastan Catering & Services{% endblock %}
 {% block page_title %}Menu Management{% endblock %}
 
 {% block content %}
@@ -86,7 +86,7 @@
 {% empty %}
 <div class="panel" style="text-align:center;padding:60px;color:var(--muted)">
   <i class="fas fa-utensils" style="font-size:3rem;margin-bottom:16px;display:block;color:var(--border)"></i>
-  <p>No menu categories yet. <a href="/django-admin/menu/menucategory/add/" style="color:var(--gold)">Add one in Django Admin</a></p>
+  <p>No menu categories yet. Please add a new menu item to get started!</p>
 </div>
 {% endfor %}
 

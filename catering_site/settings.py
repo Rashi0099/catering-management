@@ -50,8 +50,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Brute-force rate limiter on login endpoints
-    'core.middleware.LoginRateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'catering_site.urls'
@@ -151,8 +149,8 @@ if not DEBUG:
 SESSION_COOKIE_HTTPONLY    = True          # JS cannot read session cookie
 SESSION_COOKIE_SAMESITE    = 'Lax'        # Block cross-site request riding
 SESSION_COOKIE_NAME        = 'catrin_sess' # Obscure default 'sessionid' name
-SESSION_COOKIE_AGE         = 60 * 60 * 8  # 8-hour inactivity timeout
-SESSION_SAVE_EVERY_REQUEST = False         # Only save if data changed (perf)
+SESSION_COOKIE_AGE         = 60 * 60 * 24 * 30  # 30-day session — login once per month
+SESSION_SAVE_EVERY_REQUEST = True          # Reset 30-day timer on every request (keeps active users logged in)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False   # Persist across browser restarts
 
 # ── CSRF Hardening ───────────────────────────────────────────────────────────
@@ -167,17 +165,8 @@ LOGIN_LOCKOUT_SECONDS = 300  # 5-minute lockout window
 # ── Password Validation ──────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {'min_length': 8},
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'OPTIONS': {'min_length': 4},
     },
 ]
 

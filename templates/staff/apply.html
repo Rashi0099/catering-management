@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Staff Registration — Mastan Catering</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root { 
+      --teal: #2dd4bf; 
+      --bg: #0f172a; 
+      --surface: #1e293b; 
+      --border: rgba(255,255,255,0.1); 
+      --text: #ffffff; 
+      --muted: rgba(255,255,255,0.5); 
+      --red: #f43f5e; 
+      --gold: #f59e0b;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { 
+        font-family:'Outfit','DM Sans',sans-serif; 
+        background:#0b0f19; 
+        min-height:100vh; 
+        display:flex; 
+        align-items:center; 
+        justify-content:center; 
+        color:var(--text); 
+        padding: 20px;
+    }
+    body::before {
+      content:''; position:fixed; inset:0;
+      background: radial-gradient(ellipse at 25% 30%, rgba(45,212,191,0.05) 0%, transparent 60%),
+                  radial-gradient(ellipse at 75% 70%, rgba(20,184,166,0.03) 0%, transparent 60%);
+      pointer-events:none;
+    }
+    .box { 
+        width:100%; 
+        max-width:550px; 
+        background:var(--surface); 
+        border:1px solid var(--border); 
+        border-radius:18px; 
+        padding:42px 38px; 
+        position:relative; 
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); 
+    }
+    .box::after { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:30%; height:3px; background:var(--teal); border-radius: 0 0 10px 10px; box-shadow: 0 0 15px var(--teal); }
+    
+    .header { text-align:center; margin-bottom:32px; }
+    .header h1 { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--teal); font-weight:700; margin-bottom:6px; }
+    .header p { font-size:0.85rem; color:var(--muted); line-height: 1.5; }
+    
+    .form-group { margin-bottom:20px; }
+    label { display:block; font-size:0.7rem; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+    
+    input, select { 
+        width:100%; 
+        padding:14px 16px; 
+        background:#0f1117; 
+        border:1px solid var(--border); 
+        border-radius:10px; 
+        color:#fff; 
+        font-family:'DM Sans',sans-serif; 
+        font-size:0.95rem; 
+        transition:all 0.2s; 
+    }
+    input:focus, select:focus { outline:none; border-color:var(--teal); box-shadow: 0 0 0 1px var(--teal); }
+    select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 6 8 10 12 6"/></svg>'); background-repeat: no-repeat; background-position: right 16px top 50%; background-size: 16px; }
+    select option { background-color: #ffffff; color: #000000; }
+    
+    .btn { width:100%; padding:16px; background:var(--teal); border:none; border-radius:10px; color:#0f172a; font-family:'DM Sans',sans-serif; font-size:1rem; font-weight:800; cursor:pointer; margin-top:10px; transition:all 0.2s; text-transform: uppercase; letter-spacing: 0.05em;}
+    .btn:hover { opacity:0.9; transform: translateY(-1px); }
+    
+    .error-box { background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.2); color:white; padding:12px; border-radius:10px; font-size:0.85rem; margin-bottom:20px; text-align:center; }
+    .hint { text-align:center; margin-top:24px; font-size:0.85rem; color:var(--muted); }
+    .hint a { color:var(--teal); text-decoration:none; font-weight:600; }
+    
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 500px) { .grid { grid-template-columns: 1fr; gap: 0; } }
+    
+    /* Help override form widgets that come with standard django classes */
+    .form-control { width: 100% !important; border-radius: 10px !important; border: 1px solid var(--border) !important; background: #0f1117 !important; color: white !important; padding: 14px 16px !important; }
+    
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="header">
+    <h1>Staff Registration</h1>
+    <p>Submit your details below to join the Mastan Catering team. An admin will review and onboard you.</p>
+  </div>
+
+  {% if error %}
+  <div class="error-box">{{ error }}</div>
+  {% endif %}
+
+  {% if form.errors %}
+  <div class="error-box">Please check the form fields below for errors.</div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="form-group">
+      <label>Full Legal Name</label>
+      {{ form.full_name }}
+      <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.full_name.errors }}</div>
+    </div>
+    
+    <div class="grid">
+      <div class="form-group">
+        <label>Primary Phone</label>
+        {{ form.phone_1 }}
+        <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.phone_1.errors }}</div>
+      </div>
+      <div class="form-group">
+        <label>Secondary / WhatsApp</label>
+        {{ form.phone_2 }}
+        <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.phone_2.errors }}</div>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="form-group">
+        <label>Date of Birth</label>
+        {{ form.date_of_birth }}
+        <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.date_of_birth.errors }}</div>
+      </div>
+      <div class="form-group">
+        <label>Gender</label>
+        {{ form.gender }}
+        <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.gender.errors }}</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Service Area (Locality)</label>
+      {{ form.main_locality }}
+      <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.main_locality.errors }}</div>
+    </div>
+    
+    <div class="form-group" style="padding-top: 10px;">
+        <label>Recent Photo (Optional)</label>
+        {{ form.photo }}
+    </div>
+
+    <div style="padding: 16px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 20px; border: 1px dashed var(--border);">
+      <h3 style="font-size:0.9rem; color:var(--text); margin-bottom:12px;">Physical Profile (Uniforms)</h3>
+      <div class="grid">
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Height</label>
+            {{ form.height }}
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Coat Size</label>
+            {{ form.coat_size }}
+        </div>
+      </div>
+      <div class="grid" style="margin-top:16px;">
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Blood Group</label>
+            {{ form.blood_group }}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Guardian Name</label>
+      {{ form.guardian_name }}
+    </div>
+    <div class="form-group">
+      <label>Guardian Phone</label>
+      {{ form.guardian_phone }}
+    </div>
+    
+    <div class="form-group">
+      <label>Education</label>
+      {{ form.education }}
+    </div>
+
+    <div class="form-group">
+      <label>Home Address</label>
+      {{ form.home_address }}
+    </div>
+
+    <button type="submit" class="btn">Submit Application</button>
+  </form>
+
+  <div class="hint">
+    Already approved? <a href="{% url 'staff_login' %}">Go to Login</a>
+  </div>
+</div>
+</body>
+</html>

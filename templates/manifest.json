@@ -2,21 +2,50 @@
   "name": "{{ name }}",
   "short_name": "{{ short_name }}",
   "start_url": "{{ start_url }}",
+  "scope": "/staff/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "background_color": "#0b0f19",
   "theme_color": "#d4a852",
-  "gcm_sender_id": "103953800507",
-  "description": "Catering Management Application",
+  "description": "Mastan Catering Staff Management Application",
+  "lang": "en",
+  "gcm_sender_id": "227009036928",
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/static/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-192x192_white.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/static/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open Staff Dashboard",
+      "url": "/staff/",
+      "icons": [{ "src": "/static/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Bookings",
+      "short_name": "Bookings",
+      "description": "View upcoming bookings",
+      "url": "/staff/bookings/",
+      "icons": [{ "src": "/static/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

@@ -1,0 +1,71 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Settings — Mastan Catering Admin{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .settings-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+  .settings-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--gold);
+    background: rgba(255, 184, 0, 0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  }
+  .settings-card .card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.01em;
+    text-align: center;
+  }
+  
+  /* Mobile responsiveness: stack to 1 column on small screens */
+  @media (max-width: 600px) {
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-grid">
+  
+  <a href="{% url 'admin_locality_list' %}" class="settings-card">
+    <div class="card-title">Manage Localities</div>
+  </a>
+
+  <a href="{% url 'admin_client_list' %}" class="settings-card">
+    <div class="card-title">Manage Clients</div>
+  </a>
+
+  <a href="{% url 'admin_terms_list' %}" class="settings-card">
+    <div class="card-title">Terms & Conditions</div>
+  </a>
+
+  <a href="{% url 'admin_invoice_items_list' %}" class="settings-card">
+    <div class="card-title">Invoice Items</div>
+  </a>
+
+</div>
+{% endblock %}

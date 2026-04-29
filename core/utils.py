@@ -55,6 +55,7 @@ def auto_complete_past_bookings():
 
 
 
+
 def get_pending_count():
     """Returns pending booking count, cached for 2 minutes."""
     count = cache.get('pending_booking_count')
@@ -103,12 +104,27 @@ def send_fcm_notification(staff, title, body, link=None):
         badge = f"{BASE_URL}/static/icons/icon-192x192.png"
         abs_link = link if (link and link.startswith('http')) else f"{BASE_URL}{link or '/staff/'}"
         message = messaging.MulticastMessage(
+            # notification block = Android Chrome shows native OS-level notification
+            notification=messaging.Notification(
+                title=str(title),
+                body=str(body),
+            ),
             data={
                 'title': str(title),
                 'body': str(body),
                 'link': abs_link,
                 'icon': icon
             },
+            # Android-specific: override icon using WebpushConfig
+            webpush=messaging.WebpushConfig(
+                notification=messaging.WebpushNotification(
+                    icon=icon,
+                    badge=badge,
+                ),
+                fcm_options=messaging.WebpushFCMOptions(
+                    link=abs_link
+                ),
+            ),
             tokens=tokens,
         )
         response = messaging.send_each_for_multicast(message)
@@ -136,6 +152,10 @@ def notify_admins(title, body, link='/admin-panel/'):
         send_fcm_notification(admin, title, body, link=link)
 
 
+# Alias — used by admin_views.py and staff/views.py attendance update handlers
+send_push_notification = send_fcm_notification
+
+
 def _notify_all_task(title, body, link):
     """Internal task function to broadcast FCM to all active staff."""
     from firebase_admin import messaging
@@ -155,12 +175,27 @@ def _notify_all_task(title, body, link):
         chunk_tokens = tokens[i:i + chunk_size]
         try:
             message = messaging.MulticastMessage(
+                # notification block = Android Chrome shows native OS-level notification
+                notification=messaging.Notification(
+                    title=str(title),
+                    body=str(body),
+                ),
                 data={
                     'title': str(title),
                     'body': str(body),
                     'link': abs_link,
                     'icon': icon
                 },
+                # Android-specific: override icon and deep-link URL
+                webpush=messaging.WebpushConfig(
+                    notification=messaging.WebpushNotification(
+                        icon=f"{BASE_URL}/static/images/logo.png",
+                        badge=f"{BASE_URL}/static/icons/icon-192x192.png",
+                    ),
+                    fcm_options=messaging.WebpushFCMOptions(
+                        link=abs_link
+                    ),
+                ),
                 tokens=chunk_tokens,
             )
             response = messaging.send_each_for_multicast(message)

@@ -1,0 +1,29 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}{% if item %}Edit Term{% else %}Add Term{% endif %} | Admin Panel{% endblock %}
+{% block page_title %}
+<a href="{% url 'admin_terms_list' %}" class="back-link" style="color:var(--text); margin-right:12px; text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
+{% if item %}Edit Term{% else %}Add New Term{% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">{% if item %}Edit Term{% else %}New Term{% endif %}</div>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Term / Rule Text *</label>
+        <textarea name="text" rows="4" required placeholder="e.g., Staff must arrive 30 minutes before the event starts..." style="max-width:100%;">{% if item %}{{ item.text }}{% endif %}</textarea>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button type="submit" class="btn btn-gold" style="flex:1; justify-content:center;">
+          <i class="fas fa-save"></i> {% if item %}Update Term{% else %}Add Term{% endif %}
+        </button>
+        <a href="{% url 'admin_terms_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

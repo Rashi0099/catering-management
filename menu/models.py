@@ -24,7 +24,7 @@ class MenuCategory(models.Model):
 class MenuItem(models.Model):
     category = models.ForeignKey(MenuCategory, on_delete=models.CASCADE, related_name='items')
     name = models.CharField(max_length=200)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     image = models.ImageField(upload_to='menu/', blank=True, null=True)
     is_vegetarian = models.BooleanField(default=False)

@@ -3,6 +3,20 @@
 {% block nav_staff_apps %}active{% endblock %}
 
 {% block content %}
+{% if auto_whatsapp_url %}
+<div id="waModal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:9999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:30px; text-align:center; max-width:400px; width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+    <div style="font-size:3rem; color:#25D366; margin-bottom:15px;"><i class="fab fa-whatsapp"></i></div>
+    <h3 style="margin-top:0; color:var(--text); margin-bottom:10px;">Staff Approved! 🎉</h3>
+    <p style="color:var(--muted); font-size:0.95rem; margin-bottom:24px; line-height:1.5;">Staff ID and default password have been generated. Click below to send the login details directly to their WhatsApp.</p>
+    <a href="{{ auto_whatsapp_url|safe }}" target="_blank" onclick="document.getElementById('waModal').style.display='none';" style="display:flex; align-items:center; justify-content:center; width:100%; box-sizing:border-box; padding:14px; background:#25D366; color:#fff; text-decoration:none; border-radius:12px; font-weight:700; letter-spacing:0.5px; margin-bottom:12px; transition:0.3s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='brightness(1)'">
+      <i class="fab fa-whatsapp" style="margin-right:8px; font-size:1.2rem;"></i> Send Login Details
+    </a>
+    <button onclick="document.getElementById('waModal').style.display='none';" style="background:transparent; border:none; color:var(--muted); text-decoration:underline; font-size:0.9rem; cursor:pointer; width:100%; padding:10px;">Skip for now</button>
+  </div>
+</div>
+{% endif %}
+
 <style>
   @media (max-width: 768px) {
     /* Premium ListTile Mobile UX for Staff Applications */

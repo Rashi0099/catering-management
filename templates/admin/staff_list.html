@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}The Team — Mastan's Catering & Services Admin  {% include 'pagination.html' with page_obj=staff %}
+{% block title %}The Team — Mastan Catering & Services Admin  {% include 'pagination.html' with page_obj=staff %}
 {% endblock %}
 {% block page_title %}The Team  {% include 'pagination.html' with page_obj=staff %}
 {% endblock %}
@@ -24,16 +24,14 @@
       <option value="A" {% if request.GET.level == 'A' %}selected{% endif %}>A Level</option>
       <option value="B" {% if request.GET.level == 'B' %}selected{% endif %}>B Level</option>
       <option value="C" {% if request.GET.level == 'C' %}selected{% endif %}>C Level</option>
+      <option value="supervisor" {% if request.GET.level == 'supervisor' %}selected{% endif %}>Supervisor</option>
       <option value="captain" {% if request.GET.level == 'captain' %}selected{% endif %}>Captain</option>
     </select>
     <select name="locality" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);" onchange="this.form.submit()">
       <option value="">All Localities</option>
-      <option value="Kondotty" {% if request.GET.locality == 'Kondotty' %}selected{% endif %}>Kondotty</option>
-      <option value="Areekode" {% if request.GET.locality == 'Areekode' %}selected{% endif %}>Areekode</option>
-      <option value="Edavannappara" {% if request.GET.locality == 'Edavannappara' %}selected{% endif %}>Edavannappara</option>
-      <option value="Kizhisseri" {% if request.GET.locality == 'Kizhisseri' %}selected{% endif %}>Kizhisseri</option>
-      <option value="University" {% if request.GET.locality == 'University' %}selected{% endif %}>University</option>
-      <option value="Valluvambram" {% if request.GET.locality == 'Valluvambram' %}selected{% endif %}>Valluvambram</option>
+      {% for loc in localities %}
+      <option value="{{ loc.name }}" {% if request.GET.locality == loc.name %}selected{% endif %}>{{ loc.name }}</option>
+      {% endfor %}
     </select>
     <select name="month" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);" onchange="this.form.submit()">
       <option value="">Month (All)</option>

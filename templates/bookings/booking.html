@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Book an Event — Mastan's Catering & Services{% endblock %}
+{% block title %}Book an Event — Mastan Catering & Services{% endblock %}
 {% block nav_contact %}active{% endblock %}
 
 {% block extra_css %}
@@ -114,12 +114,17 @@
   
   /* Terms Modal Styles */
   .terms-modal {
-    display: none; position: fixed; inset: 0; 
-    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-    z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+    display: none; position: fixed; 
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999; align-items: center; justify-content: center; padding: 20px;
     animation: fadeInModal 0.3s ease;
   }
   .terms-modal.active { display: flex; text-align: left; }
+  
+  /* Scroll lock helper */
+  body.modal-open { overflow: hidden !important; height: 100vh !important; }
   .terms-modal-content {
     background: #fff; width: 100%; max-width: 600px;
     max-height: 80vh; overflow-y: auto; border-radius: 16px;
@@ -256,31 +261,104 @@
         <input type="text" name="website" tabindex="-1" autocomplete="off" style="display:none; position:absolute; left:-9999px;" aria-hidden="true">
         <div class="form-grid">
           <div class="form-section-title">Candidate Profile</div>
-          {% for field in staff_form %}
-            <div class="form-group {% if field.name == 'home_address' or field.name == 'education' %}full{% endif %}">
-              <label>{{ field.label }} {% if field.field.required %}*{% endif %}</label>
-              {% if field.name == 'image' %}
-                <div style="background:var(--bg); padding:18px; border-radius:14px; border:1px solid var(--border);">
-                  {{ field }}
-                </div>
-              {% else %}
-                {{ field }}
-              {% endif %}
-              <div class="invalid-feedback js-error-msg"></div>
-              {% if field.errors %}
-                <div style="color:#dc2626; font-size:0.8rem; margin-top:8px; font-weight:500;">
-                  {% for error in field.errors %}• {{ error }}<br>{% endfor %}
-                </div>
-              {% endif %}
+          <div class="form-group full">
+            <label>Full Legal Name *</label>
+            {{ staff_form.full_name }}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          
+          <div class="form-group">
+            <label>Primary Phone *</label>
+            {{ staff_form.phone_1 }}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          <div class="form-group">
+            <label>Secondary / WhatsApp</label>
+            {{ staff_form.phone_2 }}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          
+          <div class="form-group">
+            <label>Date of Birth *</label>
+            {{ staff_form.date_of_birth }}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          <div class="form-group">
+            <label>Gender *</label>
+            <div style="position:relative;">
+                {{ staff_form.gender }}
             </div>
-          {% endfor %}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+
+          <div class="form-group full">
+            <label>Service Area (Locality) *</label>
+            <div style="position:relative;">
+                {{ staff_form.main_locality }}
+            </div>
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          
+          <div class="form-section-title">Physical Profile & Uniform</div>
+          
+          <div class="form-group">
+              <label>Height *</label>
+              {{ staff_form.height }}
+              <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          <div class="form-group">
+              <label>Coat Size *</label>
+              <div style="position:relative;">
+                  {{ staff_form.coat_size }}
+              </div>
+              <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          <div class="form-group">
+              <label>Blood Group *</label>
+              {{ staff_form.blood_group }}
+              <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          <div class="form-group">
+              <label>Recent Photo</label>
+              <div style="background:var(--cream, #f9f9f9); padding:10px; border-radius:14px; border:1px dashed var(--border);">
+                  {{ staff_form.photo }}
+              </div>
+              <div class="invalid-feedback js-error-msg"></div>
+          </div>
+
+          <div class="form-section-title">Background Details</div>
+
+          <div class="form-group">
+            <label>Guardian Name *</label>
+            {{ staff_form.guardian_name }}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          <div class="form-group">
+            <label>Guardian Phone *</label>
+            {{ staff_form.guardian_phone }}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+          
+          <div class="form-group full">
+            <label>Education *</label>
+            <div style="position:relative;">
+                {{ staff_form.education }}
+            </div>
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
+
+          <div class="form-group full">
+            <label>Home Address *</label>
+            {{ staff_form.home_address }}
+            <div class="invalid-feedback js-error-msg"></div>
+          </div>
 
           <!-- TERMS & CONDITIONS -->
           <div class="form-group full" style="margin-top:20px;">
             <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer;" class="terms-label">
-              <input type="checkbox" name="agree_terms" required style="width:20px; height:20px; margin-top:2px; accent-color:var(--gold); flex-shrink:0;">
+              <input type="checkbox" name="agree_terms" id="agreeTerms" required style="width:20px; height:20px; margin-top:2px; accent-color:var(--gold); flex-shrink:0;">
               <span style="text-transform:none; font-size:0.95rem; font-weight:500; color:var(--text); letter-spacing:0;">
-                I deeply understand and agree to the <a href="javascript:void(0)" onclick="openTermsModal(event)" style="color:var(--gold); text-decoration:underline; font-weight:600;">Terms & Conditions</a> of working with Mastan's Catering & Services.
+                I deeply understand and agree to the <a href="javascript:void(0)" onclick="openTermsModal(event)" style="color:var(--gold); text-decoration:underline; font-weight:600;">Terms & Conditions</a> of working with Mastan Catering & Services.
               </span>
             </label>
             <div class="invalid-feedback js-error-msg">You must accept the terms before submitting.</div>
@@ -304,17 +382,17 @@
       Terms & Conditions
     </div>
     <div style="font-size:0.95rem; line-height:1.6; color:#444;">
-      <div style="margin-bottom:15px; font-weight:600; color:var(--brown);">MASTAN'S കാറ്ററിങ് മാനേജ്മെന്റിൽ.. പാർടൈമായും ജോലി ചെയ്യാനുള്ള "ഉപാധികളും നിബന്ധനകളും"</div>
+      <div style="margin-bottom:15px; font-weight:600; color:var(--brown);">MASTAN കാറ്ററിങ് മാനേജ്മെന്റിൽ.. പാർടൈമായും ജോലി ചെയ്യാനുള്ള "ഉപാധികളും നിബന്ധനകളും"</div>
       <ol style="padding-left:18px;">
-        <li style="margin-bottom:10px;">ജോലി ചെയ്യുന്ന കമ്പനിയോട് വിശ്വസ്തതയും കൂറും പുലർത്തുന്നവർ ആയിരിക്കണം. വർക്ക് ബുക്ക് ചെയ്താൽ നിർബന്ധമായും സൈറ്റിൽ എത്തണം. <b style="color:#e74c3c;">"ക്യാൻസലേഷൻ അനുവദിക്കുകയില്ല"</b>.</li>
-        <li style="margin-bottom:10px;">കൃത്യമായ സമയത്ത് സൈറ്റിൽ എത്തുകയും ക്യാപ്റ്റൻ/സീനിയേഴ്സ് പറഞ്ഞതനുസരിച്ച് വർക്ക് ചെയ്യുകയും ചെയ്താൽ താങ്കളിലുള്ള വിശ്വാസം വർദ്ധിപ്പിക്കാൻ അത് കാരണമാകും.</li>
-        <li style="margin-bottom:10px;">അച്ചടക്കമുള്ള നല്ല സ്റ്റാഫുകളെ വാർത്തെടുക്കാൻ മൂല്യനിർണയം നടത്തും. വർക്കിന് പ്രവേശിച്ചാൽ പിന്നീടുള്ള സമയങ്ങളിൽ മൊബൈലുകൾക്ക് ഏർപ്പെടുത്തിയ നിയന്ത്രണത്തിന് താങ്കൾ പൂർണ്ണമായും സഹകരിക്കണം.</li>
-        <li style="margin-bottom:10px;">റിപ്പോർട്ടിംഗ് മുതൽ ഡിസ്പോസൽ വരെ താങ്കളുടെ ഉത്തരവാദിത്വം കമ്പനിക്ക് ആയിരിക്കും.</li>
-        <li style="margin-bottom:10px;">കമ്പനി ഏൽപ്പിച്ച ക്യാപ്റ്റൻ ആയിരിക്കും സൈറ്റിനെ പൂർണ ചുമതല. ക്യാപ്റ്റൻ തരുന്ന നിർദ്ദേശങ്ങൾ പാലിക്കാൻ താങ്കൾ ബാധ്യസ്ഥനാണ്.</li>
+        {% for term in terms %}
+        <li style="margin-bottom:10px;">{{ term.text }}</li>
+        {% empty %}
+        <li>No terms have been added yet.</li>
+        {% endfor %}
       </ol>
     </div>
     <div style="margin-top:24px; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
-      <button type="button" class="btn-primary" onclick="closeTermsModal()" style="padding:12px 24px; background:var(--brown); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size:0.95rem; display:flex; align-items:center; gap:8px;"><i class="fas fa-check"></i> I Understand</button>
+      <button type="button" class="btn-primary" onclick="acceptTerms()" style="padding:12px 24px; background:var(--gold); color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size:0.95rem; display:flex; align-items:center; gap:8px;"><i class="fas fa-check"></i> I Understand</button>
     </div>
   </div>
 </div>
@@ -362,12 +440,25 @@
 
   function openTermsModal(e) {
     if (e) e.preventDefault();
-    document.getElementById('termsModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
+    const modal = document.getElementById('termsModal');
+    if (modal) {
+      modal.classList.add('active');
+      modal.style.display = 'flex'; // Force display
+    }
+    document.body.classList.add('modal-open');
   }
   function closeTermsModal() {
-    document.getElementById('termsModal').classList.remove('active');
-    document.body.style.overflow = 'auto';
+    const modal = document.getElementById('termsModal');
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none'; // Force hide
+    }
+    document.body.classList.remove('modal-open');
+  }
+  function acceptTerms() {
+    const cb = document.getElementById('agreeTerms');
+    if (cb) cb.checked = true;
+    closeTermsModal();
   }
 
   // Premium Validation Logic for all forms

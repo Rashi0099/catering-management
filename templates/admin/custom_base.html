@@ -114,6 +114,12 @@
       margin-left: auto; background: var(--red); color: #fff;
       font-size: 0.65rem; padding: 2px 7px; border-radius: 20px; font-weight: 600;
     }
+    .nav-item.has-submenu.submenu-open .submenu {
+      display: flex !important;
+    }
+    .nav-item.has-submenu.submenu-open .fa-chevron-down {
+      transform: rotate(180deg);
+    }
 
     .sidebar-footer {
       padding: 16px; border-top: 1px solid var(--border);
@@ -223,6 +229,12 @@
     .btn-gold:hover { filter: brightness(1.1); }
     .btn-secondary { background: var(--border); color: var(--text); border: 1px solid rgba(255,255,255,0.1); }
     .btn-secondary:hover { background: var(--surface); border-color: var(--gold); }
+    .nav-item.active { background: rgba(200, 148, 10, 0.1); color: var(--gold); font-weight: 600; border-right: 3px solid var(--gold); }
+    .nav-item.active i { color: var(--gold); }
+    
+    .sub-nav { display: none; background: rgba(0,0,0,0.15); border-radius: 8px; margin: 4px 8px; overflow: hidden; }
+    .sub-nav.open { display: block; animation: slideDown 0.2s ease-out; }
+    @keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
     .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
     .btn-ghost:hover { color: var(--text); border-color: var(--text); }
     .btn-danger { background: rgba(224,92,92,0.12); color: var(--red); border: 1px solid rgba(224,92,92,0.2); }
@@ -331,7 +343,7 @@
     <div class="brand">
       <img src="{% static 'images/logo.png' %}" alt="Logo" style="height: 28px; margin-right: 10px; border-radius: 5px;">
       <div>
-        Mastan's Catering & Services
+        Mastan Catering & Services
         <div class="subtitle">Admin Panel</div>
       </div>
     </div>
@@ -349,11 +361,29 @@
     <a href="{% url 'admin_reports' %}" class="nav-item {% if page == 'reports' and request.resolver_match.url_name != 'admin_manual_invoice' and request.resolver_match.url_name != 'admin_event_reports' %}active{% endif %}">
       <i class="nav-icon fas fa-file-invoice-dollar"></i> Financial Report
     </a>
-    <a href="{% url 'admin_manual_invoice' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_manual_invoice' %}active{% endif %}">
-      <i class="nav-icon fas fa-file-pdf"></i> Invoice
-    </a>
+    <!-- Invoice Dropdown Menu -->
+    <div class="nav-group">
+      <a href="#" class="nav-item" onclick="document.getElementById('invoice-submenu').classList.toggle('open'); return false;">
+        <i class="nav-icon fas fa-file-invoice"></i> Invoices
+        <i class="fas fa-chevron-down" style="margin-left:auto; font-size:0.8rem; opacity:0.6;"></i>
+      </a>
+      <div id="invoice-submenu" class="sub-nav {% if 'invoice' in request.resolver_match.url_name %}open{% endif %}">
+        <a href="{% url 'admin_manual_invoice' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_manual_invoice' %}active{% endif %}" style="padding-left:36px; font-size:0.9rem;">
+          <i class="fas fa-plus" style="margin-right:8px; font-size:0.8rem;"></i> Create Invoice
+        </a>
+        <a href="{% url 'admin_invoice_history' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_invoice_history' or request.resolver_match.url_name == 'admin_invoice_history_download' %}active{% endif %}" style="padding-left:36px; font-size:0.9rem;">
+          <i class="fas fa-history" style="margin-right:8px; font-size:0.8rem;"></i> Invoice History
+        </a>
+      </div>
+    </div>
+
     <a href="{% url 'admin_event_reports' %}" class="nav-item {% if request.resolver_match.url_name == 'admin_event_reports' or request.resolver_match.url_name == 'admin_event_report_detail' %}active{% endif %}">
       <i class="nav-icon fas fa-clipboard-list"></i> Captain Reports
+    </a>
+
+    <div class="nav-section-label">Tools</div>
+    <a href="{% url 'admin_notepad' %}" class="nav-item {% if page == 'notepad' %}active{% endif %}">
+      <i class="nav-icon fas fa-sticky-note"></i> Notepad
     </a>
 
     <div class="nav-section-label">Content</div>
@@ -379,7 +409,7 @@
     
     {% get_pending_app_count as pending_app_count %}
     <a href="{% url 'admin_staff_requests' %}" class="nav-item {% if page == 'staff_requests' %}active{% endif %}">
-      <i class="nav-icon fas fa-user-plus"></i> Staff Requests
+      <i class="nav-icon fas fa-user-plus"></i> Event Requests
       {% if pending_app_count %}<span class="nav-badge">{{ pending_app_count }}</span>{% endif %}
     </a>
     
@@ -393,8 +423,9 @@
       <i class="nav-icon fas fa-bullhorn"></i> Notice Board
     </a>
 
-    <a href="/django-admin/" class="nav-item" target="_blank">
-      <i class="nav-icon fas fa-cog"></i> Django Admin
+    <div class="nav-section-label">Settings</div>
+    <a href="{% url 'admin_settings' %}" class="nav-item {% if 'setting' in request.resolver_match.url_name or 'locality' in request.resolver_match.url_name or 'client' in request.resolver_match.url_name %}active{% endif %}" style="padding-left: 20px;">
+      Settings
     </a>
   </nav>
 
@@ -439,6 +470,7 @@
         <i class="fas fa-plus"></i> New Booking
       </a>
       {% endif %}
+      {% block header_actions %}{% endblock %}
     </div>
   </div>
 
@@ -511,7 +543,8 @@
     const a = e.target.closest('a');
     if (!a) return;
     if (a.target === '_blank' || a.hasAttribute('download')) return;
-    if (a.href.startsWith('#') || a.href === '' || a.protocol === 'javascript:') return;
+    const hrefAttr = a.getAttribute('href') || '';
+    if (hrefAttr.startsWith('#') || hrefAttr === '' || a.protocol === 'javascript:') return;
     if (a.href.includes('logout')) return;
     if (a.hostname !== window.location.hostname) return;
     
@@ -572,6 +605,21 @@
       setTimeout(() => el.remove(), 500);
     });
   }, 4000);
+
+  // Pull-To-Refresh Logic for Mobile/PWA
+  let ptrStartY = 0;
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) ptrStartY = e.touches[0].screenY;
+    else ptrStartY = 0;
+  }, {passive: true});
+  document.addEventListener('touchend', e => {
+    if (ptrStartY > 0 && window.scrollY === 0) {
+      if (e.changedTouches[0].screenY - ptrStartY > 150) {
+        if(typeof startNav === 'function') startNav();
+        window.location.reload();
+      }
+    }
+  }, {passive: true});
 
   // Toggle Sidebar
   function toggleSidebar() {

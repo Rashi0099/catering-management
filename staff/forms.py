@@ -28,6 +28,18 @@ class StaffApplicationForm(forms.ModelForm):
             'coat_size': forms.Select(attrs={'class': 'form-control', 'style': 'appearance: auto;'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Explicitly enforce education choices from model to ensure no stale data appears
+        self.fields['education'].choices = [('', 'Select Education')] + Staff.EDUCATION_CHOICES
+        
+        from .models import Locality
+        try:
+            locs = list(Locality.objects.values_list('name', 'name'))
+        except Exception:
+            locs = []
+        self.fields['main_locality'].choices = [('', 'Select Locality')] + locs
+
     def clean_phone_1(self):
         phone = self.cleaned_data.get('phone_1')
         if not phone.isdigit() or len(phone) < 10:

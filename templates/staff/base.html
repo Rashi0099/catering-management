@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Mastan Staff">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
-  <title>{% block title %}Staff Portal — Mastan's Catering & Services{% endblock %}</title>
+  <title>{% block title %}Staff Portal — Mastan Catering & Services{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
@@ -25,16 +25,16 @@
     #nav-progress.done { width: 100% !important; transition: width 0.2s ease !important; opacity: 1; }
     #nav-progress.fade { opacity: 0; transition: opacity 0.4s ease; }
 
-    /* Skeleton Loading & Page Transitions */
+    /* Skeleton shimmer — moving gradient */
     .skeleton-loader { display: none; padding: 20px; }
-    .skeleton-item { background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); height: 120px; }
-    .skeleton-line { height: 12px; background: rgba(255,255,255,0.04); border-radius: 4px; margin-bottom: 12px; }
-    .skeleton-title { height: 24px; width: 50%; background: rgba(255,255,255,0.06); margin-bottom: 20px; border-radius: 6px; }
-    .skeleton-pulse { animation: skeleton-fade 0.8s infinite ease-in-out alternate; transform: translate3d(0,0,0); }
-    @keyframes skeleton-fade { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+    .skeleton-item { background: rgba(255,255,255,0.04); border-radius: 12px; margin-bottom: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); }
+    .skeleton-line { height: 11px; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; border-radius: 4px; margin-bottom: 10px; animation: shimmer 1.2s infinite linear; }
+    .skeleton-title { height: 20px; width: 55%; background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.13) 50%, rgba(255,255,255,0.06) 75%); background-size: 200% 100%; border-radius: 6px; margin-bottom: 16px; animation: shimmer 1.2s infinite linear; }
+    .skeleton-pulse { } /* keep class for compatibility */
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-    .content-inner { animation: smoothPageLoad 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
-    @keyframes smoothPageLoad { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+    .content-inner { animation: smoothPageLoad 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes smoothPageLoad { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
 
     body.nav-loading-active .content-inner { display: none !important; }
     body.nav-loading-active .skeleton-loader { display: block !important; animation: fadeInSoft 0.3s ease forwards; }
@@ -239,7 +239,7 @@
 
 <aside class="sidebar" id="sidebar">
   <div class="s-logo">
-    <div class="brand"><img src="{% static 'images/logo.png' %}" style="height:30px;margin-right:8px;vertical-align:middle;border-radius:50%"> Mastan's Catering & Services</div>
+    <div class="brand"><img src="{% static 'images/logo.png' %}" style="height:30px;margin-right:8px;vertical-align:middle;border-radius:50%"> Mastan Catering & Services</div>
     <span class="role-badge">{{ request.user.get_level_display }}</span>
   </div>
   <nav class="s-nav">
@@ -321,7 +321,7 @@
     <i class="fas fa-home"></i> Home
   </a>
   <a href="{% url 'staff_bookings' %}" class="{% if request.resolver_match.url_name == 'staff_bookings' or request.resolver_match.url_name == 'staff_apply_booking' or request.resolver_match.url_name == 'staff_booking_detail' %}active{% endif %}">
-    <i class="fas fa-calendar-alt"></i> Events
+    <i class="fas fa-calendar-alt"></i> My Bookings
   </a>
   <a href="{% url 'staff_profile' %}" class="{% if request.resolver_match.url_name == 'staff_profile' or request.resolver_match.url_name == 'staff_change_password' or request.resolver_match.url_name == 'staff_terms' %}active{% endif %}">
     <i class="fas fa-user-circle"></i> Profile
@@ -409,7 +409,23 @@
     });
   }, 3500);
 
+  // Pull-To-Refresh Logic for Mobile/PWA
+  let ptrStartY = 0;
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) ptrStartY = e.touches[0].screenY;
+    else ptrStartY = 0;
+  }, {passive: true});
+  document.addEventListener('touchend', e => {
+    if (ptrStartY > 0 && window.scrollY === 0) {
+      if (e.changedTouches[0].screenY - ptrStartY > 150) {
+        if(typeof startNav === 'function') startNav();
+        window.location.reload();
+      }
+    }
+  }, {passive: true});
+
   // Toggle Sidebar
+
   function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('active');
@@ -435,17 +451,24 @@
     _deferredInstall.userChoice.then(() => { _deferredInstall = null; });
   }
 
-  // Navigation Pre-fetching for instant feel
-  document.querySelectorAll('.nav-link, .nav-item a, .sidebar a').forEach(link => {
-    link.addEventListener('mouseenter', function() {
-      const url = this.href;
-      if (url && url.startsWith(window.location.origin) && !url.includes('#')) {
-        const linkElem = document.createElement('link');
-        linkElem.rel = 'prefetch';
-        linkElem.href = url;
-        document.head.appendChild(linkElem);
-      }
-    }, { once: true });
+  // Navigation Pre-fetching — desktop hover + mobile touchstart
+  function prefetchUrl(url) {
+    if (!url || !url.startsWith(window.location.origin) || url.includes('#')) return;
+    if (document.querySelector(`link[rel="prefetch"][href="${url}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = url;
+    document.head.appendChild(link);
+  }
+  document.querySelectorAll('.nav-link, .nav-item a, .sidebar a, .bottom-nav a').forEach(link => {
+    link.addEventListener('mouseenter', () => prefetchUrl(link.href), { once: true });
+    link.addEventListener('touchstart', () => prefetchUrl(link.href), { once: true, passive: true });
+  });
+  // Also prefetch on bottom-nav touchstart immediately (fastest mobile path)
+  document.querySelectorAll('.bottom-nav a').forEach(link => {
+    link.addEventListener('touchstart', function(e) {
+      prefetchUrl(this.href);
+    }, { passive: true });
   });
 </script>
 {% block extra_js %}{% endblock %}

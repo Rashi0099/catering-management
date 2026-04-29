@@ -28,25 +28,67 @@
       <div class="panel-hdr"><div class="panel-title">Event Location & Time</div>
         <span class="badge b-{{ booking.status }}">{{ booking.get_status_display }}</span>
       </div>
-      <div class="form-row cols-2" style="font-size:0.95rem;">
-        <div><label>Event Type</label><div style="font-weight:500">{{ booking.get_event_type_display }}</div></div>
-        <div><label>Session</label><div style="font-weight:500">{{ booking.get_session_display }}</div></div>
-        <div><label>Date</label><div>{{ booking.event_date|date:"d M Y" }}</div></div>
-        <div><label>Time</label><div>{{ booking.event_time|default:"Time TBD"|time:"h:i A" }}</div></div>
-        <div style="grid-column:1/-1"><label>Venue Approximations</label><div>{{ booking.venue|default:"Venue TBD" }}</div></div>
-        {% if booking.location_name %}
-        <div style="grid-column:1/-1"><label>Map Location Name</label><div style="font-weight:500; color:var(--gold);">{{ booking.location_name }}</div></div>
-        {% endif %}
-        {% if booking.location_link %}
-        <div style="grid-column:1/-1; margin-top:8px;">
-          <a href="{{ booking.location_link }}" target="_blank" class="btn btn-gold btn-sm"><i class="fas fa-map-marker-alt"></i> Open Location in Map</a>
+      <div style="background:rgba(255,255,255,0.03); border-radius:16px; border:1px solid rgba(255,255,255,0.05); padding:16px; margin-bottom:20px;">
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+          <!-- Date -->
+          <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
+            <i class="fas fa-calendar-alt" style="color:var(--teal); font-size:1.2rem; margin-bottom:8px;"></i>
+            <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Date</div>
+            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{{ booking.event_date|date:"d M y" }}</div>
+          </div>
+          
+          <!-- Time -->
+          <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
+            <i class="fas fa-clock" style="color:var(--blue); font-size:1.2rem; margin-bottom:8px;"></i>
+            <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Time</div>
+            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{% if booking.event_time %}{{ booking.event_time|time:"h:i A" }}{% else %}TBD{% endif %}</div>
+          </div>
+          
+          <!-- Session -->
+          <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
+            <i class="fas fa-sun" style="color:var(--orange); font-size:1.2rem; margin-bottom:8px;"></i>
+            <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Session</div>
+            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{{ booking.get_session_display }}</div>
+          </div>
         </div>
+      </div>
+
+      <!-- Location Box -->
+      <div style="background:var(--surface); border-radius:12px; border:1px solid var(--border); padding:16px; margin-bottom:12px; display:flex; gap:16px; align-items:center;">
+        <div style="width:48px; height:48px; border-radius:12px; background:rgba(56, 201, 176, 0.1); border:1px solid rgba(56, 201, 176, 0.2); display:flex; align-items:center; justify-content:center; color:var(--teal); flex-shrink:0;">
+          <i class="fas fa-map-marker-alt" style="font-size:1.4rem;"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:2px;">Location</div>
+          <div style="font-size:1rem; font-weight:500; color:var(--text); line-height:1.4;">
+            {% if booking.location_link %}
+              <a href="{{ booking.location_link }}" target="_blank" style="color:var(--text); text-decoration:none;">
+                {{ booking.location_name|default:booking.venue|default:"Tap to open Map Route" }}
+              </a>
+            {% else %}
+              {{ booking.location_name|default:booking.venue|default:"Venue Details TBD" }}
+            {% endif %}
+          </div>
+        </div>
+        {% if booking.location_link %}
+        <a href="{{ booking.location_link }}" target="_blank" style="flex-shrink:0; background:rgba(56, 201, 176, 0.15); color:var(--teal); padding:10px 16px; border-radius:8px; border: 1px solid rgba(56, 201, 176, 0.3); text-decoration:none; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; transition:all 0.2s;">
+          <i class="fas fa-location-arrow"></i> Map
+        </a>
         {% endif %}
       </div>
+
+      {% if booking.budget %}
+      <div style="margin-top:12px; padding:10px 14px; background:rgba(212,168,82,0.05); border-radius:8px; border:1px solid rgba(212,168,82,0.1); display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-users" style="color:var(--gold);"></i>
+        <span style="font-size:0.85rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Staff Required:</span>
+        <span style="font-weight:700; color:var(--gold); font-size:1rem;">{{ booking.budget|stringformat:"i" }} Boys</span>
+      </div>
+      {% endif %}
+
     </div>
 
     <!-- Attendance Marking (For Captain) -->
-    {% if me.level == 'captain' or me.is_staff %}
+    {% if me.level == 'captain' or me.level == 'supervisor' or me.is_staff %}
     <div class="panel" id="panel-attendance" style="margin-bottom:16px">
       <div class="panel-hdr"><div class="panel-title">Mark Attendance</div>
         <div>
@@ -54,10 +96,8 @@
           <button type="button" onclick="forceDownloadAttendance('{% url 'staff_download_attendance' booking.pk %}', 'Attendance_Booking_{{ booking.pk }}.pdf', this)" class="btn btn-ghost" style="padding:4px 10px; font-size:0.8rem; margin-left:10px;"><i class="fas fa-file-pdf"></i> Download PDF</button>
         </div>
       </div>
-      <form method="post" action="{% url 'staff_booking_detail' booking.pk %}">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="mark_attendance">
-        <input type="hidden" name="attendance_date" value="{{ booking.event_date|date:'Y-m-d' }}">
+      
+      <div id="attendance-section-wrap">
         
         <style>
           .prm-att-card { background: rgba(22, 29, 45, 0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 22px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 18px; }
@@ -112,24 +152,27 @@
             <input type="hidden" name="staff_ids[]" value="{{ item.staff.id }}"/>
             
             <!-- Header Section -->
-            <div style="display:flex; justify-content:space-between; align-items:center; z-index: 1;">
-              <div style="display:flex; align-items:center; gap:16px;">
-                <div style="width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg, rgba(212,168,82,0.25) 0%, rgba(212,168,82,0.05) 100%); border:2px solid rgba(212,168,82,0.4); display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px rgba(212,168,82,0.2), inset 0 0 10px rgba(212,168,82,0.1); overflow:hidden; flex-shrink:0;">
+            <div style="background:rgba(255,255,255,0.03); padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, rgba(212,168,82,0.2) 0%, rgba(212,168,82,0.05) 100%); border:1px solid rgba(212,168,82,0.3); display:flex; align-items:center; justify-content:center; overflow:hidden;">
                   {% if item.staff.photo %}
-                    <img src="{{ item.staff.photo.url }}" alt="{{ item.staff.full_name }}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    <img src="{{ item.staff.photo.url }}" alt="{{ item.staff.full_name }}" style="width:100%; height:100%; object-fit:cover;">
                   {% else %}
-                    <div style="font-weight:800; font-size:1.5rem; color:var(--gold); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">{{ item.staff.first_name|slice:":1"|upper }}</div>
+                    <span style="font-weight:700; font-size:0.8rem; color:var(--gold);">{{ item.staff.first_name|slice:":1"|upper }}</span>
                   {% endif %}
                 </div>
                 <div>
-                  <div style="font-weight:800; font-size:1.1rem; color:#fff; letter-spacing:0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.4);">
-                    {{ item.staff.full_name }}
-                  </div>
-                  <div style="font-size:0.75rem; color:var(--gold); margin-top:4px; font-family:monospace; letter-spacing:0.8px;">
-                    <i class="fas fa-id-badge" style="font-size:0.65rem; opacity:0.8; margin-right:3px;"></i>{{ item.staff.staff_id }} 
-                    <span style="color:rgba(255,255,255,0.4); font-family:sans-serif; margin-left:4px; letter-spacing:0;">• {{ item.staff.get_level_display }}</span>
-                  </div>
+                  <div style="font-size:0.9rem; font-weight:700; color:#fff;">{{ item.staff.full_name }}</div>
+                  <div style="font-size:0.7rem; color:var(--gold); opacity:0.8;">{{ item.staff.get_level_display }}</div>
                 </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" class="att-ajax-trigger" data-staff="{{ item.staff.pk }}" style="background:var(--green); border:none; color:#000; font-weight:700; font-size:0.7rem; padding:6px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;" title="Save All Changes">
+                  <i class="fas fa-save"></i> SAVE
+                </button>
+                <a href="tel:{{ item.phone }}" style="width:28px; height:28px; border-radius:6px; background:rgba(46,204,113,0.1); color:var(--green); display:flex; align-items:center; justify-content:center; text-decoration:none;">
+                  <i class="fas fa-phone-alt" style="font-size:0.75rem;"></i>
+                </a>
               </div>
             </div>
 
@@ -140,7 +183,7 @@
               <div style="display:grid; grid-template-columns: 1fr auto; gap:14px;">
                 <div>
                   <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
-                  <select name="attendance_status_{{ item.staff.id }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
+                  <select name="attendance_status_{{ item.staff.id }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="status" style="cursor:pointer; padding-left:10px;">
                     <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
                     <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
                     <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
@@ -149,9 +192,21 @@
                 <div style="display:flex; flex-direction:column; align-items:center;">
                   <label class="prm-label" style="text-align:center;"><i class="fas fa-rupee-sign" style="margin-right:2px;"></i> Paid</label>
                   <label class="prm-checkbox-wrap">
-                    <input type="checkbox" class="prm-checkbox" name="payment_given_{{ item.staff.id }}" {% if item.attendance.payment_given %}checked{% endif %} />
+                    <input type="checkbox" class="prm-checkbox att-ajax" data-staff="{{ item.staff.pk }}" data-field="payment_given" name="payment_given_{{ item.staff.id }}" {% if item.attendance.payment_given %}checked{% endif %} />
                     <div class="prm-box"></div>
                   </label>
+                </div>
+              </div>
+
+              <!-- Bonus & Deduction Row -->
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-bottom: 4px;">
+                <div>
+                  <label class="prm-label"><i class="fas fa-plus-circle" style="color:var(--green); margin-right:4px;"></i> Bonus (₹)</label>
+                  <input type="number" step="1" name="bonus_{{ item.staff.id }}" value="{{ item.attendance.bonus|default:'0' }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="bonus" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
+                </div>
+                <div>
+                  <label class="prm-label"><i class="fas fa-minus-circle" style="color:var(--orange); margin-right:4px;"></i> Minus (₹)</label>
+                  <input type="number" step="1" name="deduction_{{ item.staff.id }}" value="{{ item.attendance.deduction|default:'0' }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="deduction" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
                 </div>
               </div>
 
@@ -160,26 +215,26 @@
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <div style="display:flex; align-items:center; gap:10px;">
                     <label class="prm-label" style="margin-bottom:0;"><i class="far fa-clock"></i> Time</label>
-                    <input type="time" name="reaching_time_{{ item.staff.id }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
+                    <input type="time" name="reaching_time_{{ item.staff.id }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="reaching_time" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
                   </div>
                 </div>
 
                 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="On Time">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">On Time</span>
-                    <input type="checkbox" name="on_time_{{ item.staff.id }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="on_time" name="on_time_{{ item.staff.id }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Shoe">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Shoe</span>
-                    <input type="checkbox" name="shoes_{{ item.staff.id }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="shoes" name="shoes_{{ item.staff.id }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Uniform">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Uniform</span>
-                    <input type="checkbox" name="uniform_{{ item.staff.id }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="uniform" name="uniform_{{ item.staff.id }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Grooming">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Grooming</span>
-                    <input type="checkbox" name="grooming_{{ item.staff.id }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="grooming" name="grooming_{{ item.staff.id }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                 </div>
               </div>
@@ -194,14 +249,79 @@
           {% endfor %}
         </div>
         
-        {% if assigned_staff_list %}
-        <div style="margin-top:20px; text-align:right;">
-          <button type="submit" class="btn btn-gold" style="padding:10px 24px; font-size:0.95rem; border-radius:8px; box-shadow:0 4px 10px rgba(212,168,82,0.2); transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 14px rgba(212,168,82,0.3)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 10px rgba(212,168,82,0.2)';">
-            <i class="fas fa-check-circle" style="margin-right:6px;"></i> Save Attendance Update
-          </button>
         </div>
-        {% endif %}
-      </form>
+      </div>
+      
+      <script>
+      // Attendance AJAX for Staff Portal
+      function saveAttField(el) {
+          const staffId = el.dataset.staff;
+          const field = el.dataset.field;
+          let value = el.type === 'checkbox' ? (el.checked ? 'true' : 'false') : el.value;
+          
+          const card = el.closest('.prm-att-card');
+          if (card) {
+              card.style.opacity = '0.6';
+              card.style.transform = 'scale(0.99)';
+          }
+
+          const formData = new FormData();
+          formData.append('staff_id', staffId);
+          formData.append('field', field);
+          formData.append('value', value);
+          formData.append('csrfmiddlewaretoken', document.querySelector('input[name="csrfmiddlewaretoken"]').value);
+
+          fetch("{% url 'staff_ajax_update_attendance_field' booking.pk %}", {
+              method: 'POST',
+              body: new URLSearchParams(formData)
+          })
+          .then(r => r.json())
+          .then(data => {
+              if (card) {
+                  card.style.opacity = '1';
+                  card.style.transform = 'scale(1)';
+              }
+              if (data.status === 'success') {
+                  if (card) {
+                      card.style.borderColor = 'var(--green)';
+                      setTimeout(() => card.style.borderColor = 'rgba(255,255,255,0.05)', 1000);
+                  }
+                  if(typeof showNotifToast !== 'undefined') showNotifToast(`✅ ${field.replace('_',' ')} saved`, "success");
+              } else {
+                  if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Save failed", "error");
+                  if (el.type === 'checkbox') el.checked = !el.checked;
+              }
+          })
+          .catch(err => {
+              if (card) {
+                  card.style.opacity = '1';
+                  card.style.transform = 'scale(1)';
+                  card.style.borderColor = 'var(--red)';
+              }
+              if(typeof showNotifToast !== 'undefined') showNotifToast("Connection Error", "error");
+          });
+      }
+
+      document.querySelectorAll('.att-ajax').forEach(el => {
+          const eventType = el.tagName === 'SELECT' ? 'change' : 'blur';
+          el.addEventListener(eventType, function(e) {
+              e.stopPropagation();
+              saveAttField(this);
+          });
+      });
+
+      document.querySelectorAll('.att-ajax-trigger').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              const card = this.closest('.prm-att-card');
+              if (card) {
+                  card.querySelectorAll('.att-ajax').forEach(input => saveAttField(input));
+                  if(typeof showNotifToast !== 'undefined') showNotifToast("Saving staff data...", "info");
+              }
+          });
+      });
+      </script>
     </div>
     {% endif %}
 
@@ -210,7 +330,7 @@
   <!-- RIGHT -->
   <div class="staff-booking-col">
 
-    {% if me.level == 'captain' or me.is_staff %}
+    {% if me.level == 'captain' or me.level == 'supervisor' or me.is_staff %}
     <!-- Post-Event Report -->
     <div class="panel" id="panel-report" style="margin-bottom:16px;">
       <div class="panel-hdr"><div class="panel-title">Post-Event Report</div></div>

@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Edit Financial Report — Mastan's Catering{% endblock %}
+{% block title %}Edit Financial Report — Mastan Catering{% endblock %}
 {% block page_title %}Edit Financial Report{% endblock %}
 
 {% block content %}
@@ -17,15 +17,23 @@
       </div>
       <div class="form-group">
         <label>Site Name</label>
-        <input type="text" name="site_name" value="{{ report.site_name }}" required>
+        <input type="text" name="site_name" value="{{ report.site_name }}" required list="client-list">
       </div>
       <div class="form-group">
         <label>Event Name</label>
-        <input type="text" name="event_name" value="{{ report.event_name }}" required>
+        <input type="text" name="event_name" value="{{ report.event_name }}" required list="client-list">
+        <datalist id="client-list"></datalist>
       </div>
       <div class="form-group">
         <label>No. of Boys</label>
         <input type="number" name="boys_count" value="{{ report.boys_count }}">
+      </div>
+      <div class="form-group">
+        <label>Work Type</label>
+        <select name="work_type">
+          <option value="day" {% if report.work_type == 'day' %}selected{% endif %}> Day</option>
+          <option value="night" {% if report.work_type == 'night' %}selected{% endif %}>Night</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Bill Incharge</label>
@@ -82,6 +90,18 @@
         billInput.addEventListener('input', autoCalcProfit);
         recvInput.addEventListener('input', autoCalcProfit);
     }
+
+    // Client Autocomplete Logic
+    fetch("{% url 'admin_api_clients' %}")
+      .then(r => r.json())
+      .then(data => {
+        const dl = document.getElementById('client-list');
+        data.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.name;
+          dl.appendChild(opt);
+        });
+      });
   });
 </script>
 {% endblock %}

@@ -48,6 +48,13 @@
     <h3 style="font-size: 0.85rem; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; font-weight: 600;">Financial Settlement</h3>
     <div class="grid-2">
       <div class="form-group">
+        <label>Work Type</label>
+        <select name="work_type" {% if report and report.status == 'submitted' %}disabled{% endif %}>
+          <option value="day" {% if report and report.work_type == 'day' %}selected{% endif %}> Day</option>
+          <option value="night" {% if report and report.work_type == 'night' %}selected{% endif %}>Night</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Bill In Charge</label>
         <input type="text" name="bill_in_charge" placeholder="NIL" value="{{ report.bill_in_charge|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
       </div>
@@ -91,10 +98,77 @@
         <label>Coat Rent</label>
         <input type="text" name="coat_rent" placeholder="NIL" value="{{ report.coat_rent|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
       </div>
+      <div class="form-group">
+        <label>Plate Count</label>
+        <input type="text" name="plate_count" placeholder="NIL" value="{{ report.plate_count|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Bottle Count</label>
+        <input type="text" name="bottle_count" placeholder="NIL" value="{{ report.bottle_count|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
+      <div class="form-group">
+        <label>Other Logistics</label>
+        <input type="text" name="extra_logistics" placeholder="NIL" value="{{ report.extra_logistics|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+      </div>
       <div class="form-group" style="grid-column: 1 / -1;">
         <label>TA (Travel Allowance)</label>
         <input type="text" name="ta" placeholder="NIL" value="{{ report.ta|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
       </div>
+    </div>
+
+    <!-- Dynamic Logistics Section -->
+    <div style="margin-top: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+        <h4 style="font-size: 0.8rem; color: var(--teal); text-transform: uppercase; margin: 0; font-weight: 700; letter-spacing: 0.05em;">More Logistics</h4>
+        {% if not report or report.status != 'submitted' %}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addDynamicRow('logistics-container', 'dyn_log')">
+          <i class="fas fa-plus"></i> Add Field
+        </button>
+        {% endif %}
+      </div>
+      <div id="logistics-container" style="display:flex; flex-direction:column; gap:10px;">
+        {% if report.dynamic_logistics %}
+          {% for label, val in report.dynamic_logistics.items %}
+          <div class="dynamic-row" style="display:grid; grid-template-columns: 1fr 1.5fr auto; gap:10px; align-items:center;">
+            <input type="text" name="dyn_log_label[]" value="{{ label }}" placeholder="Label (e.g. Ice)" {% if report.status == 'submitted' %}readonly{% endif %}>
+            <input type="text" name="dyn_log_val[]" value="{{ val }}" placeholder="Value (e.g. 10kg)" {% if report.status == 'submitted' %}readonly{% endif %}>
+            {% if report.status != 'submitted' %}
+            <button type="button" class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Dynamic Rentals Section -->
+    <div style="margin-top: 25px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+        <h4 style="font-size: 0.8rem; color: var(--orange); text-transform: uppercase; margin: 0; font-weight: 700; letter-spacing: 0.05em;">More Rentals</h4>
+        {% if not report or report.status != 'submitted' %}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addDynamicRow('rentals-container', 'dyn_rent')">
+          <i class="fas fa-plus"></i> Add Field
+        </button>
+        {% endif %}
+      </div>
+      <div id="rentals-container" style="display:flex; flex-direction:column; gap:10px;">
+        {% if report.dynamic_rentals %}
+          {% for label, val in report.dynamic_rentals.items %}
+          <div class="dynamic-row" style="display:grid; grid-template-columns: 1fr 1.5fr auto; gap:10px; align-items:center;">
+            <input type="text" name="dyn_rent_label[]" value="{{ label }}" placeholder="Label (e.g. Table)" {% if report.status == 'submitted' %}readonly{% endif %}>
+            <input type="text" name="dyn_rent_val[]" value="{{ val }}" placeholder="Value (e.g. 5 nos)" {% if report.status == 'submitted' %}readonly{% endif %}>
+            {% if report.status != 'submitted' %}
+            <button type="button" class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+
+    <h3 style="font-size: 0.85rem; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; margin-top: 10px; font-weight: 600;">Additional Message / Notes for Admin</h3>
+    <div class="form-group">
+      <textarea name="note" placeholder="Write any message, report, or details you want the admin to see..." rows="5" style="width:100%; border:1px solid var(--border); border-radius:8px; padding:12px; background:var(--surface); color:var(--text); font-family:inherit;" {% if report and report.status == 'submitted' %}readonly{% endif %}>{{ report.note|default:'' }}</textarea>
     </div>
 
     {% if report and report.status == 'submitted' %}
@@ -113,4 +187,31 @@
     {% endif %}
   </form>
 </div>
+
+<script>
+function addDynamicRow(containerId, prefix) {
+  const container = document.getElementById(containerId);
+  const div = document.createElement('div');
+  div.className = 'dynamic-row';
+  div.style.display = 'grid';
+  div.style.gridTemplateColumns = '1fr 1.5fr auto';
+  div.style.gap = '10px';
+  div.style.alignItems = 'center';
+  div.style.animation = 'fadeIn 0.3s ease';
+  
+  div.innerHTML = `
+    <input type="text" name="${prefix}_label[]" placeholder="Label (e.g. Ice)" required>
+    <input type="text" name="${prefix}_val[]" placeholder="Value (e.g. 10kg)" required>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+  `;
+  container.appendChild(div);
+}
+
+// Ensure the button from the previous step is styled correctly if it exists
+</script>
+
+<style>
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.dynamic-row input { margin-bottom: 0 !important; }
+</style>
 {% endblock %}

@@ -54,11 +54,14 @@ def booking_form(request):
 
 
     testimonials = Testimonial.objects.filter(is_featured=True)[:3]
+    from core.models import TermAndCondition
+    terms = TermAndCondition.objects.all()
     return render(request, 'bookings/booking.html', {
         'testimonials': testimonials,
         'event_form': event_form,
         'staff_form': staff_form,
         'error': error,
+        'terms': terms,
     })
 
 def booking_success(request):

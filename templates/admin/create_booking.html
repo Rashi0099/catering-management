@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Create Booking — Mastan's Catering & Services Admin{% endblock %}
+{% block title %}Create Booking — Mastan Catering & Services Admin{% endblock %}
 {% block page_title %}New Manual Booking{% endblock %}
 
 {% block content %}
@@ -20,12 +20,15 @@
       <div class="responsive-grid cols-2" style="gap:16px; margin-bottom:24px;">
         <div class="form-group">
           <label>Full Name *</label>
-          <input type="text" name="name" placeholder="Client Name" required style="max-width: 100%;" />
+          <input type="text" name="name" id="client_name" placeholder="Client Name" required style="max-width: 100%;" list="client-list" />
+          <datalist id="client-list"></datalist>
         </div>
         <div class="form-group">
           <label>Phone Number *</label>
-          <input type="text" name="phone" placeholder="e.g. 9744067400" required style="max-width: 100%;" />
+          <input type="text" name="phone" id="client_phone" placeholder="e.g. 9744067400" required style="max-width: 100%;" />
         </div>
+      </div>
+
         <div class="form-group">
           <label>Email Address</label>
           <input type="email" name="email" placeholder="client@example.com" style="max-width: 100%;" />
@@ -33,6 +36,43 @@
         <div class="form-group">
           <label>Company/Org (Optional)</label>
           <input type="text" name="company" placeholder="Corporate Name" style="max-width: 100%;" />
+        </div>
+      </div>
+
+      <!-- Section: Staff Quotas -->
+      <div style="background:rgba(212,168,82,0.04); border:1px solid rgba(212,168,82,0.4); padding:20px; border-radius:8px; margin-bottom:24px">
+        <div class="panel-title" style="margin-bottom:16px;font-size:0.95rem;color:var(--gold)"><i class="fas fa-users" style="margin-right:6px"></i> Staff Quotas</div>
+        <div class="responsive-grid cols-5" style="gap:12px;margin-bottom:12px">
+          <div class="form-group">
+            <label style="color:#aaddff; font-size:0.75rem;">Supr</label>
+            <input type="number" name="quota_supervisor" value="0" class="quota-input"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--gold); font-size:0.75rem;">Capts</label>
+            <input type="number" name="quota_captain" value="0" class="quota-input"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--teal); font-size:0.75rem;">A-Lvl</label>
+            <input type="number" name="quota_a" value="0" class="quota-input"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--blue); font-size:0.75rem;">B-Lvl</label>
+            <input type="number" name="quota_b" value="0" class="quota-input"/>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--green); font-size:0.75rem;">C-Lvl</label>
+            <input type="number" name="quota_c" value="0" class="quota-input"/>
+          </div>
+        </div>
+        <div id="quotaTotalDisplay" style="font-size:0.85rem; color:var(--muted); margin-top:8px; text-align:right;">Total Staff Requested: <span id="quotaTotalCount" style="font-weight:600; color:var(--gold);">0</span></div>
+        <div class="form-group" style="padding-top: 15px; border-top:1px solid rgba(212,168,82,0.1); margin-top:5px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" name="allow_direct_join" style="width:18px;height:18px;cursor:pointer;accent-color:var(--gold);">
+            <div>
+              <strong style="font-size:0.9rem;">Enable Direct Join</strong>
+              <span style="font-size:0.8rem;color:var(--muted);font-weight:normal;"> (Staff can join instantly)</span>
+            </div>
+          </label>
         </div>
       </div>
 
@@ -73,11 +113,11 @@
         <div class="responsive-grid cols-2" style="gap:16px; margin-top: 16px;">
           <div class="form-group">
             <label>Guest Count *</label>
-            <input type="number" name="guest_count" value="50" required style="max-width: 100%;" />
+            <input type="number" name="guest_count" value="50" style="max-width: 100%;" />
           </div>
           <div class="form-group">
-            <label>Expected Budget (₹)</label>
-            <input type="number" name="budget" step="100" placeholder="e.g. 150000" style="max-width: 100%;" />
+            <label>Approx. Boys Count</label>
+            <input type="number" name="budget" step="1" min="1" placeholder="e.g. 15" style="max-width: 100%;" />
           </div>
         </div>
       </div>
@@ -116,14 +156,6 @@
       <div style="border-top:1px solid var(--border); padding-top:20px; margin-bottom:24px;">
         <div class="panel-title" style="margin-bottom:16px; font-size:0.95rem; color:var(--gold);">Additional Details</div>
         
-        <div class="form-group">
-          <label>Dietary Requirements &amp; Special Requests</label>
-          <textarea name="dietary_requirements" rows="2" placeholder="e.g. 20 veg meals, 5 vegan..." style="max-width: 100%;"></textarea>
-        </div>
-        <div class="form-group">
-          <label>Internal Admin Notes</label>
-          <textarea name="message" rows="2" placeholder="Specific client requests..." style="max-width: 100%;"></textarea>
-        </div>
         <div class="form-group" style="padding-top: 5px;">
           <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom: 0;">
             <input type="checkbox" name="allow_direct_join" style="width:18px; height:18px; cursor:pointer; accent-color:var(--gold);">
@@ -142,4 +174,41 @@
   </div>
 </div>
 
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.quota-input');
+    const totalDisplay = document.getElementById('quotaTotalCount');
+    function updateTotal() {
+        let sum = 0;
+        inputs.forEach(input => {
+            const val = parseInt(input.value);
+            if (!isNaN(val)) sum += val;
+        });
+        totalDisplay.innerText = sum;
+    }
+    inputs.forEach(input => input.addEventListener('input', updateTotal));
+    updateTotal();
+  });
+
+  // Client Autocomplete Logic
+  let allClients = [];
+  fetch("{% url 'admin_api_clients' %}")
+    .then(r => r.json())
+    .then(data => {
+      allClients = data;
+      const dl = document.getElementById('client-list');
+      data.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        dl.appendChild(opt);
+      });
+    });
+
+  document.getElementById('client_name').addEventListener('change', function() {
+    const selected = allClients.find(c => c.name === this.value);
+    if (selected && selected.phone) {
+      document.getElementById('client_phone').value = selected.phone;
+    }
+  });
+</script>
 {% endblock %}

@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Add Financial Report — Mastan's Catering{% endblock %}
+{% block title %}Add Financial Report — Mastan Catering{% endblock %}
 {% block page_title %}Add Financial Report{% endblock %}
 
 {% block content %}
@@ -17,15 +17,23 @@
       </div>
       <div class="form-group">
         <label>Site Name</label>
-        <input type="text" name="site_name" required>
+        <input type="text" name="site_name" required list="client-list">
       </div>
       <div class="form-group">
         <label>Event Name</label>
-        <input type="text" name="event_name" required>
+        <input type="text" name="event_name" required list="client-list">
+        <datalist id="client-list"></datalist>
       </div>
       <div class="form-group">
         <label>No. of Boys</label>
         <input type="number" name="boys_count" value="0">
+      </div>
+      <div class="form-group">
+        <label>Work Type</label>
+        <select name="work_type">
+          <option value="day"> Day</option>
+          <option value="night">Night</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Bill Incharge</label>
@@ -80,6 +88,18 @@
         billInput.addEventListener('input', autoCalcProfit);
         recvInput.addEventListener('input', autoCalcProfit);
     }
+
+    // Client Autocomplete Logic
+    fetch("{% url 'admin_api_clients' %}")
+      .then(r => r.json())
+      .then(data => {
+        const dl = document.getElementById('client-list');
+        data.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.name;
+          dl.appendChild(opt);
+        });
+      });
   });
 </script>
 {% endblock %}

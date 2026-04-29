@@ -1,8 +1,16 @@
 from django.db import models
 from django.conf import settings
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.core.cache import cache
+
+
+class Client(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    phone = models.CharField(max_length=20, blank=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Booking(models.Model):
@@ -42,7 +50,7 @@ class Booking(models.Model):
     venue       = models.CharField(max_length=300, blank=True)
     location_name = models.CharField(max_length=255, blank=True)
     location_link = models.URLField(blank=True)
-    guest_count = models.IntegerField()
+    guest_count = models.IntegerField(null=True, blank=True)
     budget      = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     # Requirements
@@ -61,22 +69,15 @@ class Booking(models.Model):
     amount_pending  = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     # Quotas & Visibility
-    quota_captain = models.PositiveIntegerField(default=0, help_text="Number of Captains needed")
-    quota_a       = models.PositiveIntegerField(default=0, help_text="Number of A-Level staff needed")
-    quota_b       = models.PositiveIntegerField(default=0, help_text="Number of B-Level staff needed")
-    quota_c       = models.PositiveIntegerField(default=0, help_text="Number of C-Level staff needed")
+    quota_captain    = models.PositiveIntegerField(default=0, help_text="Number of Captains needed")
+    quota_supervisor = models.PositiveIntegerField(default=0, help_text="Number of Supervisors needed")
+    quota_a          = models.PositiveIntegerField(default=0, help_text="Number of A-Level staff needed")
+    quota_b          = models.PositiveIntegerField(default=0, help_text="Number of B-Level staff needed")
+    quota_c          = models.PositiveIntegerField(default=0, help_text="Number of C-Level staff needed")
     is_long_work  = models.BooleanField(default=False, help_text="Checked if the venue is >20km from the main office")
     is_published  = models.BooleanField(default=False, help_text="If True, staff can see and apply for this event")
     allow_direct_join = models.BooleanField(default=False, help_text="If True, staff can join instantly without admin approval.")
-    publish_locality = models.CharField(max_length=50, choices=[
-        ('all', 'All Localities'),
-        ('Kondotty', 'Kondotty'),
-        ('Areekode', 'Areekode'),
-        ('Edavannappara', 'Edavannappara'),
-        ('Kizhisseri', 'Kizhisseri'),
-        ('University', 'University'),
-        ('Valluvambram', 'Valluvambram'),
-    ], default='all', help_text="Publish only to staff from this locality")
+    publish_locality = models.CharField(max_length=50, default='all', help_text="Publish only to staff from this locality")
 
     # Staff
     created_by  = models.ForeignKey(
@@ -114,6 +115,14 @@ class Booking(models.Model):
                 details_updated = True
 
         super().save(*args, **kwargs)
+        
+        # Sync to Client model to keep autocomplete populated
+        if self.name:
+            from bookings.models import Client
+            client, created = Client.objects.get_or_create(name=self.name)
+            if self.phone and client.phone != self.phone:
+                client.phone = self.phone
+                client.save(update_fields=['phone'])
         
         if newly_published:
             self._notify_staff_published()
@@ -213,7 +222,7 @@ class Booking(models.Model):
             {"name": "Closing responsibility", "desc": ""}
         ]
         
-        from .models import EventTask
+        # EventTask is defined in this module
         for task in default_tasks:
             EventTask.objects.create(booking=self, task_name=task["name"], description=task["desc"])
 
@@ -303,6 +312,7 @@ class EventApplication(models.Model):
     note = models.TextField(blank=True, help_text="Note from staff to admin")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     cancel_rejected = models.BooleanField(default=False, help_text="True if admin denied a cancel request")
+    is_double_work = models.BooleanField(default=False, help_text="True if staff already has another booking on this day (different session)")
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -323,6 +333,11 @@ class ManualReport(models.Model):
     site_name = models.CharField(max_length=255)
     event_name = models.CharField(max_length=255)
     boys_count = models.IntegerField(default=0)
+    work_type = models.CharField(
+        max_length=10,
+        choices=[('day', 'Day'), ('night', 'Night')],
+        default='day'
+    )
     bill_incharge = models.CharField(max_length=255)
     bill_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     amount_received = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
@@ -346,6 +361,12 @@ class EventReport(models.Model):
     
     # Financials & Metrics
     status = models.CharField(max_length=20, choices=[('draft', 'Draft'), ('submitted', 'Submitted')], default='draft')
+    work_type = models.CharField(
+        max_length=10,
+        choices=[('day', 'Day'), ('night', 'Night')],
+        default='day',
+        help_text="Was this a day or night event?"
+    )
     bill_in_charge = models.CharField(max_length=255, default='NIL', blank=True)
     total_amount   = models.CharField(max_length=255, default='NIL', blank=True)
     balance_amount = models.CharField(max_length=255, default='NIL', blank=True)
@@ -359,6 +380,12 @@ class EventReport(models.Model):
     coat_incharge = models.CharField(max_length=255, default='NIL', blank=True)
     coat_rent     = models.CharField(max_length=255, default='NIL', blank=True)
     ta            = models.CharField(max_length=255, default='NIL', blank=True)
+    plate_count   = models.CharField(max_length=255, default='NIL', blank=True)
+    bottle_count  = models.CharField(max_length=255, default='NIL', blank=True)
+    extra_logistics = models.CharField(max_length=255, default='NIL', blank=True, help_text="One more thing / additional field")
+    dynamic_logistics = models.JSONField(default=dict, blank=True, help_text="Custom logistics fields added by user")
+    dynamic_rentals   = models.JSONField(default=dict, blank=True, help_text="Custom rental fields added by user")
+    note          = models.TextField(blank=True, help_text="Additional notes or message for the admin")
     
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -390,3 +417,16 @@ def invalidate_booking_caches(sender, instance, **kwargs):
     """Clear admin counters when bookings are created, updated, or deleted."""
     cache.delete('pending_booking_count')
     cache.delete('admin_dashboard_stats')
+
+@receiver(pre_save, sender=Client)
+def handle_client_edit(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old_client = Client.objects.get(pk=instance.pk)
+            if old_client.name != instance.name or old_client.phone != instance.phone:
+                Booking.objects.filter(name=old_client.name).update(
+                    name=instance.name,
+                    phone=instance.phone
+                )
+        except Client.DoesNotExist:
+            pass

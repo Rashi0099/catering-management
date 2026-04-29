@@ -1,70 +1,37 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Booking #{{ booking.pk }} — Admin
-  <style>
-    @media (min-width: 901px) {
-      .admin-booking-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
-        gap: 24px;
-        align-items: start;
-      }
-      .p-client { grid-column: 1; grid-row: 1; }
-      
-      .p-staff { grid-column: 1; grid-row: 2; margin-top:0 !important; }
-      .p-attendance { grid-column: 1; grid-row: 3; margin-top:0 !important; }
-      
-      .p-update { grid-column: 2; grid-row: 1; }
-      .p-captain { grid-column: 2; grid-row: 2; margin-top:0 !important; }
-    }
-    @media (max-width: 900px) {
-      .admin-booking-layout {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-      }
-      .p-client { order: 1; }
-      .p-update { order: 2; margin-top:0 !important; margin-bottom:0 !important; }
-      .p-captain { order: 3; }
-      .p-staff { order: 4; margin-top:0 !important; margin-bottom:0 !important; }
-      .p-attendance { order: 5; margin-top:0 !important; }
-    }
-  </style>
+{% block title %}Booking #{{ booking.pk }} — Admin{% endblock %}
 
-{% endblock %}
-{% block page_title %}Booking #{{ booking.pk }}
-  <style>
-    @media (min-width: 901px) {
-      .admin-booking-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
-        gap: 24px;
-        align-items: start;
-      }
-      .p-client { grid-column: 1; grid-row: 1; }
-      
-      .p-staff { grid-column: 1; grid-row: 2; margin-top:0 !important; }
-      .p-attendance { grid-column: 1; grid-row: 3; margin-top:0 !important; }
-      
-      .p-update { grid-column: 2; grid-row: 1; }
-      .p-captain { grid-column: 2; grid-row: 2; margin-top:0 !important; }
-    }
-    @media (max-width: 900px) {
-      .admin-booking-layout {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-      }
-      .p-client { order: 1; }
-      .p-update { order: 2; margin-top:0 !important; margin-bottom:0 !important; }
-      .p-captain { order: 3; }
-      .p-staff { order: 4; margin-top:0 !important; margin-bottom:0 !important; }
-      .p-attendance { order: 5; margin-top:0 !important; }
-    }
-  </style>
-
-{% endblock %}
+{% block page_title %}Booking #{{ booking.pk }}{% endblock %}
 
 {% block content %}
+<style>
+    @media (min-width: 901px) {
+      .admin-booking-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .p-client { grid-column: 1; grid-row: 1; }
+      .p-staff { grid-column: 1; grid-row: 2; margin-top:0 !important; }
+      .p-attendance { grid-column: 1; grid-row: 3; margin-top:0 !important; }
+      .p-update { grid-column: 2; grid-row: 1; }
+      .p-captain { grid-column: 2; grid-row: 2; margin-top:0 !important; }
+    }
+    @media (max-width: 900px) {
+      .admin-booking-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .p-client { order: 1; }
+      .p-update { order: 2; margin-top:0 !important; margin-bottom:0 !important; }
+      .p-captain { order: 3; }
+      .p-staff { order: 4; margin-top:0 !important; margin-bottom:0 !important; }
+      .p-attendance { order: 5; margin-top:0 !important; }
+    }
+</style>
+
 <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center;justify-content:space-between">
   <!-- Left Side Badges -->
   <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
@@ -104,16 +71,17 @@
           <i class="fas fa-globe" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--blue); font-size:0.9rem;"></i>
           <select name="publish_locality" style="padding:8px 32px 8px 36px; border:1px solid rgba(255,255,255,0.1); border-radius:8px; background:rgba(28,33,44,0.6); color:var(--text); font-size:0.85rem; outline:none; cursor:pointer; appearance:none;">
               <option value="all">All Localities</option>
-              <option value="Kondotty">Kondotty</option>
-              <option value="Areekode">Areekode</option>
-              <option value="Edavannappara">Edavannappara</option>
-              <option value="Kizhisseri">Kizhisseri</option>
-              <option value="University">University</option>
-              <option value="Valluvambram">Valluvambram</option>
+              {% for loc in localities %}
+              <option value="{{ loc.name }}">{{ loc.name }}</option>
+              {% endfor %}
           </select>
           <i class="fas fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:0.7rem; pointer-events:none;"></i>
         </div>
-        <button type="submit" name="action" value="publish" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(46,204,133,0.1); color:var(--green); border:1px solid rgba(46,204,133,0.4); font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
+        {% if total_quota > 0 %}
+            <button type="submit" name="action" value="publish" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(46,204,133,0.1); color:var(--green); border:1px solid rgba(46,204,133,0.4); font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
+          {% else %}
+            <button type="button" onclick="alert('Cannot publish event with zero quotas. Please click Edit Details to set the required staff counts first.')" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; font-weight:500; cursor:not-allowed;"><i class="fas fa-lock"></i> Publish Restricted</button>
+          {% endif %}
       {% endif %}
     </form>
     <a href="{% url 'admin_edit_booking' booking.pk %}" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; text-decoration:none; font-weight:500; transition:background 0.2s;"><i class="fa-regular fa-pen-to-square"></i> Edit Details</a>
@@ -122,11 +90,19 @@
 
 <!-- 4 TOP STAT CARDS -->
 <style>
-  .stat-ribbon { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:28px; }
-  .ribbon-card { background:rgba(28, 33, 44, 0.4); padding:20px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); display:flex; flex-direction:column; justify-content:center; }
-  .rb-label { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600; }
-  .rb-val { font-size:1.6rem; font-weight:600; color:var(--text); display:flex; align-items:baseline; gap:6px; }
-  .rb-sub { font-size:0.9rem; color:var(--muted); font-weight:400; }
+  .stat-ribbon { display:grid; grid-template-columns: 0.8fr 0.8fr 1.2fr 2fr; gap:16px; margin-bottom:28px; }
+  @media (max-width: 1100px) {
+    .stat-ribbon { grid-template-columns: 1fr 1fr; }
+    .stat-ribbon > div:last-child { grid-column: span 2; }
+  }
+  @media (max-width: 600px) {
+    .stat-ribbon { grid-template-columns: 1fr; }
+    .stat-ribbon > div:last-child { grid-column: span 1; }
+  }
+  .ribbon-card { background:rgba(28, 33, 44, 0.4); padding:16px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); display:flex; flex-direction:column; justify-content:center; }
+  .rb-label { font-size:0.6rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; font-weight:600; }
+  .rb-val { font-size:1.4rem; font-weight:600; color:var(--text); display:flex; align-items:baseline; gap:4px; }
+  .rb-sub { font-size:0.8rem; color:var(--muted); font-weight:400; }
 </style>
 <div class="stat-ribbon">
   <div class="ribbon-card" style="border-left:2px solid var(--gold);">
@@ -156,28 +132,115 @@
   <div class="ribbon-card" style="border-left:2px solid var(--green); padding:0; overflow:hidden; background:rgba(10, 25, 47, 0.4); border-radius:12px; border:1px solid #1a2c4e;">
     <div style="padding:12px 16px; border-bottom:1px solid #1a2c4e; background:rgba(10, 25, 47, 0.6); display:flex; justify-content:space-between; align-items:center;">
       <div class="rb-label" style="margin-bottom:0; color:#7a849a;">STAFF REQUIRED</div>
-      <div style="font-size:0.85rem; font-weight:700; color:{% if total_filled >= booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c %}var(--green){% else %}#fff{% endif %}; letter-spacing:0.5px;">
-        {{ total_filled }} / {{ booking.quota_captain|add:booking.quota_a|add:booking.quota_b|add:booking.quota_c }} <span style="font-size:0.65rem; color:var(--muted); margin-left:4px;">TOTAL</span>
+      <div id="quota-total-display" style="font-size:0.85rem; font-weight:700; color:{% if total_filled >= total_quota %}var(--green){% else %}#fff{% endif %}; letter-spacing:0.5px;">
+        <span id="total-filled-num">{{ total_filled }}</span> / <span id="total-quota-num">{{ total_quota }}</span> <span style="font-size:0.65rem; color:var(--muted); margin-left:4px;">TOTAL</span>
       </div>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(4, 1fr); text-align:center;">
-      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
-        <div style="font-size:0.65rem; color:var(--gold); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">Capt</div>
-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.captain }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_captain }}</div>
+    <div style="display:grid; grid-template-columns: repeat(5, 1fr); text-align:center; border-bottom:1px solid #1a2c4e;">
+      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
+        <div style="font-size:0.55rem; color:#aaddff; font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">Supr</div>
+        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-supervisor">{{ filled_counts.supervisor }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-supervisor">{{ booking.quota_supervisor|default:0 }}</span></div>
       </div>
-      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
-        <div style="font-size:0.65rem; color:var(--text); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">A-Lvl</div>
-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.A }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_a }}</div>
+      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
+        <div style="font-size:0.55rem; color:var(--gold); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">Capt</div>
+        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-captain">{{ filled_counts.captain }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-captain">{{ booking.quota_captain|default:0 }}</span></div>
       </div>
-      <div style="padding:12px 8px; border-right:1px solid #1a2c4e;">
-        <div style="font-size:0.65rem; color:var(--blue); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">B-Lvl</div>
-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.B }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_b }}</div>
+      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
+        <div style="font-size:0.55rem; color:var(--text); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">A-Lvl</div>
+        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-a">{{ filled_counts.A }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-a">{{ booking.quota_a|default:0 }}</span></div>
       </div>
-      <div style="padding:12px 8px;">
-        <div style="font-size:0.65rem; color:var(--green); font-weight:800; letter-spacing:0.5px; margin-bottom:4px; text-transform:uppercase;">C-Lvl</div>
-        <div style="font-size:1.1rem; font-weight:600; color:#fff;">{{ filled_counts.C }}<span style="color:rgba(255,255,255,0.2); font-size:0.8rem; margin:0 2px;">/</span>{{ booking.quota_c }}</div>
+      <div style="padding:10px 4px; border-right:1px solid #1a2c4e;">
+        <div style="font-size:0.55rem; color:var(--blue); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">B-Lvl</div>
+        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-b">{{ filled_counts.B }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-b">{{ booking.quota_b|default:0 }}</span></div>
+      </div>
+      <div style="padding:10px 4px;">
+        <div style="font-size:0.55rem; color:var(--green); font-weight:800; letter-spacing:0.3px; margin-bottom:4px; text-transform:uppercase;">C-Lvl</div>
+        <div style="font-size:1rem; font-weight:600; color:#fff;"><span id="f-val-c">{{ filled_counts.C }}</span><span style="color:rgba(255,255,255,0.2); font-size:0.7rem; margin:0 1px;">/</span><span class="role-quota" id="q-val-c">{{ booking.quota_c|default:0 }}</span></div>
       </div>
     </div>
+    
+    <!-- Quick Quota Controls for Mobile/Desktop -->
+    <div style="display:grid; grid-template-columns: repeat(5, 1fr); padding:8px 0; background:rgba(255,255,255,0.02);">
+      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
+        <button type="button" title="Supervisor" onclick="changeQuota('supervisor', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
+        <button type="button" title="Supervisor" onclick="changeQuota('supervisor', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid #4facfe; background:rgba(79,172,254,0.1); color:#4facfe; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+      </div>
+      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
+        <button type="button" title="Captain" onclick="changeQuota('captain', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
+        <button type="button" title="Captain" onclick="changeQuota('captain', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid var(--gold); background:rgba(212,168,82,0.1); color:var(--gold); display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+      </div>
+      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
+        <button type="button" onclick="changeQuota('a', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
+        <button type="button" onclick="changeQuota('a', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+      </div>
+      <div style="display:flex; justify-content:center; gap:6px; border-right:1px solid rgba(255,255,255,0.05);">
+        <button type="button" onclick="changeQuota('b', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
+        <button type="button" onclick="changeQuota('b', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid var(--blue); background:rgba(64,153,255,0.1); color:var(--blue); display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+      </div>
+      <div style="display:flex; justify-content:center; gap:6px;">
+        <button type="button" onclick="changeQuota('c', -1)" style="width:22px; height:22px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-minus" style="font-size:0.55rem;"></i></button>
+        <button type="button" onclick="changeQuota('c', 1)" style="width:22px; height:22px; border-radius:4px; border:1px solid var(--green); background:rgba(46,204,133,0.1); color:var(--green); display:flex; align-items:center; justify-content:center; cursor:pointer;"><i class="fas fa-plus" style="font-size:0.55rem;"></i></button>
+      </div>
+    </div>
+
+    <script>
+      function changeQuota(role, delta) {
+          const span = document.getElementById(`q-val-${role}`);
+          // AJAX Save with Delta
+          fetch("{% url 'admin_quick_update_quota' booking.pk %}", {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'X-CSRFToken': '{{ csrf_token }}',
+                  'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: `role=${role}&delta=${delta}`
+          })
+          .then(async r => {
+              const data = await r.json();
+              if (r.ok && data.status === 'success') {
+                  span.innerText = data.new_val;
+                  document.getElementById('total-quota-num').innerText = data.total;
+                  
+                  const pubBtn = document.querySelector('button[name="action"][value="publish"]');
+                  const lockBtn = document.querySelector('button[onclick*="Cannot publish"]');
+                  
+                  if ((data.total > 0 && lockBtn) || (data.total === 0 && pubBtn)) {
+                      location.reload(); 
+                  }
+
+                  // Dynamic color update
+                  const totalFilled = parseInt(document.getElementById('total-filled-num').innerText);
+                  const displayEl = document.getElementById('quota-total-display');
+                  if (totalFilled >= data.total) {
+                      displayEl.style.color = 'var(--green)';
+                  } else {
+                      displayEl.style.color = '#fff';
+                  }
+                  
+                  if(typeof showNotifToast !== 'undefined') {
+                    showNotifToast("Quota updated successfully", "success");
+                  }
+              } else {
+                  if(typeof showNotifToast !== 'undefined') {
+                    showNotifToast("⚠️ " + (data.message || "Error updating quota"), "error");
+                  } else {
+                    alert(data.message || "Error updating quota");
+                  }
+              }
+          })
+          .catch(err => {
+              console.error(err);
+              if(typeof showNotifToast !== 'undefined') {
+                showNotifToast("❌ Request failed. Check connection.", "error");
+              }
+          });
+      }
+    </script>
+    <style>
+      .quick-quota-box:hover { background: rgba(255,255,255,0.05); }
+      .quick-quota-box:hover i { color: var(--gold) !important; opacity:0.8; }
+    </style>
   </div>
 </div>
 
@@ -219,6 +282,13 @@
             <div class="detail-lbl">Venue</div>
             <div class="detail-txt"><i class="fas fa-map-marker-alt" style="color:var(--gold);"></i> {{ booking.venue|default:"kk auditorium" }}</div>
           </div>
+          
+          {% if booking.budget %}
+          <div class="detail-box">
+            <div class="detail-lbl">Approx. Boys</div>
+            <div class="detail-txt"><i class="fas fa-users" style="color:var(--gold);"></i> {{ booking.budget|stringformat:"i" }} Boys</div>
+          </div>
+          {% endif %}
           
           {% if booking.message %}
           <div class="detail-box" style="grid-column: 1 / -1;">
@@ -333,6 +403,14 @@
                   </div>
                 </div>
               </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" class="att-ajax-trigger" data-staff="{{ item.staff.pk }}" style="background:var(--green); border:none; color:#000; font-weight:700; font-size:0.7rem; padding:6px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;" title="Save All Changes">
+                  <i class="fas fa-save"></i> SAVE
+                </button>
+                <a href="tel:{{ item.phone }}" style="width:32px; height:32px; border-radius:8px; background:rgba(46,204,113,0.1); color:var(--green); display:flex; align-items:center; justify-content:center; text-decoration:none; transition:all 0.2s;">
+                  <i class="fas fa-phone-alt" style="font-size:0.85rem;"></i>
+                </a>
+              </div>
             </div>
 
             <!-- Inputs Section -->
@@ -342,18 +420,30 @@
               <div style="display:grid; grid-template-columns: 1fr auto; gap:14px;">
                 <div>
                   <label class="prm-label"><i class="fas fa-signal" style="margin-right:4px;"></i> Status</label>
-                  <select name="attendance_status_{{ item.staff.pk }}" class="prm-input" style="cursor:pointer; padding-left:10px;">
-                    <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
-                    <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
-                    <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
-                  </select>
+                    <select name="attendance_status_{{ item.staff.pk }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="status" style="cursor:pointer; padding-left:10px;">
+                      <option value="pending" {% if not item.attendance or item.attendance.status == 'pending' %}selected{% endif %}>⏳ Pending</option>
+                      <option value="present" {% if item.attendance and item.attendance.status == 'present' %}selected{% endif %}>✅ Present</option>
+                      <option value="absent" {% if item.attendance and item.attendance.status == 'absent' %}selected{% endif %}>❌ Absent</option>
+                    </select>
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:center;">
                   <label class="prm-label" style="text-align:center;"><i class="fas fa-rupee-sign" style="margin-right:2px;"></i> Paid</label>
                   <label class="prm-checkbox-wrap">
-                    <input type="checkbox" class="prm-checkbox" name="payment_given_{{ item.staff.pk }}" {% if item.attendance.payment_given %}checked{% endif %} />
+                    <input type="checkbox" class="prm-checkbox att-ajax" data-staff="{{ item.staff.pk }}" data-field="payment_given" name="payment_given_{{ item.staff.pk }}" {% if item.attendance.payment_given %}checked{% endif %} />
                     <div class="prm-box"></div>
                   </label>
+                </div>
+              </div>
+
+              <!-- Bonus & Deduction Row -->
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap:10px; margin-bottom: 4px;">
+                <div>
+                  <label class="prm-label"><i class="fas fa-plus-circle" style="color:var(--green); margin-right:4px;"></i> Bonus (₹)</label>
+                  <input type="number" step="1" name="bonus_{{ item.staff.pk }}" data-staff="{{ item.staff.pk }}" data-field="bonus" value="{{ item.attendance.bonus|default:'0' }}" class="prm-input att-ajax" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
+                </div>
+                <div>
+                  <label class="prm-label"><i class="fas fa-minus-circle" style="color:var(--orange); margin-right:4px;"></i> Minus (₹)</label>
+                  <input type="number" step="1" name="deduction_{{ item.staff.pk }}" data-staff="{{ item.staff.pk }}" data-field="deduction" value="{{ item.attendance.deduction|default:'0' }}" class="prm-input att-ajax" placeholder="0" style="padding:8px 10px; font-size: 0.9rem;">
                 </div>
               </div>
 
@@ -362,26 +452,26 @@
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <div style="display:flex; align-items:center; gap:10px;">
                     <label class="prm-label" style="margin-bottom:0;"><i class="far fa-clock"></i> Time</label>
-                    <input type="time" name="reaching_time_{{ item.staff.pk }}" value="{{ item.attendance.reaching_time|time:'H:i' }}" class="prm-input" style="padding:6px 10px; width:auto; border-radius:6px; cursor:text;"/>
+                    <input type="time" name="attendance_reaching_time_{{ item.staff.pk }}" class="prm-input att-ajax" data-staff="{{ item.staff.pk }}" data-field="reaching_time" value="{{ item.attendance.reaching_time|time:'H:i' }}">
                   </div>
                 </div>
 
                 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; padding:10px;">
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="On Time">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">On Time</span>
-                    <input type="checkbox" name="on_time_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="on_time" name="on_time_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.on_time %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Shoe">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Shoe</span>
-                    <input type="checkbox" name="shoes_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="shoes" name="shoes_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.shoes %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Uniform">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Uniform</span>
-                    <input type="checkbox" name="uniform_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="uniform" name="uniform_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.uniform %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                   <label style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer;" title="Grooming">
                     <span style="font-size:0.65rem; color:var(--muted); font-weight:600; text-transform:uppercase; text-align:center;">Grooming</span>
-                    <input type="checkbox" name="grooming_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
+                    <input type="checkbox" class="att-ajax" data-staff="{{ item.staff.pk }}" data-field="grooming" name="grooming_{{ item.staff.pk }}" {% if not item.attendance or item.attendance.grooming %}checked{% endif %} style="accent-color:var(--gold); width:18px; height:18px; cursor:pointer;"/>
                   </label>
                 </div>
               </div>
@@ -391,28 +481,98 @@
           {% endfor %}
         </div>
         
+        <!-- Legacy Save Button Removed (Auto-save implemented) -->
         <div style="margin-top:24px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:16px;">
-          {% if attendance_map %}
           <span style="font-size:0.8rem; color:var(--gold); display:flex; align-items:center; gap:6px;">
-            <i class="fas fa-check-circle"></i> Attendance already saved — you can still update
+            <i class="fas fa-magic"></i> Attendance auto-saves instantly
           </span>
-          {% endif %}
-          <button type="submit" id="att-submit-btn" class="btn" style="background:linear-gradient(135deg, var(--gold) 0%, #aa843a 100%); color:#12161c; padding:12px 28px; font-size:1rem; font-weight:700; border-radius:12px; border:none; box-shadow:0 6px 20px rgba(212,168,82,0.3); transition:all 0.3s ease; cursor:pointer;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 25px rgba(212,168,82,0.4)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 20px rgba(212,168,82,0.3)';">
-            <i class="fas fa-check-circle" style="margin-right:8px;"></i> Save Event Attendance
-          </button>
         </div>
+
         <script>
-        document.querySelector('form [name=action][value=mark_attendance]')?.closest('form')?.addEventListener('submit', function(e) {
-          var btn = document.getElementById('att-submit-btn');
-          if (btn.dataset.submitted === 'true') {
-            e.preventDefault();
-            return false;
-          }
-          btn.dataset.submitted = 'true';
-          btn.disabled = true;
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Saving...';
-          btn.style.opacity = '0.7';
-          btn.style.cursor = 'not-allowed';
+        // Attendance Auto-Save Logic
+        function saveAttField(el) {
+            const staffId = el.dataset.staff;
+            const field = el.dataset.field;
+            let value = el.type === 'checkbox' ? (el.checked ? 'true' : 'false') : el.value;
+            
+            console.log(`Saving Attendance: Staff ${staffId}, Field ${field}, Value ${value}`);
+            
+            const card = el.closest('.prm-att-card');
+            if (card) {
+                card.style.opacity = '0.5';
+                card.style.transform = 'scale(0.99)';
+            }
+
+            fetch("{% url 'admin_ajax_update_attendance_field' booking.pk %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `staff_id=${staffId}&field=${field}&value=${encodeURIComponent(value)}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (card) {
+                    card.style.opacity = '1';
+                    card.style.transform = 'scale(1)';
+                }
+                if (data.status === 'success') {
+                    if (card) {
+                        card.style.borderColor = 'var(--green)';
+                        setTimeout(() => card.style.borderColor = '#1a2c4e', 1000);
+                    }
+                    if(typeof showNotifToast !== 'undefined') {
+                         showNotifToast(`✅ ${field.replace('_',' ')} saved`, "success");
+                    }
+                    if (data.present_counts) {
+                        const pc = data.present_counts;
+                        if (document.getElementById('f-val-supervisor')) document.getElementById('f-val-supervisor').innerText = pc.supervisor;
+                        if (document.getElementById('f-val-captain')) document.getElementById('f-val-captain').innerText = pc.captain;
+                        if (document.getElementById('f-val-a')) document.getElementById('f-val-a').innerText = pc.a;
+                        if (document.getElementById('f-val-b')) document.getElementById('f-val-b').innerText = pc.b;
+                        if (document.getElementById('f-val-c')) document.getElementById('f-val-c').innerText = pc.c;
+                        if (document.getElementById('total-filled-num')) document.getElementById('total-filled-num').innerText = data.total_present;
+                        
+                        const totalQuota = parseInt(document.getElementById('total-quota-num')?.innerText || '0');
+                        const totalDisplay = document.getElementById('quota-total-display');
+                        if (totalDisplay) totalDisplay.style.color = (data.total_present >= totalQuota) ? 'var(--green)' : '#fff';
+                    }
+                } else {
+                    if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Save failed", "error");
+                    if (el.type === 'checkbox') el.checked = !el.checked;
+                }
+            })
+            .catch(err => {
+                if (card) {
+                    card.style.opacity = '1';
+                    card.style.transform = 'scale(1)';
+                    card.style.borderColor = 'var(--red)';
+                    setTimeout(() => card.style.borderColor = '#1a2c4e', 2000);
+                }
+                if(typeof showNotifToast !== 'undefined') showNotifToast("Connection Error", "error");
+            });
+        }
+
+        // Bind events
+        document.querySelectorAll('.att-ajax').forEach(el => {
+            const eventType = el.tagName === 'SELECT' ? 'change' : 'blur';
+            el.addEventListener(eventType, function(e) {
+                e.stopPropagation();
+                saveAttField(this);
+            });
+        });
+
+        document.querySelectorAll('.att-ajax-trigger').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const card = this.closest('.prm-att-card');
+                if (card) {
+                    card.querySelectorAll('.att-ajax').forEach(input => saveAttField(input));
+                    if(typeof showNotifToast !== 'undefined') showNotifToast("Saving staff data...", "info");
+                }
+            });
         });
         </script>
       </form>
@@ -430,14 +590,12 @@
   <div class="desktop-right-col">
     <div class="panel p-update" style="margin-bottom:16px;">
       <div class="panel-hdr">
-        <div class="panel-title"><i class="fas fa-edit" style="color:var(--gold);"></i> Update Booking</div>
+        <div class="panel-title"><i class="fas fa-magic" style="color:var(--gold);"></i> Quick Details (Auto-save)</div>
       </div>
-      <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="update_booking"/>
+      <div style="padding:20px; display:flex; flex-direction:column; gap:16px;">
         <div class="form-group">
-          <label>Status</label>
-          <select name="status">
+          <label class="prm-label">Event Status</label>
+          <select class="ajax-update" data-field="status">
             <option value="pending"     {% if booking.status == 'pending'     %}selected{% endif %}>⏳ Pending</option>
             <option value="confirmed"   {% if booking.status == 'confirmed'   %}selected{% endif %}>✅ Confirmed</option>
             <option value="completed"   {% if booking.status == 'completed'   %}selected{% endif %}>🏁 Completed</option>
@@ -445,8 +603,8 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Quoted Price (₹)</label>
-          <input type="number" name="quoted_price" step="0.01" value="{{ booking.quoted_price|default:'' }}" placeholder="Enter quote..."/>
+          <label class="prm-label">Quoted Price (₹)</label>
+          <input type="number" class="ajax-update" data-field="quoted_price" step="0.01" value="{{ booking.quoted_price|default:'' }}" placeholder="Enter quote..."/>
         </div>
         <div class="form-group">
           <label>Assign Staff</label>
@@ -456,16 +614,14 @@
               <option value="A">A Level</option>
               <option value="B">B Level</option>
               <option value="C">C Level</option>
+              <option value="supervisor">Supervisor</option>
               <option value="captain">Captain</option>
             </select>
             <select id="staffLocalityFilter" onchange="filterStaff()" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);">
               <option value="">All Localities</option>
-              <option value="Kondotty">Kondotty</option>
-              <option value="Areekode">Areekode</option>
-              <option value="Edavannappara">Edavannappara</option>
-              <option value="Kizhisseri">Kizhisseri</option>
-              <option value="University">University</option>
-              <option value="Valluvambram">Valluvambram</option>
+              {% for loc in localities %}
+              <option value="{{ loc.name }}">{{ loc.name }}</option>
+              {% endfor %}
             </select>
           </div>
           <input type="text" id="staffSearch" placeholder="Search staff by name..." onkeyup="filterStaff()" style="width:100%; padding:8px 12px; margin-bottom:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text);"/>
@@ -476,7 +632,7 @@
               <div style="display:flex; flex-direction:column; gap:8px;">
                 {% for s in staff_list %}
                 <label class="staff-item" data-level="{{ s.level }}" data-locality="{{ s.main_locality|default:'' }}" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px 8px; border-radius:4px; transition: background 0.2s;">
-                  <input type="checkbox" name="assigned_to" value="{{ s.pk }}" {% if s in booking.assigned_to.all %}checked{% endif %} style="accent-color:var(--gold); width:16px; height:16px; flex-shrink: 0;">
+                  <input type="checkbox" class="assigned-to-ajax" name="assigned_to" value="{{ s.pk }}" {% if s in booking.assigned_to.all %}checked{% endif %} style="accent-color:var(--gold); width:16px; height:16px; flex-shrink: 0;">
                   <div style="flex:1;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                       <span class="staff-name" style="font-weight:500; font-size:0.92rem;">{{ s.full_name }}</span>
@@ -527,15 +683,19 @@
               });
             }
           </script>
+        <div class="form-group">
+          <label class="prm-label">Dietary Requirements</label>
+          <textarea class="ajax-update" data-field="dietary_requirements" rows="2" placeholder="Veg/Non-veg counts...">{{ booking.dietary_requirements }}</textarea>
         </div>
         <div class="form-group">
-          <label>Admin Notes</label>
-          <textarea name="admin_notes" rows="3">{{ booking.admin_notes }}</textarea>
+          <label class="prm-label">Additional Notes (Client)</label>
+          <textarea class="ajax-update" data-field="message" rows="2" placeholder="Client instructions...">{{ booking.message }}</textarea>
         </div>
-        <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
-          <i class="fas fa-save"></i> Save Changes
-        </button>
-      </form>
+        <div class="form-group">
+          <label class="prm-label">Admin Notes</label>
+          <textarea class="ajax-update" data-field="admin_notes" rows="3" placeholder="Private admin notes...">{{ booking.admin_notes }}</textarea>
+        </div>
+      </div>
     </div>
 
     <div class="panel p-captain" style="margin-bottom:16px;">
@@ -638,6 +798,104 @@ function forceDownloadAttendance(url, filename, btn) {
         if(typeof showNotifToast !== 'undefined') showNotifToast("❌ Download Failed", "error");
     });
 }
+
+// AJAX Field Auto-save
+document.querySelectorAll('.ajax-update').forEach(el => {
+    let timeout = null;
+    el.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            const field = el.getAttribute('data-field');
+            const val = el.value;
+            
+            fetch("{% url 'admin_ajax_update_booking_field' booking.pk %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `field=${field}&value=${encodeURIComponent(val)}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    el.style.borderColor = 'var(--green)';
+                    setTimeout(() => el.style.borderColor = '', 1000);
+                } else {
+                    if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Update Failed", "error");
+                }
+            });
+        }, 800);
+    });
+    
+    // For selects, update immediately
+    if (el.tagName === 'SELECT') {
+        el.addEventListener('change', () => {
+            const field = el.getAttribute('data-field');
+            const val = el.value;
+            fetch("{% url 'admin_ajax_update_booking_field' booking.pk %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `field=${field}&value=${encodeURIComponent(val)}`
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    if(typeof showNotifToast !== 'undefined') showNotifToast("✅ Updated Successfully", "success");
+                }
+            });
+        });
+    }
+});
+
+// Staff Assignment Auto-save
+document.querySelectorAll('.assigned-to-ajax').forEach(cb => {
+    cb.addEventListener('change', function() {
+        const staffId = this.value;
+        const subAction = this.checked ? 'add' : 'remove';
+        
+        fetch("{% url 'admin_ajax_update_booking_field' booking.pk %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `field=assigned_to&value=${staffId}&sub_action=${subAction}`
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Assignment Updated", "success");
+                
+                // Update Ribbon Counts
+                if (data.filled) {
+                    for (const [role, count] of Object.entries(data.filled)) {
+                        const el = document.getElementById(`q-val-${role.toLowerCase()}`);
+                        if (el) el.innerText = count;
+                    }
+                }
+                if (data.total_filled !== undefined) {
+                    const filledEl = document.getElementById('total-filled-num');
+                    if (filledEl) {
+                        filledEl.innerText = data.total_filled;
+                        const totalQuota = parseInt(document.getElementById('total-quota-num').innerText) || 0;
+                        const displayEl = document.getElementById('quota-total-display');
+                        if (displayEl) {
+                            displayEl.style.color = (data.total_filled >= totalQuota) ? 'var(--green)' : '#fff';
+                        }
+                    }
+                }
+            } else {
+                if(typeof showNotifToast !== 'undefined') showNotifToast(data.message || "Assignment Failed", "error");
+                // Revert checkbox state on failure
+                this.checked = !this.checked;
+            }
+        });
+    });
+});
 </script>
 
 {% endblock %}

@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 def admin_required(view_func):
     return user_passes_test(lambda u: u.is_authenticated and u.is_staff, login_url='/admin-panel/login/')(view_func)
 from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -161,17 +162,60 @@ def booking_detail(request, pk):
             # Fix 3: If quoted_price changed, recalculate payment totals immediately
             if booking.quoted_price != old_quoted_price:
                 BookingPayment._recalc_booking_totals_for(booking)
-            # Assign staff
-            staff_ids = request.POST.getlist('assigned_to')
-            booking.assigned_to.set(staff_ids)
+            # Assign staff & Dynamic Quota Adjustment
+            old_assigned_ids = set(booking.assigned_to.values_list('id', flat=True))
+            new_assigned_ids = set(map(int, request.POST.getlist('assigned_to')))
             
-            # Event completion tracking
-            if old_status != 'completed' and booking.status == 'completed':
-                for staff_id in staff_ids:
+            added_ids = new_assigned_ids - old_assigned_ids
+            removed_ids = old_assigned_ids - new_assigned_ids
+            
+            quota_changed = False
+            if added_ids:
+                added_staff = Staff.objects.filter(id__in=added_ids)
+                for s in added_staff:
+                    role_key = s.level
+                    if role_key == 'supervisor':
+                        filled = booking.assigned_to.filter(level='supervisor').count() + 1
+                        if (booking.quota_supervisor or 0) < filled: booking.quota_supervisor = filled
+                    elif role_key == 'captain':
+                        filled = booking.assigned_to.filter(level='captain').count() + 1
+                        if (booking.quota_captain or 0) < filled: booking.quota_captain = filled
+                    elif role_key == 'A':
+                        filled = booking.assigned_to.filter(level='A').count() + 1
+                        if (booking.quota_a or 0) < filled: booking.quota_a = filled
+                    elif role_key == 'B':
+                        filled = booking.assigned_to.filter(level='B').count() + 1
+                        if (booking.quota_b or 0) < filled: booking.quota_b = filled
+                    elif role_key == 'C':
+                        filled = booking.assigned_to.filter(level='C').count() + 1
+                        if (booking.quota_c or 0) < filled: booking.quota_c = filled
+                quota_changed = True
+            
+            if removed_ids:
+                removed_staff = Staff.objects.filter(id__in=removed_ids)
+                for s in removed_staff:
+                    if s.level == 'captain': booking.quota_captain = max(0, (booking.quota_captain or 0) - 1)
+                    elif s.level == 'supervisor': booking.quota_supervisor = max(0, (booking.quota_supervisor or 0) - 1)
+                    elif s.level == 'A': booking.quota_a = max(0, (booking.quota_a or 0) - 1)
+                    elif s.level == 'B': booking.quota_b = max(0, (booking.quota_b or 0) - 1)
+                    elif s.level == 'C': booking.quota_c = max(0, (booking.quota_c or 0) - 1)
+                quota_changed = True
+            
+            if quota_changed:
+                booking.save(update_fields=['quota_captain', 'quota_supervisor', 'quota_a', 'quota_b', 'quota_c'])
+                
+            booking.assigned_to.set(new_assigned_ids)
+            
+            # Recalculate work counts for ALL affected staff (new and old)
+            affected_staff_ids = old_assigned_ids | new_assigned_ids
+            # If status changed to/from 'completed', or if staff list changed on a 'completed' event
+            if (old_status == 'completed' or booking.status == 'completed') or (booking.status == 'completed' and (added_ids or removed_ids)):
+                for staff_id in affected_staff_ids:
                     s = Staff.objects.get(id=staff_id)
-                    # Use .count() to stay in sync — never += 1 which can drift
                     s.total_events_completed = s.bookings.filter(status='completed').count()
                     s.save(update_fields=['total_events_completed'])
+                    
+                    # Promotion check for Level-C
                     if s.level == 'C':
                         day_count = s.bookings.filter(status='completed', session='day').count()
                         night_count = s.bookings.filter(status='completed', session='night').count()
@@ -188,9 +232,9 @@ def booking_detail(request, pk):
             # Sync EventApplication statuses based on manual assignment changes
             from bookings.models import EventApplication
             # If manually added to event, mark any pending app as approved
-            EventApplication.objects.filter(booking=booking, staff_id__in=staff_ids, status='pending').update(status='approved')
+            EventApplication.objects.filter(booking=booking, staff_id__in=new_assigned_ids, status='pending').update(status='approved')
             # If manually removed from event, mark any cancel_request as cancelled
-            EventApplication.objects.filter(booking=booking, status='cancel_requested').exclude(staff_id__in=staff_ids).update(status='cancelled')
+            EventApplication.objects.filter(booking=booking, status='cancel_requested').exclude(staff_id__in=new_assigned_ids).update(status='cancelled')
             
             messages.success(request, 'Booking updated!')
         elif action == 'add_payment':
@@ -204,35 +248,10 @@ def booking_detail(request, pk):
                 notes       = request.POST.get('notes', ''),
             )
             messages.success(request, f'Payment of Rs.{request.POST["amount"]} recorded!')
-        
         elif action == 'mark_attendance':
-            from staff.models import StaffAttendance
-            staff_ids = request.POST.getlist('attendance_staff_id')
-            for sid in staff_ids:
-                status = request.POST.get(f'attendance_status_{sid}', 'present')
-                r_time = request.POST.get(f'reaching_time_{sid}') or None
-                on_time = request.POST.get(f'on_time_{sid}') == 'on'
-                shoes = request.POST.get(f'shoes_{sid}') == 'on'
-                uniform = request.POST.get(f'uniform_{sid}') == 'on'
-                grooming = request.POST.get(f'grooming_{sid}') == 'on'
-                payment_given = request.POST.get(f'payment_given_{sid}') == 'on'
-                
-                att, created = StaffAttendance.objects.get_or_create(
-                    booking=booking,
-                    staff_id=sid,
-                    date=booking.event_date,
-                    defaults={'status': status, 'reaching_time': r_time, 'on_time': on_time, 'shoes': shoes, 'uniform': uniform, 'grooming': grooming, 'payment_given': payment_given}
-                )
-                if not created:
-                    att.status = status
-                    att.reaching_time = r_time
-                    att.on_time = on_time
-                    att.shoes = shoes
-                    att.uniform = uniform
-                    att.grooming = grooming
-                    att.payment_given = payment_given
-                    att.save()
-            messages.success(request, 'Attendance and fines saved successfully!')
+            # Attendance is now handled via AJAX. 
+            # Keeping this block empty to prevent errors if a legacy POST occurs.
+            pass
 
         return redirect('admin_booking_detail', pk=pk)
 
@@ -255,20 +274,34 @@ def booking_detail(request, pk):
     
     assigned_staff_with_att = []
     coat_counts = {'S': 0, 'M': 0, 'L': 0, 'XL': 0, 'XXL': 0}
-    filled_counts = {'captain': 0, 'A': 0, 'B': 0, 'C': 0}
+    filled_counts = {'supervisor': 0, 'captain': 0, 'A': 0, 'B': 0, 'C': 0}
+    total_quota = (booking.quota_supervisor or 0) + (booking.quota_captain or 0) + \
+                  (booking.quota_a or 0) + (booking.quota_b or 0) + (booking.quota_c or 0)
+    total_filled = 0
 
     for s in booking.assigned_to.all():
-        if s.coat_size and s.coat_size in coat_counts:
-            coat_counts[s.coat_size] += 1
+        if s.level not in ['captain', 'supervisor']:
+            if s.coat_size and s.coat_size in coat_counts:
+                coat_counts[s.coat_size] += 1
         
         # Calculate filled counts by level
-        if s.level == 'captain': filled_counts['captain'] += 1
-        elif s.level == 'A': filled_counts['A'] += 1
-        elif s.level == 'B': filled_counts['B'] += 1
-        elif s.level == 'C': filled_counts['C'] += 1
+        if s.level == 'supervisor': 
+            filled_counts['supervisor'] += 1
+            total_filled += 1
+        elif s.level == 'captain': 
+            filled_counts['captain'] += 1
+            total_filled += 1
+        elif s.level == 'A': 
+            filled_counts['A'] += 1
+            total_filled += 1
+        elif s.level == 'B': 
+            filled_counts['B'] += 1
+            total_filled += 1
+        elif s.level == 'C': 
+            filled_counts['C'] += 1
+            total_filled += 1
 
-        app = applications_map.get(s.id)
-        phone = app.applicant_phone if app and app.applicant_phone else s.phone
+        phone = s.phone
         assigned_staff_with_att.append({
             'staff': s,
             'phone': phone,
@@ -284,6 +317,7 @@ def booking_detail(request, pk):
         'grouped_staff': grouped_staff,
         'coat_counts': coat_counts,
         'filled_counts': filled_counts,
+        'total_quota': total_quota,
         'total_filled': len(assigned_staff_with_att),
         'attendance_map': attendance_map,
         'assigned_staff_with_att': assigned_staff_with_att,
@@ -293,6 +327,7 @@ def booking_detail(request, pk):
         'today': timezone.now().date(),
         'page': 'bookings',
         'captain_tasks': booking.tasks.all().order_by('id'),
+        'localities': __import__('staff').models.Locality.objects.all(),
     }
     return render(request, 'admin/booking_detail.html', context)
 
@@ -313,6 +348,250 @@ def download_attendance(request, pk):
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="attendance_booking_{booking.pk}.pdf"'
     return response
+
+
+@admin_required
+def admin_quick_update_quota(request, pk):
+    from django.http import JsonResponse
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST allowed'}, status=405)
+    
+    booking = get_object_or_404(Booking, pk=pk)
+    role = request.POST.get('role')
+    delta = request.POST.get('delta') # +1 or -1
+    
+    if not role or delta is None:
+        return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
+    
+    try:
+        d = int(delta)
+        
+        # Current DB value
+        if role == 'captain':
+            current_quota = booking.quota_captain
+            filled = booking.assigned_to.filter(level='captain').count()
+        elif role == 'supervisor':
+            current_quota = booking.quota_supervisor
+            filled = booking.assigned_to.filter(level='supervisor').count()
+        elif role in ['a', 'b', 'c']:
+            current_quota = getattr(booking, f'quota_{role}')
+            filled = booking.assigned_to.filter(level=role.upper()).count()
+        else: 
+            return JsonResponse({'status': 'error', 'message': 'Invalid role'}, status=400)
+            
+        new_val = current_quota + d
+        
+        # Floor check
+        if d < 0 and new_val < filled:
+            return JsonResponse({
+                'status': 'error', 
+                'message': f'Cannot decrease {role.upper()} quota below {filled} (currently assigned).'
+            }, status=400)
+        
+        if d > 0 and new_val < filled + 1:
+            new_val = filled + 1
+            
+        if role == 'captain': booking.quota_captain = new_val
+        elif role == 'supervisor': booking.quota_supervisor = new_val
+        else: setattr(booking, f'quota_{role}', new_val)
+        
+        update_field = f'quota_{role}' if role != 'captain' else 'quota_captain'
+        booking.save(update_fields=[update_field])
+        
+        total = (booking.quota_captain or 0) + (booking.quota_supervisor or 0) + \
+                (booking.quota_a or 0) + (booking.quota_b or 0) + (booking.quota_c or 0)
+        return JsonResponse({'status': 'success', 'new_val': new_val, 'total': total})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@admin_required
+@require_POST
+def admin_ajax_update_booking_field(request, pk):
+    booking = get_object_or_404(Booking, pk=pk)
+    field_name = request.POST.get('field')
+    value = request.POST.get('value')
+    
+    allowed_fields = [
+        'status', 'quoted_price', 'admin_notes', 
+        'dietary_requirements', 'message', 'venue', 
+        'event_time', 'budget', 'guest_count', 'assigned_to'
+    ]
+    
+    if field_name not in allowed_fields:
+        return JsonResponse({'status': 'error', 'message': f'Field {field_name} not allowed'}, status=400)
+    
+    try:
+        msg = "Updated successfully"
+        if field_name == 'quoted_price':
+            setattr(booking, field_name, float(value) if value else None)
+        elif field_name in ['budget', 'guest_count']:
+            setattr(booking, field_name, int(value) if value else 0)
+        elif field_name == 'assigned_to':
+            sub_action = request.POST.get('sub_action', 'add')
+            staff_id = value
+            if staff_id:
+                try:
+                    from bookings.models import EventApplication
+                    s = Staff.objects.get(id=staff_id)
+                    if sub_action == 'add':
+                        booking.assigned_to.add(s)
+                        msg = f"Added {s.full_name} to event!"
+                        
+                        # Auto-adjust quota if it's exceeded
+                        role_key = s.level
+                        if role_key == 'supervisor':
+                            filled = booking.assigned_to.filter(level='supervisor').count()
+                            if (booking.quota_supervisor or 0) < filled: booking.quota_supervisor = filled
+                        elif role_key == 'captain':
+                            filled = booking.assigned_to.filter(level='captain').count()
+                            if (booking.quota_captain or 0) < filled: booking.quota_captain = filled
+                        elif role_key == 'A':
+                            filled = booking.assigned_to.filter(level='A').count()
+                            if (booking.quota_a or 0) < filled: booking.quota_a = filled
+                        elif role_key == 'B':
+                            filled = booking.assigned_to.filter(level='B').count()
+                            if (booking.quota_b or 0) < filled: booking.quota_b = filled
+                        elif role_key == 'C':
+                            filled = booking.assigned_to.filter(level='C').count()
+                            if (booking.quota_c or 0) < filled: booking.quota_c = filled
+                        
+                        booking.save(update_fields=['quota_captain', 'quota_supervisor', 'quota_a', 'quota_b', 'quota_c'])
+                        
+                        # Mark pending apps as approved
+                        EventApplication.objects.filter(booking=booking, staff=s, status='pending').update(status='approved')
+                        
+                    else:
+                        booking.assigned_to.remove(s)
+                        msg = f"Removed {s.full_name} from event"
+                        
+                        # Auto-decrease quota
+                        if s.level == 'captain': booking.quota_captain = max(0, (booking.quota_captain or 0) - 1)
+                        elif s.level == 'supervisor': booking.quota_supervisor = max(0, (booking.quota_supervisor or 0) - 1)
+                        elif s.level == 'A': booking.quota_a = max(0, (booking.quota_a or 0) - 1)
+                        elif s.level == 'B': booking.quota_b = max(0, (booking.quota_b or 0) - 1)
+                        elif s.level == 'C': booking.quota_c = max(0, (booking.quota_c or 0) - 1)
+                        
+                        booking.save(update_fields=['quota_captain', 'quota_supervisor', 'quota_a', 'quota_b', 'quota_c'])
+                        
+                        # Mark cancel requests as cancelled
+                        EventApplication.objects.filter(booking=booking, staff=s, status='cancel_requested').update(status='cancelled')
+                        
+                except Staff.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Staff not found'}, status=404)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'No staff ID provided'}, status=400)
+        else:
+            setattr(booking, field_name, value)
+            
+        if field_name == 'assigned_to':
+            pass # Already saved through model relations and update_fields above
+        else:
+            booking.save(update_fields=[field_name])
+            
+        # Recalculate filled counts for response
+        counts = {
+            'supervisor': booking.assigned_to.filter(level='supervisor').count(),
+            'captain': booking.assigned_to.filter(level='captain').count(),
+            'a': booking.assigned_to.filter(level='A').count(),
+            'b': booking.assigned_to.filter(level='B').count(),
+            'c': booking.assigned_to.filter(level='C').count(),
+        }
+        total_filled = sum(counts.values())
+        total_quota = (booking.quota_captain or 0) + (booking.quota_supervisor or 0) + \
+                      (booking.quota_a or 0) + (booking.quota_b or 0) + (booking.quota_c or 0)
+        
+        return JsonResponse({
+            'status': 'success', 
+            'message': msg,
+            'filled': counts, 
+            'total_filled': total_filled, 
+            'total_quota': total_quota
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@admin_required
+@require_POST
+def admin_ajax_update_attendance_field(request, pk):
+    from staff.models import StaffAttendance
+    booking = get_object_or_404(Booking, pk=pk)
+    staff_id = request.POST.get('staff_id')
+    field = request.POST.get('field')
+    value = request.POST.get('value')
+
+    if not staff_id or not field:
+        print(f"Attendance Update Error: Missing staff_id or field. Received: staff_id={staff_id}, field={field}")
+        return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
+
+    print(f"Attendance Update: Booking {booking.pk}, Staff {staff_id}, Field {field}, Value {value}")
+
+    try:
+        att, created = StaffAttendance.objects.get_or_create(
+            booking=booking,
+            staff_id=staff_id,
+            date=booking.event_date
+        )
+
+        from decimal import Decimal
+        if field == 'status':
+            att.status = value.strip().lower()
+        elif field == 'payment_given':
+            att.payment_given = (value == 'true')
+        elif field == 'bonus':
+            att.bonus = Decimal(str(value or 0))
+        elif field == 'deduction':
+            att.deduction = Decimal(str(value or 0))
+        elif field == 'reaching_time':
+            att.reaching_time = value if value and value != 'None' else None
+        elif field in ['on_time', 'shoes', 'uniform', 'grooming']:
+            setattr(att, field, (value == 'true'))
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Invalid field'}, status=400)
+
+        att.save()
+        print(f"Attendance Saved: {att}")
+
+        # Real-time counts for ribbon
+        from staff.models import StaffAttendance
+        present_counts = {
+            'supervisor': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='supervisor').count(),
+            'captain': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='captain').count(),
+            'A': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='A').count(),
+            'B': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='B').count(),
+            'C': StaffAttendance.objects.filter(booking=booking, status='present', staff__level='C').count(),
+        }
+        total_present = StaffAttendance.objects.filter(booking=booking, status='present').count()
+
+        # Send push if status changed
+        if field == 'status' and value in ['present', 'absent']:
+            try:
+                from core.utils import send_push_notification
+                staff = att.staff
+                title = "Attendance Updated"
+                msg = f"Your attendance for {booking.name} has been marked as {value.capitalize()} ✅" if value == 'present' else f"Your attendance for {booking.name} has been marked as Absent ❌"
+                send_push_notification(staff, title, msg)
+            except Exception as e:
+                print(f"Push Notification Error: {e}")
+
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Attendance updated',
+            'present_counts': {
+                'supervisor': present_counts.get('supervisor', 0),
+                'captain': present_counts.get('captain', 0),
+                'a': present_counts.get('A', 0),
+                'b': present_counts.get('B', 0),
+                'c': present_counts.get('C', 0),
+            },
+            'total_present': total_present,
+            'booking_id': booking.pk
+        })
+    except Exception as e:
+        import traceback
+        print(f"CRITICAL AJAX ERROR: {e}")
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @admin_required
@@ -362,23 +641,22 @@ def handle_application(request, pk, app_id, action):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         # Return updated quota counts so the frontend can refresh counts without page reload
         booking = application.booking
+        # Count staff at each level from the assigned_to list (source of truth)
+        assigned_staff = booking.assigned_to.all()
+        counts = {
+            'supervisor': len([s for s in assigned_staff if s.level == 'supervisor']),
+            'captain': len([s for s in assigned_staff if s.level == 'captain']),
+            'a': len([s for s in assigned_staff if s.level == 'A']),
+            'b': len([s for s in assigned_staff if s.level == 'B']),
+            'c': len([s for s in assigned_staff if s.level == 'C']),
+        }
+
         quota_data = {
-            'captain': {
-                'q': booking.quota_captain,
-                'c': booking.applications.filter(status='approved', staff__level='captain').count()
-            },
-            'a': {
-                'q': booking.quota_a,
-                'c': booking.applications.filter(status='approved', staff__level='A').count()
-            },
-            'b': {
-                'q': booking.quota_b,
-                'c': booking.applications.filter(status='approved', staff__level='B').count()
-            },
-            'c': {
-                'q': booking.quota_c,
-                'c': booking.applications.filter(status='approved', staff__level='C').count()
-            },
+            'supervisor': {'q': booking.quota_supervisor, 'c': counts['supervisor']},
+            'captain': {'q': booking.quota_captain, 'c': counts['captain']},
+            'a': {'q': booking.quota_a, 'c': counts['a']},
+            'b': {'q': booking.quota_b, 'c': counts['b']},
+            'c': {'q': booking.quota_c, 'c': counts['c']},
         }
         return JsonResponse({'status': 'success', 'quota': quota_data})
 
@@ -415,7 +693,7 @@ def admin_create_booking(request):
                 venue       = request.POST.get('venue', ''),
                 location_name = request.POST.get('location_name', ''),
                 location_link = request.POST.get('location_link', ''),
-                guest_count = int(request.POST.get('guest_count', 1)),
+                guest_count = int(request.POST.get('guest_count')) if request.POST.get('guest_count') else None,
                 budget      = request.POST.get('budget') or None,
                 dietary_requirements = request.POST.get('dietary_requirements', ''),
                 special_requests     = request.POST.get('special_requests', ''),
@@ -423,7 +701,12 @@ def admin_create_booking(request):
                 status               = 'confirmed',  # Manual admin entry defaults to confirmed
                 # Note: quoted_price is NOT set from budget — set it separately in booking detail
                 allow_direct_join    = request.POST.get('allow_direct_join') == 'on',
-                is_long_work         = request.POST.get('is_long_work') == 'on'
+                is_long_work         = request.POST.get('is_long_work') == 'on',
+                quota_captain        = int(request.POST.get('quota_captain') or 0),
+                quota_supervisor     = int(request.POST.get('quota_supervisor') or 0),
+                quota_a              = int(request.POST.get('quota_a') or 0),
+                quota_b              = int(request.POST.get('quota_b') or 0),
+                quota_c              = int(request.POST.get('quota_c') or 0),
             )
             # Admin creating booking is not necessarily assigning themselves, but we can assign later
             messages.success(request, f'Booking for {booking.name} created successfully!')
@@ -452,16 +735,34 @@ def admin_edit_booking(request, pk):
             booking.venue = request.POST.get('venue', '')
             booking.location_name = request.POST.get('location_name', '')
             booking.location_link = request.POST.get('location_link', '')
-            booking.guest_count = int(request.POST.get('guest_count', 1))
+            booking.guest_count = int(request.POST.get('guest_count')) if request.POST.get('guest_count') else None
             booking.budget = request.POST.get('budget') or None
             booking.dietary_requirements = request.POST.get('dietary_requirements', '')
             booking.message = request.POST.get('message', '')
             
             # Quotas & Locality
-            booking.quota_captain = int(request.POST.get('quota_captain') or 0)
-            booking.quota_a = int(request.POST.get('quota_a') or 0)
-            booking.quota_b = int(request.POST.get('quota_b') or 0)
-            booking.quota_c = int(request.POST.get('quota_c') or 0)
+            # Floor check validation
+            q_capt = int(request.POST.get('quota_captain') or 0)
+            q_supr = int(request.POST.get('quota_supervisor') or 0)
+            q_a = int(request.POST.get('quota_a') or 0)
+            q_b = int(request.POST.get('quota_b') or 0)
+            q_c = int(request.POST.get('quota_c') or 0)
+            
+            f_capt = booking.assigned_to.filter(level='captain').count()
+            f_supr = booking.assigned_to.filter(level='supervisor').count()
+            f_a = booking.assigned_to.filter(level='A').count()
+            f_b = booking.assigned_to.filter(level='B').count()
+            f_c = booking.assigned_to.filter(level='C').count()
+            
+            if q_capt < f_capt or q_supr < f_supr or q_a < f_a or q_b < f_b or q_c < f_c:
+                messages.error(request, "Cannot set quota lower than currently assigned staff count.")
+                return redirect('admin_edit_booking', pk=booking.pk)
+
+            booking.quota_captain = q_capt
+            booking.quota_supervisor = q_supr
+            booking.quota_a = q_a
+            booking.quota_b = q_b
+            booking.quota_c = q_c
             booking.publish_locality = request.POST.get('publish_locality', 'all')
             booking.allow_direct_join = request.POST.get('allow_direct_join') == 'on'
             booking.is_long_work = request.POST.get('is_long_work') == 'on'
@@ -475,6 +776,7 @@ def admin_edit_booking(request, pk):
     return render(request, 'admin/edit_booking.html', {
         'booking': booking,
         'page': 'bookings',
+        'localities': __import__('staff').models.Locality.objects.all(),
     })
 
 
@@ -485,6 +787,16 @@ def admin_publish_booking(request, pk):
         action = request.POST.get('action', 'publish')
         
         if action == 'publish':
+            if booking.status == 'pending':
+                messages.error(request, "Cannot publish a pending event. Please update the event status to 'Confirmed' first.")
+                return redirect('admin_booking_detail', pk=booking.pk)
+                
+            total_quota = (booking.quota_supervisor or 0) + (booking.quota_captain or 0) + (booking.quota_a or 0) + \
+                          (booking.quota_b or 0) + (booking.quota_c or 0)
+            if total_quota <= 0:
+                messages.error(request, "Cannot publish event with zero quotas. Please set the required staff counts first.")
+                return redirect('admin_booking_detail', pk=booking.pk)
+
             booking.is_published = True
             booking.publish_locality = request.POST.get('publish_locality', 'all')
             booking.save(update_fields=['is_published', 'publish_locality'])
@@ -547,6 +859,7 @@ def staff_requests(request):
         
         selected_booking_obj = Booking.objects.get(pk=booking_id)
         live_quota_data = {
+            'supervisor': {'q': selected_booking_obj.quota_supervisor, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='supervisor').count()},
             'captain': {'q': selected_booking_obj.quota_captain, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='captain').count()},
             'a': {'q': selected_booking_obj.quota_a, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='A').count()},
             'b': {'q': selected_booking_obj.quota_b, 'c': selected_booking_obj.applications.filter(status='approved', staff__level='B').count()},
@@ -601,9 +914,13 @@ def staff_requests(request):
 @admin_required
 def staff_applications(request):
     applications = StaffApplication.objects.filter(status='pending').order_by('-created_at')
+    
+    wa_url = request.session.pop('auto_whatsapp_url', None)
+    
     context = {
         'applications': applications,
         'page': 'staff_applications',
+        'auto_whatsapp_url': wa_url,
     }
     return render(request, 'admin/staff_applications.html', context)
 
@@ -639,7 +956,29 @@ def handle_staff_application(request, pk, action):
             
             application.status = 'approved'
             application.save()
-            messages.success(request, f'✅ Staff created! ID: {new_id} | Default Password: password123 — Staff must change it on first login.')
+            
+            # WhatsApp Integration via Web Redirect
+            import urllib.parse
+            phone_raw = str(application.phone_1).replace('+', '').replace(' ', '').replace('-', '')
+            if len(phone_raw) == 10:
+                phone_raw = '91' + phone_raw
+                
+            # Emojis fixed via proper Unicode escapes. Using real domain for clickable links.
+            login_url = "https://mastan.in/staff/login/"
+            
+            msg = (
+                f"\U0001F389 *Welcome to Mastan Catering!*\n\n"
+                f"Hi {application.full_name}, your staff registration has been approved. You can now login to the Staff Portal and start booking events.\n\n"
+                f"\U0001F464 *Staff ID:* {new_id}\n"
+                f"\U0001F511 *Password:* password123\n\n"
+                f"\U0001F517 *Login Here:* {login_url}\n\n"
+                f"_Note: You will be asked to securely change this password on your first login._"
+            )
+            
+            wa_link = f"https://wa.me/{phone_raw}?text={urllib.parse.quote(msg)}"
+            request.session['auto_whatsapp_url'] = wa_link
+            
+            messages.success(request, f'✅ Staff created! ID: {new_id} | Default Password: password123')
         except Exception as e:
             messages.error(request, f'Error creating staff: {str(e)}')
     elif action == 'reject':
@@ -726,11 +1065,13 @@ def staff_list(request):
     total_staff_count = Staff.objects.filter(is_active=True).count()
     total_events_served = Booking.objects.filter(status='completed').count()
 
+    from staff.models import Locality
     context = {
         'staff': page_obj,
         'page': 'staff',
         'total_events_served': total_events_served,
         'total_staff_count': total_staff_count,
+        'localities': Locality.objects.all(),
     }
     return render(request, 'admin/staff_list.html', context)
 
@@ -749,13 +1090,15 @@ def staff_add(request):
         phone = validate_phone(phone_raw)
         if not phone:
             messages.error(request, f'Invalid phone number: "{phone_raw}". Please enter a valid 10-digit Indian mobile number.')
-            return render(request, 'admin/staff_add.html', {'page': 'staff', 'form_data': request.POST})
+            from staff.models import Locality
+            return render(request, 'admin/staff_add.html', {'page': 'staff', 'form_data': request.POST, 'localities': Locality.objects.all()})
 
         phone_2 = validate_phone(phone_2_raw) or phone_2_raw  # Alt phone is optional
         guardian_phone = validate_phone(guardian_phone_raw)
         if guardian_phone_raw and not guardian_phone:
             messages.error(request, f'Invalid guardian phone: "{guardian_phone_raw}". Please enter a valid 10-digit number.')
-            return render(request, 'admin/staff_add.html', {'page': 'staff', 'form_data': request.POST})
+            from staff.models import Locality
+            return render(request, 'admin/staff_add.html', {'page': 'staff', 'form_data': request.POST, 'localities': Locality.objects.all()})
 
         # Defensive parsing
         try:
@@ -802,12 +1145,20 @@ def staff_add(request):
             return redirect('admin_staff')
         except Exception as e:
             messages.error(request, f'Error adding staff: {str(e)}')
+            from staff.models import Locality
             return render(request, 'admin/staff_add.html', {
                 'page': 'staff',
-                'form_data': request.POST
+                'form_data': request.POST,
+                'localities': Locality.objects.all()
             })
 
-    return render(request, 'admin/staff_add.html', {'page': 'staff'})
+    from staff.models import Locality
+    try:
+        localities = Locality.objects.all()
+    except Exception:
+        localities = []
+    
+    return render(request, 'admin/staff_add.html', {'page': 'staff', 'localities': localities})
 
 
 @admin_required
@@ -851,7 +1202,9 @@ def staff_edit(request, pk):
         messages.success(request, f'Staff {member.full_name} updated successfully!')
         return redirect('admin_staff_detail', pk=member.pk)
 
-    return render(request, 'admin/staff_edit.html', {'member': member, 'page': 'staff'})
+    from staff.models import Locality
+    localities = Locality.objects.all()
+    return render(request, 'admin/staff_edit.html', {'member': member, 'page': 'staff', 'localities': localities})
 
 
 
@@ -930,11 +1283,11 @@ def menu_add(request):
             cat, _ = MenuCategory.objects.get_or_create(name=new_category)
             category_id = cat.id
 
-        MenuItem.objects.create(
+        item = MenuItem.objects.create(
             category_id   = category_id,
             name          = request.POST['name'],
-            description   = request.POST['description'],
-            price         = request.POST['price'],
+            description   = request.POST.get('description', ''),
+            price         = request.POST.get('price', '0.00') or '0.00',
             is_vegetarian = request.POST.get('is_vegetarian') == 'on',
             is_vegan      = request.POST.get('is_vegan') == 'on',
             is_gluten_free= request.POST.get('is_gluten_free') == 'on',
@@ -965,8 +1318,8 @@ def menu_edit(request, pk):
 
         item.category_id = category_id
         item.name = request.POST['name']
-        item.description = request.POST['description']
-        item.price = request.POST['price']
+        item.description = request.POST.get('description', '')
+        item.price = request.POST.get('price', '0.00') or '0.00'
         item.is_vegetarian = request.POST.get('is_vegetarian') == 'on'
         item.is_vegan = request.POST.get('is_vegan') == 'on'
         item.is_gluten_free = request.POST.get('is_gluten_free') == 'on'
@@ -1153,8 +1506,10 @@ def admin_reports(request):
     import calendar
     month_filter = request.GET.get('month', '')
     year_filter = request.GET.get('year', '')
+    client_filter = request.GET.get('client', '')
     
-    reports = ManualReport.objects.all()
+    # Order by ID descending so the newest added report is always right at the top
+    reports = ManualReport.objects.all().order_by('-id')
     
     month_name = ''
     if month_filter:
@@ -1166,6 +1521,10 @@ def admin_reports(request):
             
     if year_filter:
         reports = reports.filter(event_date__year=year_filter)
+
+    if client_filter:
+        from django.db.models import Q
+        reports = reports.filter(Q(site_name=client_filter) | Q(event_name=client_filter))
         
     totals = reports.aggregate(
         t_boys=Sum('boys_count'),
@@ -1174,6 +1533,9 @@ def admin_reports(request):
         t_profit=Sum('profit')
     )
         
+    from bookings.models import Client
+    all_clients = Client.objects.all().order_by('name')
+        
     context = {
         'reports': reports,
         'totals': totals,
@@ -1181,8 +1543,59 @@ def admin_reports(request):
         'month_filter': month_filter,
         'month_name': month_name,
         'year_filter': year_filter,
+        'client_filter': client_filter,
+        'clients': all_clients,
     }
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'admin/reports.html', context)
     return render(request, 'admin/reports.html', context)
+
+@admin_required
+def admin_reports_pdf(request):
+    from bookings.models import ManualReport
+    from django.db.models import Sum
+    from django.http import HttpResponse
+    import calendar
+    from .pdf_utils import generate_financial_reports_pdf
+    
+    month_filter = request.GET.get('month', '')
+    year_filter = request.GET.get('year', '')
+    client_filter = request.GET.get('client', '')
+    
+    reports = ManualReport.objects.all().order_by('event_date')
+    
+    month_name = ''
+    if month_filter:
+        reports = reports.filter(event_date__month=month_filter)
+        try:
+            month_name = calendar.month_name[int(month_filter)]
+        except:
+            pass
+            
+    if year_filter:
+        reports = reports.filter(event_date__year=year_filter)
+
+    if client_filter:
+        from django.db.models import Q
+        reports = reports.filter(Q(site_name=client_filter) | Q(event_name=client_filter))
+        
+    totals = reports.aggregate(
+        t_boys=Sum('boys_count'),
+        t_bill=Sum('bill_amount'),
+        t_received=Sum('amount_received'),
+        t_profit=Sum('profit')
+    )
+    
+
+    pdf_bytes = generate_financial_reports_pdf(reports, totals, month_name, year_filter, client_filter)
+    
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    filename = "Financial_Reports"
+    if month_name: filename += f"_{month_name}"
+    if year_filter: filename += f"_{year_filter}"
+    response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+    return response
 
 @admin_required
 def admin_report_add(request):
@@ -1202,6 +1615,7 @@ def admin_report_add(request):
                 site_name = request.POST.get('site_name', ''),
                 event_name = request.POST.get('event_name', ''),
                 boys_count = int(request.POST.get('boys_count') or 0),
+                work_type = request.POST.get('work_type', 'day'),
                 bill_incharge = request.POST.get('bill_incharge', ''),
                 bill_amount = bill_amount,
                 amount_received = amount_received,
@@ -1249,6 +1663,7 @@ def admin_report_edit(request, pk):
             report.site_name = request.POST.get('site_name', '')
             report.event_name = request.POST.get('event_name', '')
             report.boys_count = int(request.POST.get('boys_count') or 0)
+            report.work_type = request.POST.get('work_type', 'day')
             report.bill_incharge = request.POST.get('bill_incharge', '')
             report.bill_amount = bill_amount
             report.amount_received = amount_received
@@ -1300,7 +1715,7 @@ def staff_notice(request):
                 if tokens:
                     base_url = "https://mastan.in"
                     body_text = notice.message[:150] + ("..." if len(notice.message) > 150 else "")
-                    title = "MASTAN'S CATERING — Official Notice"
+                    title = "MASTAN CATERING — Official Notice"
                     icon = f"{base_url}/static/images/logo.png"
                     badge = f"{base_url}/static/icons/icon-192x192.png"
                     link = f"{base_url}/staff/"
@@ -1360,17 +1775,41 @@ def manual_invoice(request):
 @admin_required
 def event_reports_list(request):
     from django.core.paginator import Paginator
-    from bookings.models import EventReport
-    reports = EventReport.objects.all().select_related('booking', 'submitted_by')
+    from bookings.models import EventReport, Client
+    
+    month_filter = request.GET.get('month', '')
+    year_filter = request.GET.get('year', '')
+    client_filter = request.GET.get('client', '')
+    
+    reports_qs = EventReport.objects.all().select_related('booking', 'submitted_by')
+    
+    if month_filter:
+        reports_qs = reports_qs.filter(booking__event_date__month=month_filter)
+    if year_filter:
+        reports_qs = reports_qs.filter(booking__event_date__year=year_filter)
+    if client_filter:
+        reports_qs = reports_qs.filter(booking__name=client_filter)
+    
+    reports_qs = reports_qs.order_by('-booking__event_date', '-created_at')
+    
+    all_clients = Client.objects.all().order_by('name')
     
     # Simple pagination
-    paginator = Paginator(reports, 30)
+    paginator = Paginator(reports_qs, 40)
     page_obj = paginator.get_page(request.GET.get('page'))
     
-    return render(request, 'admin/event_reports_list.html', {
+    context = {
         'reports': page_obj,
         'page': 'reports',
-    })
+        'month_filter': month_filter,
+        'year_filter': year_filter,
+        'client_filter': client_filter,
+        'clients': all_clients,
+    }
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'admin/event_reports_list.html', context)
+    return render(request, 'admin/event_reports_list.html', context)
 
 @admin_required
 def event_report_detail(request, pk):
@@ -1383,7 +1822,8 @@ def event_report_detail(request, pk):
 @admin_required
 def download_invoice_pdf(request):
     """
-    Handle POST request with invoice JSON data and return a professional PDF.
+    Handle POST request with invoice JSON data.
+    Instead of downloading immediately, it just saves to history and returns success.
     """
     if request.method == 'POST':
         import json
@@ -1392,13 +1832,399 @@ def download_invoice_pdf(request):
                 data = json.loads(request.POST.get('invoice_data'))
             else:
                 data = json.loads(request.body)
-            from .pdf_utils import build_invoice_pdf
-            buffer = build_invoice_pdf(data)
+
+            # ── Save invoice record to history ──────────────────────────────
+            from core.models import InvoiceRecord
+            from datetime import datetime
+            import decimal
             
-            response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-            inv_no = data.get('inv_no', 'invoice')
-            response['Content-Disposition'] = f'attachment; filename="Invoice_{inv_no}.pdf"'
-            return response
+            items = data.get('items', [])
+            total = sum(
+                float(i.get('qty', 0)) * float(i.get('price', i.get('rate', 0)))
+                for i in items if i.get('name')
+            )
+            
+            event_date_str = data.get('event_date', '')
+            event_date_obj = None
+            if event_date_str:
+                try:
+                    event_date_obj = datetime.strptime(event_date_str, '%d-%b-%Y').date()
+                except ValueError:
+                    try:
+                        event_date_obj = datetime.strptime(event_date_str, '%Y-%m-%d').date()
+                    except ValueError:
+                        pass
+
+            InvoiceRecord.objects.create(
+                client_name=data.get('bill_to', ''),
+                client_phone=data.get('contact', ''),
+                event_date=event_date_obj,
+                items_json=items,
+                total_amount=round(total, 2),
+                notes=json.dumps(data),  # Store full JSON for PDF generation
+            )
+            # ────────────────────────────────────────────────────────────────
+            return JsonResponse({'ok': True})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return redirect('admin_manual_invoice')
+
+
+# ─── Invoice History ─────────────────────────────────────────────────────────
+
+@admin_required
+def invoice_history(request):
+    from core.models import InvoiceRecord
+    from django.core.paginator import Paginator
+    records = InvoiceRecord.objects.all()
+    paginator = Paginator(records, 20)
+    page = paginator.get_page(request.GET.get('page', 1))
+    return render(request, 'admin/invoice_history.html', {'page_obj': page, 'page': 'reports'})
+
+
+@admin_required
+def invoice_history_download(request, pk):
+    from core.models import InvoiceRecord
+    record = get_object_or_404(InvoiceRecord, pk=pk)
+    try:
+        from .pdf_utils import build_invoice_pdf
+        import json
+        
+        try:
+            full_data = json.loads(record.notes) if record.notes else {}
+        except json.JSONDecodeError:
+            full_data = {}
+            
+        data = {
+            'inv_no': full_data.get('inv_no', f'INV-{record.pk:04d}'),
+            'date': full_data.get('date', record.created_at.strftime('%d-%b-%Y')),
+            'site_name': full_data.get('site_name', ''),
+            'bill_to': record.client_name,
+            'contact': record.client_phone,
+            'event_date': full_data.get('event_date', record.event_date.strftime('%d-%b-%Y') if record.event_date else ''),
+            'items': record.items_json,
+        }
+        
+        buffer = build_invoice_pdf(data)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="Invoice_{record.pk}_{record.client_name}.pdf"'
+        return response
+    except Exception as e:
+        messages.error(request, f'Could not generate PDF: {e}')
+        return redirect('admin_invoice_history')
+
+
+@admin_required
+def invoice_history_delete(request, pk):
+    from core.models import InvoiceRecord
+    if request.method == 'POST':
+        try:
+            record = get_object_or_404(InvoiceRecord, pk=pk)
+            record.delete()
+            messages.success(request, 'Invoice record deleted successfully.')
+        except Exception as e:
+            messages.error(request, f'Error deleting invoice: {e}')
+    return redirect('admin_invoice_history')
+
+
+# ─── Admin Notepad ───────────────────────────────────────────────────────────
+
+@admin_required
+def notepad(request):
+    from core.models import AdminNote, NoteCategory
+    if request.method == 'POST':
+        title = request.POST.get('title', 'New Note').strip() or 'New Note'
+        category_id = request.POST.get('category_id')
+        note = AdminNote.objects.create(title=title, category_id=category_id if category_id else None)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'id': note.pk,
+                'title': note.title,
+                'content': note.content,
+                'category_id': note.category_id,
+                'created_at': note.created_at.strftime('%A, %d %B · %I:%M %p'),
+                'updated_at': note.updated_at.strftime('%A, %d %B · %I:%M %p'),
+            })
+        return redirect('admin_notepad')
+        
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' and request.method == 'GET':
+        qs = AdminNote.objects.select_related('category').all()
+        cat_id = request.GET.get('category')
+        if cat_id:
+            qs = qs.filter(category_id=cat_id)
+        
+        month = request.GET.get('month')
+        if month:
+            qs = qs.filter(updated_at__month=month)
+            
+        year = request.GET.get('year')
+        if year:
+            qs = qs.filter(updated_at__year=year)
+            
+        notes_data = [{
+            'id': n.pk,
+            'title': n.title,
+            'content': n.content,
+            'category_id': n.category_id,
+            'updated_at_formatted': n.updated_at.strftime('%A, %d %B · %I:%M %p')
+        } for n in qs]
+        return JsonResponse({'notes': notes_data})
+
+    notes = AdminNote.objects.all()
+    categories = NoteCategory.objects.all()
+    return render(request, 'admin/notepad.html', {'notes': notes, 'categories': categories, 'page': 'notepad'})
+
+
+@admin_required
+def note_save(request, pk):
+    from core.models import AdminNote
+    if request.method == 'POST':
+        note = get_object_or_404(AdminNote, pk=pk)
+        note.title = request.POST.get('title', note.title).strip() or 'New Note'
+        note.content = request.POST.get('content', note.content)
+        category_id = request.POST.get('category_id')
+        if category_id:
+            note.category_id = category_id
+        else:
+            note.category = None
+        note.save()
+        return JsonResponse({
+            'ok': True,
+            'updated_at': note.updated_at.strftime('%A, %d %B · %I:%M %p'),
+        })
+    return JsonResponse({'ok': False}, status=405)
+
+
+@admin_required
+def note_delete(request, pk):
+    from core.models import AdminNote
+    if request.method == 'POST':
+        note = get_object_or_404(AdminNote, pk=pk)
+        note.delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True})
+    return redirect('admin_notepad')
+
+@admin_required
+def note_category_add(request):
+    from core.models import NoteCategory
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        name = request.POST.get('name', '').strip()
+        if not name:
+            return JsonResponse({'error': 'Category name is required'}, status=400)
+        cat, created = NoteCategory.objects.get_or_create(name=name)
+        return JsonResponse({'id': cat.pk, 'name': cat.name})
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+def api_get_clients(request):
+    """
+    Returns a list of all clients for autocomplete.
+    """
+    from bookings.models import Client
+    clients = Client.objects.all().values('name', 'phone')
+    return JsonResponse(list(clients), safe=False)
+
+
+# ── Dynamic Settings ────────────────────────────────────────────────────────
+@admin_required
+def admin_settings(request):
+    return render(request, 'admin/settings_dashboard.html')
+
+@admin_required
+def locality_list(request):
+    from staff.models import Locality
+    localities = Locality.objects.all()
+    return render(request, 'admin/locality_list.html', {'localities': localities, 'page': 'settings'})
+
+@admin_required
+def locality_add(request):
+    from staff.models import Locality
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if name:
+            Locality.objects.create(name=name)
+            messages.success(request, 'Locality added successfully!')
+            return redirect('admin_locality_list')
+        messages.error(request, 'Locality name cannot be empty.')
+    return render(request, 'admin/locality_form.html', {'page': 'settings'})
+
+@admin_required
+def locality_edit(request, pk):
+    from staff.models import Locality
+    locality = get_object_or_404(Locality, pk=pk)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if name:
+            locality.name = name
+            locality.save()
+            messages.success(request, 'Locality updated successfully!')
+            return redirect('admin_locality_list')
+        messages.error(request, 'Locality name cannot be empty.')
+    return render(request, 'admin/locality_form.html', {'item': locality, 'page': 'settings'})
+
+@admin_required
+def locality_delete(request, pk):
+    if request.method == 'POST':
+        from staff.models import Locality
+        locality = get_object_or_404(Locality, pk=pk)
+        locality.delete()
+        messages.success(request, 'Locality deleted.')
+    return redirect('admin_locality_list')
+
+@admin_required
+def client_list(request):
+    from bookings.models import Client
+    clients = Client.objects.all().order_by('name')
+    return render(request, 'admin/client_list.html', {'clients': clients, 'page': 'settings'})
+
+@admin_required
+def client_add(request):
+    from bookings.models import Client
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        if name:
+            Client.objects.create(name=name, phone=phone)
+            messages.success(request, 'Client added successfully!')
+            return redirect('admin_client_list')
+        messages.error(request, 'Client name cannot be empty.')
+    return render(request, 'admin/client_form.html', {'page': 'settings'})
+
+@admin_required
+def client_edit(request, pk):
+    from bookings.models import Client
+    client = get_object_or_404(Client, pk=pk)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        if name:
+            client.name = name
+            client.phone = phone
+            client.save()
+            messages.success(request, 'Client updated successfully!')
+            return redirect('admin_client_list')
+        messages.error(request, 'Client name cannot be empty.')
+    return render(request, 'admin/client_form.html', {'item': client, 'page': 'settings'})
+
+@admin_required
+def client_delete(request, pk):
+    if request.method == 'POST':
+        from bookings.models import Client
+        client = get_object_or_404(Client, pk=pk)
+        client.delete()
+        messages.success(request, 'Client deleted.')
+    return redirect('admin_client_list')
+
+
+# ─── Terms & Conditions CRUD ────────────────────────────────────────────────
+
+@admin_required
+def terms_list(request):
+    from core.models import TermAndCondition
+    terms = TermAndCondition.objects.all()
+    return render(request, 'admin/terms_list.html', {'terms': terms, 'page': 'settings'})
+
+
+@admin_required
+def term_add(request):
+    from core.models import TermAndCondition
+    if request.method == 'POST':
+        text = request.POST.get('text', '').strip()
+        if text:
+            TermAndCondition.objects.create(text=text)
+            messages.success(request, 'Term added successfully!')
+            return redirect('admin_terms_list')
+        messages.error(request, 'Term text cannot be empty.')
+    return render(request, 'admin/term_form.html', {'item': None, 'page': 'settings'})
+
+
+@admin_required
+def term_edit(request, pk):
+    from core.models import TermAndCondition
+    term = get_object_or_404(TermAndCondition, pk=pk)
+    if request.method == 'POST':
+        text = request.POST.get('text', '').strip()
+        if text:
+            term.text = text
+            term.save()
+            messages.success(request, 'Term updated successfully!')
+            return redirect('admin_terms_list')
+        messages.error(request, 'Term text cannot be empty.')
+    return render(request, 'admin/term_form.html', {'item': term, 'page': 'settings'})
+
+
+@admin_required
+def term_delete(request, pk):
+    from core.models import TermAndCondition
+    if request.method == 'POST':
+        term = get_object_or_404(TermAndCondition, pk=pk)
+        term.delete()
+        messages.success(request, 'Term deleted.')
+    return redirect('admin_terms_list')
+
+
+# ─── Invoice Items CRUD ─────────────────────────────────────────────────────
+
+@admin_required
+def invoice_items_list(request):
+    from core.models import InvoiceItem
+    items = InvoiceItem.objects.all()
+    return render(request, 'admin/invoice_items_list.html', {'items': items, 'page': 'settings'})
+
+
+@admin_required
+def invoice_item_add(request):
+    from core.models import InvoiceItem
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        price = request.POST.get('default_price', '0') or '0'
+        if name:
+            if InvoiceItem.objects.filter(name=name).exists():
+                messages.error(request, f'Item "{name}" already exists.')
+            else:
+                InvoiceItem.objects.create(name=name, default_price=price)
+                messages.success(request, 'Invoice item added!')
+                return redirect('admin_invoice_items_list')
+        else:
+            messages.error(request, 'Item name cannot be empty.')
+    return render(request, 'admin/invoice_item_form.html', {'item': None, 'page': 'settings'})
+
+
+@admin_required
+def invoice_item_edit(request, pk):
+    from core.models import InvoiceItem
+    inv_item = get_object_or_404(InvoiceItem, pk=pk)
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        price = request.POST.get('default_price', '0') or '0'
+        if name:
+            inv_item.name = name
+            inv_item.default_price = price
+            inv_item.save()
+            messages.success(request, 'Invoice item updated!')
+            return redirect('admin_invoice_items_list')
+        messages.error(request, 'Item name cannot be empty.')
+    return render(request, 'admin/invoice_item_form.html', {'item': inv_item, 'page': 'settings'})
+
+
+@admin_required
+def invoice_item_delete(request, pk):
+    from core.models import InvoiceItem
+    if request.method == 'POST':
+        inv_item = get_object_or_404(InvoiceItem, pk=pk)
+        inv_item.delete()
+        messages.success(request, 'Invoice item deleted.')
+    return redirect('admin_invoice_items_list')
+
+
+# ─── Invoice Items JSON API ─────────────────────────────────────────────────
+
+def api_get_invoice_items(request):
+    from core.models import InvoiceItem
+    from django.http import JsonResponse
+    items = list(InvoiceItem.objects.values('name', 'default_price'))
+    # Make price serializable as float
+    for item in items:
+        item['price'] = float(item.pop('default_price'))
+    return JsonResponse(items, safe=False)

@@ -15,12 +15,12 @@ from django.core.cache import cache
 from .models import Staff, StaffAttendance, StaffNotice, FCMDevice
 from bookings.models import Booking, BookingPayment, EventApplication
 from core.utils import notify_admins
+import threading
 
 
 
 from django.views.decorators.csrf import csrf_exempt
-
-# ── Firebase ────────────────────────────────────────────────────────────────
+from django.views.decorators.http import require_POST# ── Firebase ────────────────────────────────────────────────────────────────
 @csrf_exempt
 @login_required
 def save_fcm_token(request):
@@ -135,7 +135,7 @@ def staff_download_attendance(request, pk):
     from core.pdf_utils import build_attendance_pdf
 
     me = request.user
-    if me.level != 'captain':
+    if me.level not in ['captain', 'supervisor']:
         messages.error(request, 'Only Captains can download PDF reports.')
         return redirect('staff_booking_detail', pk=pk)
 
@@ -234,10 +234,25 @@ def staff_dashboard(request):
         status__in=['pending', 'confirmed'], 
         event_date__gte=today,
         is_published=True
-    ).exclude(assigned_to=me).prefetch_related('applications__staff').order_by('event_date')
+    ).exclude(assigned_to=me).prefetch_related('applications__staff', 'assigned_to').order_by('event_date', 'event_time')
     
     available_bookings = []
     for b in available_bookings_qs:
+        # 1. Level-specific Quota Check: Only show if there's a quota for user's level
+        level_quota = 0
+        if me.level in ['captain', 'supervisor']:
+            level_quota = b.quota_captain
+        elif me.level == 'A':
+            level_quota = b.quota_a
+        elif me.level == 'B':
+            level_quota = b.quota_b
+        elif me.level == 'C':
+            level_quota = b.quota_c
+        
+        # If no quota is set for this staff's level, hide the event (as per user's "mandatory quota" logic)
+        if level_quota <= 0:
+            continue
+
         # Locality filter
         if b.publish_locality != 'all' and me.main_locality != b.publish_locality:
             continue
@@ -245,19 +260,13 @@ def staff_dashboard(request):
         if len(available_bookings) >= 20:
             break
             
-        # Use Python list comprehension to use prefetched data and avoid N+1 DB hit
-        approved_count = len([app for app in b.applications.all() if app.status == 'approved' and app.staff.level == me.level])
+        # 2. Accurate Filled Count: Include both approved apps AND manual assignments
+        # Use sets to avoid double counting if a staff is in both
+        working_staff_ids = set([s.id for s in b.assigned_to.all() if s.level == me.level])
+        approved_app_staff_ids = set([app.staff_id for app in b.applications.all() if app.status == 'approved' and app.staff.level == me.level])
+        total_filled_for_level = len(working_staff_ids | approved_app_staff_ids)
         
-        is_full = False
-        if me.level == 'captain' and b.quota_captain > 0 and approved_count >= b.quota_captain:
-            is_full = True
-        elif me.level == 'A' and b.quota_a > 0 and approved_count >= b.quota_a:
-            is_full = True
-        elif me.level == 'B' and b.quota_b > 0 and approved_count >= b.quota_b:
-            is_full = True
-        elif me.level == 'C' and b.quota_c > 0 and approved_count >= b.quota_c:
-            is_full = True
-            
+        is_full = total_filled_for_level >= level_quota
         b.is_level_full = is_full
         available_bookings.append(b)
 
@@ -268,7 +277,8 @@ def staff_dashboard(request):
         rem_long = max(0, 5 - cached_stats.get('long_works', 0))
 
     latest_promotion = me.promotion_requests.order_by('-created_at').first()
-    active_notice = StaffNotice.objects.filter(is_active=True).first()
+    latest_notice = StaffNotice.objects.order_by('-created_at').first()
+    active_notice = latest_notice if latest_notice and latest_notice.is_active else None
 
     return render(request, 'staff/dashboard.html', {
         'me': me,
@@ -310,9 +320,28 @@ def staff_bookings(request):
             Q(location_name__icontains=search)
         )
 
-    bookings = bookings.select_related('created_by').prefetch_related('applications__staff', 'assigned_to').order_by('event_date')
+    from django.db.models import Case, When, IntegerField, Value
+    bookings = bookings.select_related('created_by').prefetch_related(
+        'applications__staff', 'assigned_to'
+    ).annotate(
+        # Completed events get sort_order=1, everything else gets 0 (comes first)
+        sort_order=Case(
+            When(status='completed', then=Value(1)),
+            When(status='cancelled', then=Value(2)),
+            default=Value(0),
+            output_field=IntegerField(),
+        )
+    ).order_by('sort_order', 'event_date')
+
     paginator = Paginator(bookings, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
+
+    # AJAX request — return JSON with rendered rows
+    if request.GET.get('ajax') == '1':
+        from django.template.loader import render_to_string
+        rows_html = render_to_string('staff/_bookings_rows.html', {'bookings': page_obj}, request=request)
+        pagination_html = render_to_string('pagination.html', {'page_obj': page_obj}, request=request)
+        return JsonResponse({'html': rows_html, 'pagination_html': pagination_html})
 
     return render(request, 'staff/bookings.html', {
         'bookings': page_obj,
@@ -406,52 +435,8 @@ def staff_booking_detail(request, pk):
             messages.error(request, f'Error recording payment: {e}')
 
     if request.method == 'POST' and request.POST.get('action') == 'mark_attendance':
-        if me.level != 'captain' and not me.is_staff:
-            messages.error(request, 'Only Captains can mark attendance.')
-            return redirect('staff_booking_detail', pk=pk)
-            
-        staff_ids = request.POST.getlist('staff_ids[]')
-        date_str = request.POST.get('attendance_date', booking.event_date.strftime('%Y-%m-%d'))
-        
-        with transaction.atomic():
-            for sid in staff_ids:
-                status = request.POST.get(f'attendance_status_{sid}', 'present')
-                reaching_time_str = request.POST.get(f'reaching_time_{sid}')
-                
-                on_time = request.POST.get(f'on_time_{sid}') == 'on'
-                shoes = request.POST.get(f'shoes_{sid}') == 'on'
-                uniform = request.POST.get(f'uniform_{sid}') == 'on'
-                grooming = request.POST.get(f'grooming_{sid}') == 'on'
-                payment_given = request.POST.get(f'payment_given_{sid}') == 'on'
-                
-                try:
-                    staff_member = Staff.objects.get(id=sid)
-                except Staff.DoesNotExist:
-                    continue
-                
-                reaching_time = None
-                if reaching_time_str:
-                    try:
-                        reaching_time = datetime.strptime(reaching_time_str, '%H:%M').time()
-                    except ValueError:
-                        pass
-                
-                StaffAttendance.objects.update_or_create(
-                    staff=staff_member,
-                    date=date_str,
-                    booking=booking,
-                    defaults={
-                        'status': status,
-                        'reaching_time': reaching_time,
-                        'on_time': on_time,
-                        'shoes': shoes,
-                        'uniform': uniform,
-                        'grooming': grooming,
-                        'payment_given': payment_given
-                    }
-                )
-        messages.success(request, f'Attendance marked for {len(staff_ids)} staff members.')
-        return redirect('staff_booking_detail', pk=pk)
+        # Attendance is now handled via AJAX in staff/booking_detail.html
+        pass
 
     assigned_staff_list = []
     attendances = StaffAttendance.objects.filter(booking=booking, date=booking.event_date)
@@ -460,7 +445,7 @@ def staff_booking_detail(request, pk):
     
     for s in booking.assigned_to.all():
         app = applications_map.get(s.id)
-        phone = app.applicant_phone if app and app.applicant_phone else s.phone
+        phone = s.phone
         assigned_staff_list.append({
             'staff': s,
             'phone': phone,
@@ -493,7 +478,7 @@ def staff_apply_booking(request, pk):
     approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
     is_full = False
     
-    if request.user.level == 'captain':
+    if request.user.level in ['captain', 'supervisor']:
         if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
             is_full = True
     elif request.user.level == 'A':
@@ -510,9 +495,31 @@ def staff_apply_booking(request, pk):
         messages.error(request, f"Sorry, the {request.user.get_level_display()} quota is fully booked for this event.")
         return redirect('staff_dashboard')
 
+    # --- DOUBLE WORK DETECTION ---
+    # Check if staff already has a booking on the same event_date (any session / any assignment)
+    same_day_apps = EventApplication.objects.filter(
+        staff=request.user,
+        booking__event_date=booking.event_date,
+        status__in=['pending', 'approved', 'cancel_requested']
+    ).exclude(booking=booking).exists()
+
+    same_day_assigned = request.user.bookings.filter(
+        event_date=booking.event_date,
+        status__in=['pending', 'confirmed']
+    ).exclude(pk=booking.pk).exists()
+
+    is_double_work = same_day_apps or same_day_assigned
+
     # If GET, render a simple apply form
     if request.method == 'GET':
-        return render(request, 'staff/apply_booking.html', {'booking': booking, 'user': request.user})
+        from core.models import TermAndCondition
+        terms = TermAndCondition.objects.all()
+        return render(request, 'staff/apply_booking.html', {
+            'booking': booking,
+            'user': request.user,
+            'is_double_work': is_double_work,
+            'terms': terms,
+        })
     
     # If POST, process the application
     if request.method == 'POST':
@@ -524,7 +531,7 @@ def staff_apply_booking(request, pk):
                 approved_count = booking.applications.filter(status='approved', staff__level=request.user.level).count()
                 is_full = False
                 
-                if request.user.level == 'captain':
+                if request.user.level in ['captain', 'supervisor']:
                     if booking.quota_captain > 0 and approved_count >= booking.quota_captain:
                         is_full = True
                 elif request.user.level == 'A':
@@ -558,9 +565,22 @@ def staff_apply_booking(request, pk):
                 ).exclude(pk=booking.pk).exists()
                 
                 if conflicting_apps or conflicting_assigned:
-                    messages.error(request, f"⚠️ Collision: You already have a {booking.get_session_display()} shift on {booking.event_date.strftime('%d %b')}.")
+                    messages.error(request, f"You already have a {booking.get_session_display()} shift on {booking.event_date.strftime('%d %b')}. You cannot apply for the same session twice.")
                     return redirect('staff_dashboard')
                 # -----------------------------------
+
+                # --- RE-CHECK DOUBLE WORK (for POST) ---
+                same_day_apps_post = EventApplication.objects.filter(
+                    staff=request.user,
+                    booking__event_date=booking.event_date,
+                    status__in=['pending', 'approved', 'cancel_requested']
+                ).exclude(booking=booking).exists()
+                same_day_assigned_post = request.user.bookings.filter(
+                    event_date=booking.event_date,
+                    status__in=['pending', 'confirmed']
+                ).exclude(pk=booking.pk).exists()
+                is_double_work_post = same_day_apps_post or same_day_assigned_post
+                # ----------------------------------------
                 
                 applicant_name = request.POST.get('applicant_name', request.user.full_name)
                 applicant_phone = request.POST.get('applicant_phone', request.user.phone)
@@ -575,39 +595,50 @@ def staff_apply_booking(request, pk):
                 elif request.user in booking.assigned_to.all():
                     messages.info(request, "You are already assigned to this event.")
                 else:
-                    if booking.allow_direct_join:
+                    # If direct join BUT it's a double-work situation, force pending for admin review
+                    if booking.allow_direct_join and not is_double_work_post:
                         EventApplication.objects.create(
                             booking=booking,
                             staff=request.user,
                             applicant_name=applicant_name,
                             applicant_phone=applicant_phone,
                             note=request.POST.get('note', ''),
-                            status='approved'
+                            status='approved',
+                            is_double_work=False
                         )
                         booking.assigned_to.add(request.user)
                         messages.success(request, f'✅ Success! You have joined {booking.name}.')
-                        # Notify admin about direct join
-                        notify_admins(
-                            title="✅ Staff Joined Event",
-                            body=f"{request.user.full_name} directly joined {booking.name} on {booking.event_date}.",
-                            link=f"/admin-panel/bookings/{booking.pk}/"
-                        )
+                        # Notify admin in background (non-blocking)
+                        threading.Thread(target=notify_admins, kwargs={
+                            'title': '✅ Staff Joined Event',
+                            'body': f"{request.user.full_name} directly joined {booking.name} on {booking.event_date}.",
+                            'link': f"/admin-panel/bookings/{booking.pk}/"
+                        }, daemon=True).start()
                     else:
+                        # Either non-direct-join OR double-work situation — goes for admin review
                         EventApplication.objects.create(
                             booking=booking,
                             staff=request.user,
                             applicant_name=applicant_name,
                             applicant_phone=applicant_phone,
                             note=request.POST.get('note', ''),
-                            status='pending'
+                            status='pending',
+                            is_double_work=is_double_work_post
                         )
-                        messages.success(request, f'📩 Application received for {booking.name}. Check your dashboard for updates.')
-                        # Notify admin about new application
-                        notify_admins(
-                            title="📩 New Event Application",
-                            body=f"{request.user.full_name} applied for {booking.name} on {booking.event_date}.",
-                            link=f"/admin-panel/bookings/{booking.pk}/"
-                        )
+                        if is_double_work_post:
+                            messages.success(request, f'⚠️ Double Work Detected! Your application for {booking.name} has been sent to Admin for review.')
+                            threading.Thread(target=notify_admins, kwargs={
+                                'title': '⚠️ Double Work Application',
+                                'body': f"{request.user.full_name} has applied for {booking.name} on {booking.event_date} but already has another booking that day. Admin review required.",
+                                'link': '/admin-panel/staff-requests/'
+                            }, daemon=True).start()
+                        else:
+                            messages.success(request, f'📩 Application received for {booking.name}. Check your dashboard for updates.')
+                            threading.Thread(target=notify_admins, kwargs={
+                                'title': '📩 New Event Application',
+                                'body': f"{request.user.full_name} applied for {booking.name} on {booking.event_date}.",
+                                'link': f"/admin-panel/bookings/{booking.pk}/"
+                            }, daemon=True).start()
                 
                 
                 
@@ -619,6 +650,7 @@ def staff_apply_booking(request, pk):
             return redirect('staff_dashboard')
             
         return redirect('staff_dashboard')
+
 
 
 @login_required(login_url='/staff/login/')
@@ -743,7 +775,32 @@ def staff_profile(request):
                 me.save(update_fields=['photo'])
                 messages.success(request, '✅ Profile photo updated successfully.')
 
-    return render(request, 'staff/profile.html', {'me': me})
+    # Context for Level Progress Tracking
+    today = timezone.now().date()
+    my_bookings = me.bookings.all()
+    
+    day_works = my_bookings.filter(status='completed', session='day').count()
+    night_works = my_bookings.filter(status='completed', session='night').count()
+    long_works = my_bookings.filter(status='completed', is_long_work=True).count()
+    
+    rem_day, rem_night, rem_long = 0, 0, 0
+    if me.level == 'C':
+        rem_day = max(0, 10 - day_works)
+        rem_night = max(0, 5 - night_works)
+        rem_long = max(0, 5 - long_works)
+
+    latest_promotion = me.promotion_requests.order_by('-created_at').first()
+
+    return render(request, 'staff/profile.html', {
+        'me': me,
+        'day_works': day_works,
+        'night_works': night_works,
+        'long_works': long_works,
+        'rem_day': rem_day,
+        'rem_night': rem_night,
+        'rem_long': rem_long,
+        'latest_promotion': latest_promotion,
+    })
 
 
 @login_required(login_url='/staff/login/')
@@ -794,7 +851,9 @@ def upload_profile_photo(request):
 @login_required(login_url='/staff/login/')
 def staff_terms(request):
     """Displays the terms and conditions for staff members."""
-    return render(request, 'staff/terms.html')
+    from core.models import TermAndCondition
+    terms = TermAndCondition.objects.all()
+    return render(request, 'staff/terms.html', {'terms': terms})
 
 
 @login_required(login_url='/staff/login/')
@@ -831,6 +890,7 @@ def staff_submit_report(request, pk):
             report.total_amount   = request.POST.get('total_amount', 'NIL').strip() or 'NIL'
             report.balance_amount = request.POST.get('balance_amount', 'NIL').strip() or 'NIL'
             report.pending        = request.POST.get('pending', 'NIL').strip() or 'NIL'
+            report.work_type      = request.POST.get('work_type', 'day')
             report.juice          = request.POST.get('juice', 'NIL').strip() or 'NIL'
             report.tea            = request.POST.get('tea', 'NIL').strip() or 'NIL'
             report.popcorn        = request.POST.get('popcorn', 'NIL').strip() or 'NIL'
@@ -838,6 +898,21 @@ def staff_submit_report(request, pk):
             report.coat_incharge  = request.POST.get('coat_incharge', 'NIL').strip() or 'NIL'
             report.coat_rent      = request.POST.get('coat_rent', 'NIL').strip() or 'NIL'
             report.ta             = request.POST.get('ta', 'NIL').strip() or 'NIL'
+            report.plate_count    = request.POST.get('plate_count', 'NIL').strip() or 'NIL'
+            report.bottle_count   = request.POST.get('bottle_count', 'NIL').strip() or 'NIL'
+            report.extra_logistics = request.POST.get('extra_logistics', 'NIL').strip() or 'NIL'
+            
+            # Dynamic Logistics
+            log_labels = request.POST.getlist('dyn_log_label[]')
+            log_vals   = request.POST.getlist('dyn_log_val[]')
+            report.dynamic_logistics = {l.strip(): v.strip() or 'NIL' for l, v in zip(log_labels, log_vals) if l.strip()}
+            
+            # Dynamic Rentals
+            rent_labels = request.POST.getlist('dyn_rent_label[]')
+            rent_vals   = request.POST.getlist('dyn_rent_val[]')
+            report.dynamic_rentals = {l.strip(): v.strip() or 'NIL' for l, v in zip(rent_labels, rent_vals) if l.strip()}
+
+            report.note           = request.POST.get('note', '').strip()
             report.save()
             
             messages.success(request, 'Report updated/submitted successfully.')
@@ -891,4 +966,97 @@ def staff_complete_task(request, pk):
         'task_name': task.task_name,
         'completed_by': task.completed_by.full_name if task.completed_by else 'Unknown'
     })
+
+
+@login_required(login_url='/staff/login/')
+@require_POST
+def staff_ajax_update_attendance_field(request, pk):
+    """AJAX endpoint for Captains/Supervisors to update attendance fields."""
+    me = request.user
+    booking = get_object_or_404(Booking, pk=pk)
+    
+    # Permission check: Must be admin or high-level staff assigned to this booking
+    is_assigned = booking.assigned_to.filter(id=me.id).exists()
+    has_perm = me.is_staff or (is_assigned and me.level in ['captain', 'supervisor'])
+    
+    if not has_perm:
+        return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+
+    staff_id = request.POST.get('staff_id')
+    field    = request.POST.get('field')
+    value    = request.POST.get('value')
+
+    if not all([staff_id, field]):
+        return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
+
+    try:
+        from staff.models import StaffAttendance, Staff
+        att, created = StaffAttendance.objects.get_or_create(
+            booking=booking,
+            staff_id=staff_id,
+            date=booking.event_date
+        )
+
+        from decimal import Decimal
+        if field == 'status':
+            att.status = value.strip().lower()
+        elif field == 'payment_given':
+            att.payment_given = (value == 'true')
+        elif field == 'bonus':
+            att.bonus = Decimal(str(value or 0))
+        elif field == 'deduction':
+            att.deduction = Decimal(str(value or 0))
+        elif field == 'reaching_time':
+            att.reaching_time = value if value and value != 'None' else None
+        elif field in ['on_time', 'shoes', 'uniform', 'grooming']:
+            setattr(att, field, (value == 'true'))
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Invalid field'}, status=400)
+
+        att.save()
+
+        # Send push if status changed to Present
+        if field == 'status' and value == 'present':
+            try:
+                from core.utils import send_push_notification
+                staff_member = att.staff
+                title = "Attendance Marked ✅"
+                msg = f"Your attendance for {booking.name} has been marked as Present by {me.full_name}."
+                send_push_notification(staff_member, title, msg)
+            except Exception as e:
+                print(f"Staff Push Error: {e}")
+
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Updated successfully'
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def staff_apply(request):
+    """In-app registration for new staff members, skipping the main website."""
+    from staff.forms import StaffApplicationForm
+    if request.user.is_authenticated:
+        return redirect('staff_dashboard')
+        
+    error = None
+    if request.method == 'POST':
+        form = StaffApplicationForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                application = form.save(commit=False)
+                application.status = 'pending'
+                application.save()
+                messages.success(request, '🎉 Application submitted successfully! An Admin will review the application and WhatsApp you the login details shortly.')
+                return redirect('staff_login')
+            except Exception as e:
+                error = 'Something went wrong processing your staff application. Please try again.'
+        else:
+            error = 'Please correct the errors below.'
+    else:
+        form = StaffApplicationForm()
+        
+    return render(request, 'staff/apply.html', {'form': form, 'error': error})
 

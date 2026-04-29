@@ -36,6 +36,18 @@ def generate_staff_id():
         return f"MS-{random.randint(1000, 9999)}"
 
 
+class Locality(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = 'Localities'
+
+    def __str__(self):
+        return self.name
+
+
 class StaffManager(BaseUserManager):
     def create_user(self, staff_id, password, **extra):
         if not staff_id:
@@ -57,6 +69,7 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         ('A', 'A Level'),
         ('B', 'B Level'),
         ('C', 'C Level'),
+        ('supervisor', 'Supervisor'),
         ('captain', 'Captain'),
         ('admin', 'Admin'),
     ]
@@ -80,15 +93,7 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         ('XL', 'Extra Large (XL)'),
         ('XXL', 'Double XL (XXL)'),
     ]
-    LOCALITY_CHOICES = [
-        ('Kondotty', 'Kondotty'),
-        ('Areekode', 'Areekode'),
-        ('Edavannappara', 'Edavannappara'),
-        ('Kizhisseri', 'Kizhisseri'),
-        ('University', 'University'),
-        ('Valluvambram', 'Valluvambram'),
-    ]
-    main_locality = models.CharField(max_length=50, choices=LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
+    main_locality = models.CharField(max_length=50, blank=True, null=True, help_text="Major operational area")
     coat_size = models.CharField(max_length=5, choices=COAT_SIZE_CHOICES, blank=True, null=True, help_text="Required coat size")
 
     GENDER_CHOICES = [
@@ -97,11 +102,11 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         ('Other', 'Other'),
     ]
     EDUCATION_CHOICES = [
-        ('10th', '10th'),
         ('+1', '+1'),
         ('+2', '+2'),
         ('UG', 'UG'),
         ('PG', 'PG'),
+        ('Other', 'Other'),
     ]
 
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
@@ -185,6 +190,25 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         result = self.payouts.filter(status='pending').aggregate(total=Sum('amount'))
         return result['total'] or 0
 
+    def total_earned(self):
+        from django.db.models import Sum
+        result = self.payouts.filter(status='paid').aggregate(total=Sum('amount'))
+        return result['total'] or 0
+
+    def pending_payout_amount(self):
+        from django.db.models import Sum
+        result = self.payouts.filter(status='pending').aggregate(total=Sum('amount'))
+        return result['total'] or 0
+
+    def this_month_earnings(self):
+        from django.db.models import Sum
+        result = self.payouts.filter(
+            status='paid',
+            paid_on__month=timezone.now().month,
+            paid_on__year=timezone.now().year
+        ).aggregate(total=Sum('amount'))
+        return result['total'] or 0
+
     # Fix 11: Staff financial metrics
     def events_this_month(self):
         return self.bookings.filter(
@@ -221,6 +245,8 @@ class StaffAttendance(models.Model):
     shoes      = models.BooleanField(default=True)
     uniform    = models.BooleanField(default=True)
     grooming   = models.BooleanField(default=True)
+    bonus      = models.DecimalField(max_digits=8, decimal_places=2, default=0, help_text="Extra money given")
+    deduction  = models.DecimalField(max_digits=8, decimal_places=2, default=0, help_text="Amount deducted")
     hours      = models.DecimalField(max_digits=4, decimal_places=1, default=8)
     payment_given = models.BooleanField(default=False)
 
@@ -285,7 +311,7 @@ class StaffApplication(models.Model):
     home_address = models.CharField(max_length=255)
     education = models.CharField(max_length=50, choices=Staff.EDUCATION_CHOICES)
     
-    main_locality = models.CharField(max_length=50, choices=Staff.LOCALITY_CHOICES, blank=True, null=True, help_text="Major operational area")
+    main_locality = models.CharField(max_length=50, blank=True, null=True, help_text="Major operational area")
     coat_size = models.CharField(max_length=5, choices=Staff.COAT_SIZE_CHOICES, blank=True, null=True)
     
     guardian_name = models.CharField(max_length=150)
@@ -343,7 +369,7 @@ class PromotionRequest(models.Model):
             
             if self.status == 'approved':
                 title = "🎉 Promotion Approved!"
-                body = f"Congratulations! You've been promoted to {self.get_requested_level_display()}."
+                body = f"Congratulations! You've been promoted to {self.requested_level}."
             elif self.status == 'rejected':
                 title = "❌ Promotion Update"
                 body = "Your recent promotion request has not been approved at this time."
@@ -379,3 +405,31 @@ class FCMDevice(models.Model):
     def __str__(self):
         return f"{self.staff.full_name} - {self.device_name or 'Unknown Device'}"
 
+
+from django.db.models.signals import pre_delete, pre_save
+from django.dispatch import receiver
+
+# Signals for dynamic locality propagation
+@receiver(pre_delete, sender=Locality)
+def handle_locality_delete(sender, instance, **kwargs):
+    # Nullify locality for staff and applications
+    Staff.objects.filter(main_locality=instance.name).update(main_locality='')
+    StaffApplication.objects.filter(main_locality=instance.name).update(main_locality='')
+    
+    # Update bookings publish_locality back to default 'all'
+    from bookings.models import Booking
+    Booking.objects.filter(publish_locality=instance.name).update(publish_locality='all')
+
+@receiver(pre_save, sender=Locality)
+def handle_locality_rename(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old_name = Locality.objects.get(pk=instance.pk).name
+            if old_name != instance.name:
+                Staff.objects.filter(main_locality=old_name).update(main_locality=instance.name)
+                StaffApplication.objects.filter(main_locality=old_name).update(main_locality=instance.name)
+                
+                from bookings.models import Booking
+                Booking.objects.filter(publish_locality=old_name).update(publish_locality=instance.name)
+        except Locality.DoesNotExist:
+            pass

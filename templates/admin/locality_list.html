@@ -1,0 +1,51 @@
+{% extends 'admin/custom_base.html' %}
+
+{% block title %}Manage Localities | Admin Panel{% endblock %}
+{% block page_title %}
+<a href="{% url 'admin_settings' %}" class="back-link" style="color:var(--text); margin-right:12px; text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
+Platform Localities
+{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'admin_locality_add' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Locality</a>
+{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Localities</div>
+      <a href="{% url 'admin_locality_add' %}" class="btn btn-gold btn-sm"><i class="fas fa-plus"></i> Add New Locality</a>
+    </div>
+    <div style="overflow-x:auto;">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Locality Name</th>
+        <th style="width:120px;text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for loc in localities %}
+      <tr>
+        <td style="color:var(--text-muted)">#{{ loc.id }}</td>
+        <td><strong>{{ loc.name }}</strong></td>
+        <td style="text-align:right">
+          <a href="{% url 'admin_locality_edit' loc.pk %}" class="btn btn-ghost btn-sm" title="Edit"><i class="fas fa-pencil"></i></a>
+          <form method="POST" action="{% url 'admin_locality_delete' loc.pk %}" style="display:inline;" onsubmit="return confirm('Delete this locality completely?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger)" title="Delete"><i class="fas fa-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted)">
+          No localities found. <a href="{% url 'admin_locality_add' %}">Add one now</a>.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

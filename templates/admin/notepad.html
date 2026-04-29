@@ -1,0 +1,426 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}Notepad | Admin Panel{% endblock %}
+{% block page_title %}Notepad{% endblock %}
+{% block header_actions %}
+<button onclick="createNote()" class="btn btn-gold"><i class="fas fa-plus"></i> New Note</button>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 24px;
+  }
+  .note-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    position: relative;
+  }
+  .note-card:hover {
+    border-color: var(--gold);
+    box-shadow: 0 4px 20px rgba(200,148,10,0.08);
+  }
+  .note-card:focus-within {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(200,148,10,0.15);
+  }
+  .note-title-input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 1rem;
+    font-family: 'Outfit', sans-serif;
+    width: 100%;
+    padding: 0;
+    outline: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .note-title-input::placeholder { color: var(--muted); font-weight: 500; }
+  .note-content-input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    width: 100%;
+    min-height: 100px;
+    resize: none;
+    outline: none;
+    line-height: 1.6;
+  }
+  .note-content-input::placeholder { color: var(--muted); }
+  .note-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .note-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .note-actions {
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .note-card:hover .note-actions,
+  .note-card:focus-within .note-actions { opacity: 1; }
+  .note-save-indicator {
+    font-size: 0.7rem;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .note-save-indicator.visible { opacity: 1; color: #27ae60; }
+  .empty-notepad {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+  .empty-notepad i {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 16px;
+    opacity: 0.3;
+    color: var(--gold);
+  }
+  .filter-select {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.85rem;
+    outline: none;
+  }
+  @media (max-width: 600px) {
+    .notes-grid { grid-template-columns: 1fr; padding: 16px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="notesContainer">
+<div class="search-bar" style="margin-bottom: 24px; padding: 0 24px;">
+  <select id="filter-category" class="filter-select" onchange="fetchFilteredNotes()">
+    <option value="">All Categories</option>
+    {% for cat in categories %}
+    <option value="{{ cat.id }}">{{ cat.name }}</option>
+    {% endfor %}
+  </select>
+  <select id="filter-month" class="filter-select" onchange="fetchFilteredNotes()">
+    <option value="">All Months</option>
+    <option value="1">January</option>
+    <option value="2">February</option>
+    <option value="3">March</option>
+    <option value="4">April</option>
+    <option value="5">May</option>
+    <option value="6">June</option>
+    <option value="7">July</option>
+    <option value="8">August</option>
+    <option value="9">September</option>
+    <option value="10">October</option>
+    <option value="11">November</option>
+    <option value="12">December</option>
+  </select>
+  <select id="filter-year" class="filter-select" onchange="fetchFilteredNotes()">
+    <option value="">All Years</option>
+    <option value="2026">2026</option>
+    <option value="2025">2025</option>
+    <option value="2024">2024</option>
+  </select>
+</div>
+
+<div class="notes-grid" id="notesGrid" {% if not notes %}style="display:none;"{% endif %}>
+  {% for note in notes %}
+  <div class="note-card" id="card-{{ note.pk }}" data-id="{{ note.pk }}">
+    <input type="text" class="note-title-input" value="{{ note.title|escapejs }}" placeholder="Note title…"
+           onblur="saveNote({{ note.pk }}, this.closest('.note-card'))">
+    <textarea class="note-content-input" placeholder="Write your note here…"
+              onblur="saveNote({{ note.pk }}, this.closest('.note-card'))">{{ note.content|default_if_none:"" }}</textarea>
+    <div class="note-meta" style="flex-direction: column; align-items: stretch; gap: 8px;">
+      <select class="note-category-select" onchange="handleCategoryChange(this, {{ note.pk }}, this.closest('.note-card'))" style="padding: 2px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--muted);">
+        <option value="">No Category</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if note.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+        <option value="NEW_CATEGORY">+ Add New Category</option>
+      </select>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="note-date" id="date-{{ note.pk }}">{{ note.updated_at|date:"l, d F · h:i A" }}</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="note-save-indicator" id="saved-{{ note.pk }}"><i class="fas fa-check-circle"></i> Saved</span>
+          <div class="note-actions">
+            <button onclick="deleteNote({{ note.pk }})" class="btn btn-ghost btn-sm" title="Delete" style="color:var(--danger);">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="empty-notepad" id="emptyState" {% if notes %}style="display:none;"{% endif %}>
+  <i class="fas fa-sticky-note"></i>
+  <div style="font-size:1.1rem; font-weight:600; margin-bottom:8px;">No notes yet</div>
+  <div style="font-size:0.9rem;">Click <strong>New Note</strong> above to create your first note.</div>
+</div>
+</div>
+
+<script>
+const CATEGORIES = [
+  {% for cat in categories %}
+  {id: {{ cat.id }}, name: "{{ cat.name|escapejs }}"},
+  {% endfor %}
+];
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const CSRF = getCookie('csrftoken') || '{{ csrf_token }}';
+
+function getCategorySelectHtml(selectedId) {
+    let opts = '<option value="">No Category</option>';
+    CATEGORIES.forEach(c => {
+        opts += `<option value="${c.id}" ${selectedId == c.id ? 'selected' : ''}>${c.name}</option>`;
+    });
+    opts += '<option value="NEW_CATEGORY">+ Add New Category</option>';
+    return opts;
+}
+
+function createNote() {
+  fetch("{% url 'admin_notepad' %}", {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': CSRF,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'title=New+Note'
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.error) { alert(data.error); return; }
+    const grid = document.getElementById('notesGrid');
+    const empty = document.getElementById('emptyState');
+    if (empty) empty.style.display = 'none';
+    grid.style.display = 'grid';
+
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    card.id = 'card-' + data.id;
+    card.dataset.id = data.id;
+    card.innerHTML = `
+      <input type="text" class="note-title-input" value="${data.title}" placeholder="Note title…"
+             onblur="saveNote(${data.id}, this.closest('.note-card'))">
+      <textarea class="note-content-input" placeholder="Write your note here…"
+                onblur="saveNote(${data.id}, this.closest('.note-card'))"></textarea>
+      <div class="note-meta" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <select class="note-category-select" onchange="handleCategoryChange(this, ${data.id}, this.closest('.note-card'))" style="padding: 2px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--muted);">
+          ${getCategorySelectHtml('')}
+        </select>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="note-date" id="date-${data.id}">${data.updated_at}</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="note-save-indicator" id="saved-${data.id}"><i class="fas fa-check-circle"></i> Saved</span>
+            <div class="note-actions">
+              <button onclick="deleteNote(${data.id})" class="btn btn-ghost btn-sm" title="Delete" style="color:var(--danger);">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    grid.prepend(card);
+    card.querySelector('.note-title-input').focus();
+    card.querySelector('.note-title-input').select();
+  });
+}
+
+function saveNote(id, card) {
+  const title = card.querySelector('.note-title-input').value;
+  const content = card.querySelector('.note-content-input').value;
+  const selectEl = card.querySelector('.note-category-select');
+  let category_id = selectEl ? selectEl.value : '';
+  if (category_id === 'NEW_CATEGORY') category_id = ''; // Handled separately
+  
+  fetch(`/admin-panel/notepad/${id}/save/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': CSRF,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `title=${encodeURIComponent(title)}&content=${encodeURIComponent(content)}&category_id=${encodeURIComponent(category_id)}`
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      const dateEl = document.getElementById('date-' + id);
+      const savedEl = document.getElementById('saved-' + id);
+      if (dateEl) dateEl.textContent = data.updated_at;
+      if (savedEl) {
+        savedEl.classList.add('visible');
+        setTimeout(() => savedEl.classList.remove('visible'), 2000);
+      }
+    }
+  });
+}
+
+function deleteNote(id) {
+  if (!confirm('Delete this note?')) return;
+  fetch(`/admin-panel/notepad/${id}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      const card = document.getElementById('card-' + id);
+      card.style.transition = 'opacity 0.3s, transform 0.3s';
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        card.remove();
+        const grid = document.getElementById('notesGrid');
+        if (!grid.children.length) {
+          grid.style.display = 'none';
+          const empty = document.getElementById('emptyState');
+          if (empty) empty.style.display = 'block';
+        }
+      }, 300);
+    }
+  });
+}
+
+function handleCategoryChange(selectElement, id, card) {
+    if (selectElement.value === 'NEW_CATEGORY') {
+        const catName = prompt("Enter new note category name:");
+        if (catName && catName.trim() !== '') {
+            fetch("{% url 'admin_note_category_add' %}", {
+                method: "POST",
+                headers: {
+                    'X-CSRFToken': CSRF,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `name=${encodeURIComponent(catName)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) {
+                    alert(data.error);
+                    selectElement.value = '';
+                } else {
+                    CATEGORIES.push({id: data.id, name: data.name});
+                    updateAllCategoryDropdowns(data.id, selectElement);
+                    saveNote(id, card);
+                }
+            });
+        } else {
+            selectElement.value = '';
+        }
+    } else {
+        saveNote(id, card);
+    }
+}
+
+function updateAllCategoryDropdowns(newOptionId, currentSelectElement) {
+    const filterSelect = document.getElementById('filter-category');
+    filterSelect.insertAdjacentHTML('beforeend', `<option value="${newOptionId}">${CATEGORIES.find(c=>c.id==newOptionId).name}</option>`);
+    
+    document.querySelectorAll('.note-category-select').forEach(sel => {
+        const isCurrent = (sel === currentSelectElement);
+        const prevVal = isCurrent ? newOptionId : sel.value;
+        sel.innerHTML = getCategorySelectHtml(prevVal);
+    });
+}
+
+function fetchFilteredNotes() {
+    const cat = document.getElementById('filter-category').value;
+    const month = document.getElementById('filter-month').value;
+    const year = document.getElementById('filter-year').value;
+    
+    fetch(`{% url 'admin_notepad' %}?category=${cat}&month=${month}&year=${year}`, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        renderFilteredNotes(data.notes);
+    });
+}
+
+function renderFilteredNotes(notesList) {
+    const grid = document.getElementById('notesGrid');
+    const empty = document.getElementById('emptyState');
+    
+    if (notesList.length === 0) {
+        grid.style.display = 'none';
+        grid.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    
+    if (empty) empty.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+    
+    notesList.forEach(data => {
+        const card = document.createElement('div');
+        card.className = 'note-card';
+        card.id = 'card-' + data.id;
+        card.dataset.id = data.id;
+        card.innerHTML = `
+          <input type="text" class="note-title-input" value="${data.title}" placeholder="Note title…"
+                 onblur="saveNote(${data.id}, this.closest('.note-card'))">
+          <textarea class="note-content-input" placeholder="Write your note here…"
+                    onblur="saveNote(${data.id}, this.closest('.note-card'))">${data.content || ''}</textarea>
+          <div class="note-meta" style="flex-direction: column; align-items: stretch; gap: 8px;">
+            <select class="note-category-select" onchange="handleCategoryChange(this, ${data.id}, this.closest('.note-card'))" style="padding: 2px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--muted);">
+                ${getCategorySelectHtml(data.category_id)}
+            </select>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="note-date" id="date-${data.id}">${data.updated_at_formatted}</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="note-save-indicator" id="saved-${data.id}"><i class="fas fa-check-circle"></i> Saved</span>
+                  <div class="note-actions">
+                    <button onclick="deleteNote(${data.id})" class="btn btn-ghost btn-sm" title="Delete" style="color:var(--danger);">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+            </div>
+          </div>`;
+        grid.appendChild(card);
+    });
+}
+</script>
+{% endblock %}

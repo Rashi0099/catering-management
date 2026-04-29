@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Staff Login — Mastan's Catering & Services</title>
+  <title>Staff Login — Mastan Catering & Services</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     :root { 
@@ -49,7 +49,7 @@
       <img src="{% static 'images/logo.png' %}" alt="Logo" style="height: 48px; width: auto; object-fit: contain;">
     </div>
     <h1>Staff Portal</h1>
-    <p style="text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.12em; color: rgba(255,255,255,0.4);">Mastan's Catering & Services — Team Login</p>
+    <p style="text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.12em; color: rgba(255,255,255,0.4);">Mastan Catering & Services — Team Login</p>
   </div>
 
   {% for msg in messages %}
@@ -71,7 +71,8 @@
   </form>
 
   <div class="hint">
-    Forgot password? Contact your <a href="#">manager</a>
+    Forgot password? Contact your manager<br><br>
+    Don't have an account? <a href="{% url 'staff_apply' %}">Register as Staff</a>
   </div>
 </div>
 </body>

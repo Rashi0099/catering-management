@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('login/',            views.staff_login,           name='staff_login'),
     path('logout/',           views.staff_logout,          name='staff_logout'),
+    path('apply/',            views.staff_apply,           name='staff_apply'),
     path('password/',         views.staff_change_password, name='staff_change_password'),
     path('',                  views.staff_dashboard,       name='staff_dashboard'),
     path('bookings/',         views.staff_bookings,        name='staff_bookings'),
@@ -18,6 +19,7 @@ urlpatterns = [
     path('profile/', views.staff_profile, name='staff_profile'),
     path('profile/upload-photo/', views.upload_profile_photo, name='upload_profile_photo'),
     path('terms/', views.staff_terms, name='staff_terms'),
+    path('bookings/<int:pk>/attendance/ajax-update/', views.staff_ajax_update_attendance_field, name='staff_ajax_update_attendance_field'),
     path('save-fcm-token/', views.save_fcm_token, name='save_fcm_token'),
 ]
 

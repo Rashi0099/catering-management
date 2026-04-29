@@ -1,5 +1,5 @@
 {% extends 'staff/base.html' %}
-{% block title %}My Dashboard — Mastan's Catering & Services{% endblock %}
+{% block title %}Home — Mastan Catering & Services{% endblock %}
 {% block nav_dash %}active{% endblock %}
 {% block content %}
 
@@ -11,7 +11,7 @@
     </div>
     <div style="flex: 1;">
       <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid rgba(56, 201, 176, 0.1); padding-bottom: 8px;">
-        <h3 style="margin: 0; font-size: 0.88rem; color: var(--teal); font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">Mastan's Official Notice</h3>
+        <h3 style="margin: 0; font-size: 0.88rem; color: var(--teal); font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">Mastan Official Notice</h3>
         <span style="font-size: 0.65rem; color: rgba(255, 255, 255, 0.35); font-weight: 500; font-family: 'Outfit', sans-serif;">{{ active_notice.created_at|date:"d M, h:i A" }}</span>
       </div>
       <p style="margin: 0; color: #ffffff; font-size: 1rem; line-height: 1.6; font-family: 'DM Sans', sans-serif; font-weight: 400; opacity: 0.95;">{{ active_notice.message|safe|linebreaksbr }}</p>
@@ -21,281 +21,210 @@
 {% endif %}
 
 <style>
-@keyframes pulseBlueBox {
-  0% { box-shadow: 0 0 10px rgba(56, 126, 255, 0.2); border-color: rgba(56, 126, 255, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(56, 126, 255, 0.4); border-color: rgba(56, 126, 255, 0.6); }
-  100% { box-shadow: 0 0 10px rgba(56, 126, 255, 0.2); border-color: rgba(56, 126, 255, 0.2); }
+.shift-card {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 16px;
+    margin-bottom: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
 }
-@keyframes slideInDown {
-  from { transform: translateY(-100%); }
-  to { transform: translateY(0); }
+
+.shift-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent);
+    pointer-events: none;
 }
-.level-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-@media (max-width: 768px) {
-  .level-grid-4 { grid-template-columns: 1fr !important; }
+
+.shift-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(224, 171, 74, 0.3);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.shift-card-date-col {
+    background: linear-gradient(135deg, var(--gold), #c19245);
+    color: #141b2d;
+    width: 68px;
+    height: 74px;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(224, 171, 74, 0.35);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.date-day {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.date-mon {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+}
+
+.shift-card-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+}
+
+.shift-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.shift-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+}
+
+.shift-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+.detail-item i {
+    width: 14px;
+    color: var(--teal);
+    font-size: 0.9rem;
+}
+
+.shift-card-footer {
+    width: 100%;
+}
+
+.btn-modern-join {
+    width: 100%;
+    background: linear-gradient(135deg, #0fb9b1, #20bf6b);
+    color: #ffffff;
+    border: none;
+    border-radius: 14px;
+    padding: 14px;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.3s;
+    box-shadow: 0 6px 20px rgba(32, 191, 107, 0.3);
+    text-align: center;
+    display: block;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-modern-join:hover {
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+.btn-modern-apply {
+    background: linear-gradient(135deg, #4b6cb7, #182848);
+    box-shadow: 0 6px 20px rgba(75, 108, 183, 0.3);
+}
+
+.status-label {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 </style>
 
-<div class="stats-row" style="margin-bottom:24px;">
-  <!-- Level Progress Card -->
-  <div class="panel" style="width:100%; grid-column: 1 / -1; margin-bottom: 24px;">
-    <div class="panel-hdr">
-      <div class="panel-title" style="font-size: 1.05rem;"><i class="fas fa-layer-group" style="color:var(--teal); margin-right:8px;"></i> Level Progress Tracking</div>
-    </div>
-    
-    <div class="level-grid-4" style="padding:16px 0; gap:12px; width:100%; justify-items:stretch;">
-      <!-- Box 1: Current Level -->
-      <div style="width:100%; padding:24px 12px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
-        <div style="font-family:'Outfit',sans-serif; font-weight:800; font-size:2rem; color:var(--gold); text-shadow:0 0 16px rgba(224,171,74,0.4); text-align:center;">{{ me.get_level_display }}</div>
-        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:500; text-align:center;">Current Level</div>
-      </div>
-      
-      <!-- Box 2: Completed Events -->
-      <div style="width:100%; padding:24px 12px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
-        <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:1.8rem; color:var(--teal); text-align:center;">{{ me.total_events_completed }}</div>
-        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:500; text-align:center;"> Event Completed</div>
-      </div>
-
-      <!-- Box 3: Progression/Decision -->
-      <div style="width:100%; background:var(--surface); border-radius:10px; border:1px solid #0a1a4a; animation:pulseBlueBox 3s infinite ease-in-out; box-shadow:0 8px 32px rgba(0,0,0,0.35); overflow:hidden; text-align:center;">
-        {% if me.level == 'C' %}
-        <table style="width:100% !important; display:table !important; border-collapse:collapse; font-family:'Outfit',sans-serif; table-layout:fixed; margin:0 auto;">
-          <tr>
-            <td style="width:33.33%; text-align:center; padding:18px 2px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:1.5rem; font-weight:800; color:#fff;">{{ rem_day }}</td>
-            <td style="width:33.33%; text-align:center; padding:18px 2px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:1.5rem; font-weight:800; color:#fff;">{{ rem_night }}</td>
-            <td style="width:33.33%; text-align:center; padding:18px 2px; border-bottom:1px solid #0a1a4a; font-size:1.5rem; font-weight:800; color:#fff;">{{ rem_long }}</td>
-          </tr>
-          <tr>
-            <td style="width:33.33%; text-align:center; padding:8px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:0.6rem; color:rgba(255,255,255,0.5); text-transform:uppercase; font-weight:600;">Day</td>
-            <td style="width:33.33%; text-align:center; padding:8px; border-right:1px solid #0a1a4a; border-bottom:1px solid #0a1a4a; font-size:0.6rem; color:rgba(255,255,255,0.5); text-transform:uppercase; font-weight:600;">Night</td>
-            <td style="width:33.33%; text-align:center; padding:8px; border-bottom:1px solid #0a1a4a; font-size:0.6rem; color:rgba(255,255,255,0.5); text-transform:uppercase; font-weight:600;">Long</td>
-          </tr>
-          <tr>
-            <td colspan="3" style="text-align:center; padding:12px; font-size:0.7rem; color:var(--blue); text-transform:uppercase; font-weight:600;">Next: <span style="color:#fff; font-weight:900;">B LEVEL</span></td>
-          </tr>
-        </table>
-        {% elif me.level == 'B' %}
-        <div style="padding:24px 12px; text-align:center; width:100%;">
-          <div style="font-family:'Outfit',sans-serif; font-size:1.1rem; font-weight:700; color:var(--blue); text-align:center;">Admin Decision</div>
-          <div style="font-size:0.65rem; color:rgba(255,255,255,0.7); margin-top:8px; text-transform:uppercase; font-weight:600; text-align:center;">To Reach <span style="color:#fff; font-weight:900;">A LEVEL</span></div>
-        </div>
-        {% else %}
-        <div style="padding:24px 12px; text-align:center; width:100%;">
-          <div style="font-family:'Outfit',sans-serif; font-size:1.2rem; font-weight:700; color:var(--green); text-align:center;">Max Level</div>
-          <div style="font-size:0.65rem; color:rgba(255,255,255,0.7); margin-top:8px; text-transform:uppercase; font-weight:600; text-align:center;">Congratulations 🎉</div>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- Box 4: Promotion Status -->
-      <div style="width:100%; padding:24px 12px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
-        {% if latest_promotion %}
-          <div style="font-family:'Outfit',sans-serif; font-size:1rem; font-weight:600; color:var(--orange); text-align:center;">{% if latest_promotion.status == 'pending' %}Sent to Admin{% else %}{{ latest_promotion.get_status_display }}{% endif %}</div>
-        {% else %}
-          <div style="font-family:'Outfit',sans-serif; font-size:1rem; font-weight:500; color:rgba(255,255,255,0.25); text-align:center;">No Requests</div>
-        {% endif %}
-        <div style="font-size:0.65rem; color:rgba(255,255,255,0.6); margin-top:8px; text-transform:uppercase; font-weight:500; text-align:center;">Status</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="stats-row stats-row-3">
-  <div class="stat-card" style="--c:var(--teal)">
-    <div class="stat-icon">📋</div>
-    <div class="stat-val">{{ total_bookings }}</div>
-    <div class="stat-lbl">My Bookings</div>
-  </div>
-  <div class="stat-card" style="--c:var(--green)">
-    <div class="stat-icon">✅</div>
-    <div class="stat-val">{{ confirmed_count }}</div>
-    <div class="stat-lbl">Confirmed</div>
-  </div>
-  <div class="stat-card" style="--c:var(--blue)">
-    <div class="stat-icon">⏳</div>
-    <div class="stat-val">{{ pending_count }}</div>
-    <div class="stat-lbl">Pending (Event Requests)</div>
-  </div>
-</div>
-
-<style>
-  .stats-row-3 { grid-template-columns: repeat(3, 1fr) !important; }
-  /* Desktop View */
-  .dashboard-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  .tab-switcher { display: none; }
-  .tab-panel { display: block !important; }
-
-  /* Mobile View */
-  @media (max-width: 768px) {
-    .stats-row-3 { grid-template-columns: 1fr !important; }
-    .dashboard-panels { display: block; }
-    .tab-switcher {
-      display: flex; background: var(--surface); border-radius: 12px;
-      border: 1px solid var(--border); margin-bottom: 20px; overflow: hidden;
-    }
-    .tab-btn {
-      flex: 1; padding: 14px 10px; font-size: 0.85rem; font-weight: 600; color: var(--muted);
-      cursor: pointer; background: transparent; border: none; transition: all 0.3s;
-      position: relative; outline: none; border-bottom: 2px solid transparent;
-      font-family: 'DM Sans', sans-serif;
-    }
-    .tab-btn.active { color: var(--teal); background: rgba(56, 201, 176, 0.05); border-bottom: 2px solid var(--teal); }
-    .tab-badge {
-      display: inline-flex; align-items: center; justify-content: center;
-      background: var(--red); color: white; border-radius: 50%;
-      min-width: 18px; height: 18px; font-size: 0.65rem; font-weight: bold;
-      position: absolute; top: 6px; right: 12px; padding: 0 4px;
-    }
-    .tab-panel { display: none !important; }
-    .tab-panel.active { display: block !important; }
-  }
-</style>
-
-<div class="tab-switcher">
-  <button class="tab-btn active" onclick="switchDashboardTab('confirmed', this)">Confirmed Events</button>
-  <button class="tab-btn" onclick="switchDashboardTab('available', this)">
-    Available Shifts
-    {% if available_bookings|length > 0 %}
-      <span class="tab-badge">{{ available_bookings|length }}</span>
-    {% endif %}
-  </button>
-</div>
-
-<div class="dashboard-panels">
-  <!-- Confirmed Events -->
-  <div class="panel tab-panel active" id="tab-confirmed">
-    <div class="panel-hdr">
-      <div class="panel-title"><i class="fas fa-calendar-check" style="color:var(--teal); margin-right:8px;"></i> Confirmed Events</div>
-      <a href="{% url 'staff_bookings' %}" class="panel-link">All →</a>
-    </div>
-    {% for ev in upcoming %}
-    <div class="ev-item">
-      <div class="ev-box">
-        <div class="ev-day">{{ ev.event_date|date:"d" }}</div>
-        <div class="ev-mon">{{ ev.event_date|date:"M" }}</div>
-      </div>
-      <div style="flex:1">
-        <div class="ev-name">{{ ev.get_event_type_display }}</div>
-        <div class="ev-meta">{{ ev.get_session_display }} · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
-        <div class="ev-meta">
-          {% if ev.location_link %}
-            <a href="{{ ev.location_link }}" target="_blank" style="color:inherit; text-decoration:underline;">📍 {{ ev.location_name|default:"Open Map Route" }}</a>
-          {% else %}
-            📍 {{ ev.location_name|default:ev.venue|default:"Venue TBD" }}
-          {% endif %}
-        </div>
-      </div>
-      <div style="margin-left:auto; text-align:right;">
-        {% if ev.status == 'cancelled' %}
-          <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancelled</span>
-        {% elif ev.pk in cancel_req_booking_ids %}
-          <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Request Submitted</span>
-        {% elif ev.is_cancellable %}
-        <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Are you sure you want to request cancellation for this event?', event);">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm" style="padding:4px 8px; border:1px solid var(--red); color:var(--red); background:transparent;"><i class="fas fa-times"></i> Cancel</button>
-        </form>
-        {% endif %}
-      </div>
-    </div>
-    {% empty %}
-    <div style="text-align:center;color:var(--muted);padding:24px;font-size:0.83rem">
-      <i class="fas fa-calendar" style="font-size:1.8rem;margin-bottom:8px;display:block;opacity:0.3"></i>
-      No upcoming events
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- Available Events to Claim -->
-  <div class="panel tab-panel" id="tab-available">
-    <div class="panel-hdr">
-      <div class="panel-title" style="display: flex; align-items: center;">
-        Available Shifts 
-        {% if available_bookings|length > 0 %}
-          <span style="background: var(--red); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; margin-left: 8px; font-weight: bold; box-shadow: 0 0 10px rgba(231, 76, 60, 0.4);">
-            {{ available_bookings|length }}
-          </span>
-        {% endif %}
-      </div>
-    </div>
-    {% for ev in available_bookings %}
-    <div class="ev-item" style="align-items:center">
-      <div class="ev-box" style="background:rgba(212,168,82,0.1);border-color:rgba(212,168,82,0.2)">
-        <div class="ev-day" style="color:var(--gold)">{{ ev.event_date|date:"d" }}</div>
-        <div class="ev-mon">{{ ev.event_date|date:"M" }}</div>
-      </div>
-      <div style="flex:1">
-        <div class="ev-name">{{ ev.get_event_type_display }}</div>
-        <div class="ev-meta">{{ ev.get_session_display }} · <i class="fas fa-clock"></i> {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}</div>
-        <div class="ev-meta">
-          {% if ev.location_link %}
-            <a href="{{ ev.location_link }}" target="_blank" style="color:inherit; text-decoration:underline;">📍 {{ ev.location_name|default:"Open Map Route" }}</a>
-          {% else %}
-            📍 {{ ev.location_name|default:ev.venue|default:"Venue TBD" }}
-          {% endif %}
-        </div>
-      </div>
-      
-      {% if ev.pk in cancel_rejected_booking_ids %}
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-          <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.25); border-radius:8px; padding:5px 10px; font-size:0.75rem; font-weight:600;">
-            <i class="fas fa-ban"></i> Admin Denied Cancel
-          </span>
-          {% if ev.is_cancellable %}
-          <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Are you sure you want to send another cancel request?', event);">
-            {% csrf_token %}
-            <button type="submit" style="background:none; border:none; color:var(--red); font-size:0.75rem; cursor:pointer; text-decoration:underline; padding:0;"><i class="fas fa-times"></i> Request Cancel Again</button>
-          </form>
-          {% endif %}
-        </div>
-      {% elif ev.pk in pending_app_booking_ids %}
-        <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-          <span class="badge b-pending" style="background:rgba(212,168,82,0.1); color:var(--gold); border:1px solid rgba(212,168,82,0.2);">Pending Approval</span>
-          {% if ev.is_cancellable %}
-          <form method="post" action="{% url 'staff_cancel_request' ev.pk %}" onsubmit="return handleCustomConfirm(this, 'Withdraw this application?', event);">
-            {% csrf_token %}
-            <button type="submit" style="background:none; border:none; color:var(--red); font-size:0.75rem; cursor:pointer; text-decoration:underline; padding:0;">Withdraw</button>
-          </form>
-          {% endif %}
-        </div>
-      {% elif ev.pk in cancel_req_booking_ids %}
-        <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Cancel Request Submitted</span>
-      {% elif ev.pk in rejected_app_booking_ids %}
-        <span class="badge b-cancelled" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Not Approved</span>
-      {% elif ev.pk in cancelled_app_booking_ids %}
-        <div style="font-size:0.75rem; color:var(--red); font-weight:500; text-align:center;">You already cancelled booking, pls contact admin</div>
-      {% elif ev.is_level_full %}
-        <span class="badge" style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);"><i class="fas fa-lock"></i> Quota Full</span>
-      {% else %}
-        {% if ev.allow_direct_join %}
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-             <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--green);border:1px solid var(--green);color:white">Join Event</a>
-          </div>
-        {% else %}
-           <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn btn-gold btn-sm" style="padding:6px 14px;background:var(--blue);border:1px solid var(--blue);color:white">Apply</a>
-        {% endif %}
+<!-- ── AVAILABLE SHIFTS ── -->
+<div class="panel" id="tab-available" style="margin-bottom: 24px; background: transparent; border: none; padding: 0; box-shadow: none;">
+  <div class="panel-hdr" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px 20px;">
+    <div class="panel-title" style="display: flex; align-items: center; font-size: 1rem;">
+      <i class="fas fa-briefcase" style="color:var(--teal); margin-right:10px;"></i>
+      Available Events
+      {% if available_bookings|length > 0 %}
+        <span style="background: var(--red); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; margin-left: 10px; font-weight: bold; box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);">
+          {{ available_bookings|length }}
+        </span>
       {% endif %}
     </div>
-    {% empty %}
-    <div style="text-align:center;color:var(--muted);padding:24px;font-size:0.83rem">
-      <i class="fas fa-check-circle" style="font-size:1.8rem;margin-bottom:8px;display:block;opacity:0.3;color:var(--green)"></i>
-      No open shifts right now
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 4px;">
+    {% for ev in available_bookings %}
+    <div class="shift-card" style="display: block;">
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+        <div class="shift-card-date-col">
+          <span class="date-day">{{ ev.event_date|date:"d" }}</span>
+          <span class="date-mon">{{ ev.event_date|date:"M" }}</span>
+        </div>
+        
+        <div class="shift-card-main">
+          <h4 class="shift-title">{{ ev.get_event_type_display }}</h4>
+          <div class="shift-details">
+            <div class="detail-item">
+              <i class="fas fa-sun"></i> {{ ev.get_session_display }} · {{ ev.event_time|default:"Time TBD"|time:"h:i A" }}
+            </div>
+            <div class="detail-item">
+              <i class="fas fa-map-marker-alt"></i>
+              {% if ev.location_link %}
+                <a href="{{ ev.location_link }}" target="_blank" style="color:inherit; text-decoration:underline;">{{ ev.location_name|default:"View Map" }}</a>
+              {% else %}
+                {{ ev.location_name|default:ev.venue|default:"Venue TBD" }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="shift-card-footer">
+        {% if ev.pk in cancel_rejected_booking_ids %}
+          <div class="status-label" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2);">Denied</div>
+        {% elif ev.pk in pending_app_booking_ids %}
+          <div class="status-label" style="background:rgba(241,196,15,0.1); color:var(--gold); border:1px solid rgba(241,196,15,0.2);">Pending</div>
+        {% elif ev.is_level_full %}
+          <div class="status-label" style="background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1);">Full</div>
+        {% else %}
+          {% if ev.allow_direct_join %}
+            <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn-modern-join">Join Event</a>
+          {% else %}
+            <a href="{% url 'staff_apply_booking' ev.pk %}" class="btn-modern-join btn-modern-apply">Apply for Event</a>
+          {% endif %}
+        {% endif %}
+      </div>
     </div>
+    {% empty %}
     {% endfor %}
   </div>
 </div>
-
-<script>
-function switchDashboardTab(tabId, btnElement) {
-  // Only matters on mobile, but JS runs anyway
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
-  
-  btnElement.classList.add('active');
-  document.getElementById('tab-' + tabId).classList.add('active');
-}
-</script>
-
-
-
 {% endblock %}

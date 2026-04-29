@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Financial Reports — Mastan's Catering{% endblock %}
+{% block title %}Financial Reports — Mastan Catering{% endblock %}
 {% block page_title %}Financial Reports {% if month_name or year_filter %}- [ {% if month_name %}{{ month_name|upper }}{% endif %} {{ year_filter }} ]{% endif %}{% endblock %}
 
 {% block content %}
@@ -20,17 +20,26 @@
       <option value="11" {% if month_filter == '11' %}selected{% endif %}>Nov</option>
       <option value="12" {% if month_filter == '12' %}selected{% endif %}>Dec</option>
     </select>
-    <select name="year" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);" onchange="this.form.submit()">
+    <select name="year" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text);">
       <option value="">Year (All)</option>
       <option value="2024" {% if year_filter == '2024' %}selected{% endif %}>2024</option>
       <option value="2025" {% if year_filter == '2025' %}selected{% endif %}>2025</option>
       <option value="2026" {% if year_filter == '2026' %}selected{% endif %}>2026</option>
       <option value="2027" {% if year_filter == '2027' %}selected{% endif %}>2027</option>
     </select>
+    <select name="client" class="filter-select" style="height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); min-width:150px;">
+      <option value="">Client (All)</option>
+      {% for c in clients %}
+        <option value="{{ c.name }}" {% if client_filter == c.name %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
   </form>
-  <a href="{% url 'admin_report_add' %}" class="btn btn-gold" style="height:42px; display:inline-flex; align-items:center;">
-    <i class="fas fa-plus"></i> Add Report
-  </a>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button type="button" class="btn btn-ghost" style="height:42px; display:inline-flex; align-items:center;" onclick="forceDownloadReport(this)"><i class="fas fa-file-pdf"></i> Download PDF</button>
+    <a href="{% url 'admin_report_add' %}" class="btn btn-gold" style="height:42px; display:inline-flex; align-items:center;">
+      <i class="fas fa-plus"></i> Add Report
+    </a>
+  </div>
 </div>
 
 <style>
@@ -56,6 +65,7 @@
         <th style="color:var(--text);">SITE NAME</th>
         <th style="color:var(--text);">EVENT NAME</th>
         <th style="color:var(--text);">NO. OF BOYS</th>
+        <th style="color:var(--text); text-align:center;">WORK TYPE</th>
         <th style="color:var(--text);">BILL INCHARGE</th>
         <th style="color:var(--text);">BILL AMOUNT (BOYS)</th>
         <th style="color:var(--text);">AMOUNT RECEIVED (EVENT)</th>
@@ -74,6 +84,9 @@
         <td data-label="SITE">{{ r.site_name }}</td>
         <td data-label="EVENT">{{ r.event_name }}</td>
         <td data-label="BOYS">{{ r.boys_count }}</td>
+        <td data-label="WORK TYPE" style="text-align:center;">
+          {% if r.work_type == 'night' %}Night{% else %}Day{% endif %}
+        </td>
         <td data-label="INCHARGE">{{ r.bill_incharge }}</td>
         <td data-label="BILL AMOUNT" style="color:var(--gold);">{{ r.bill_amount }}</td>
         <td data-label="RECEIVED" style="color:var(--green);">{{ r.amount_received }}</td>
@@ -89,7 +102,10 @@
         </td>
         <td>
           <a href="{% url 'admin_report_edit' r.pk %}" class="btn btn-ghost"><i class="fas fa-pencil-alt"></i> Edit</a>
-          <a href="{% url 'admin_report_delete' r.pk %}" class="btn btn-danger" onclick="return handleCustomConfirm(this, 'Delete this report?', event);"><i class="fas fa-trash"></i> Delete</a>
+          <form method="post" action="{% url 'admin_report_delete' r.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" onclick="return handleCustomConfirm(this, 'Delete this report?', event);"><i class="fas fa-trash"></i> Delete</button>
+          </form>
         </td>
       </tr>
       {% empty %}
@@ -122,6 +138,52 @@
 
 {% block extra_js %}
 <script>
+  function forceDownloadReport(btn) {
+    const month = document.querySelector('select[name=month]').value;
+    const year  = document.querySelector('select[name=year]').value;
+    const client = document.querySelector('select[name=client]').value;
+    const url   = "{% url 'admin_reports_pdf' %}?month=" + month + "&year=" + year + "&client=" + encodeURIComponent(client);
+
+    // iOS Safari does not support blob anchor downloads — open in new tab instead
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      window.open(url, '_blank');
+      return;
+    }
+
+    const oldHtml = btn.innerHTML;
+    btn.disabled  = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+
+    // Android / desktop: force blob download
+    fetch(url, { credentials: 'same-origin' })
+      .then(r => {
+        if (!r.ok) throw new Error('Server error ' + r.status);
+        return r.blob();
+      })
+      .then(blob => {
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href     = blobUrl;
+        let name   = 'Financial_Reports';
+        if (month) name += '_' + month;
+        if (year)  name += '_' + year;
+        a.download = name + '.pdf';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { window.URL.revokeObjectURL(blobUrl); a.remove(); }, 300);
+        btn.disabled  = false;
+        btn.innerHTML = oldHtml;
+      })
+      .catch(() => {
+        btn.disabled  = false;
+        btn.innerHTML = oldHtml;
+        // Last resort fallback: just navigate
+        window.open(url, '_blank');
+      });
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('report-filter-form');
     
@@ -139,11 +201,6 @@
       });
       
       const fetchFilteredData = () => {
-        // Change button to indicate loading
-        const btn = filterForm.querySelector('button[type="submit"]');
-        const origText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        
         const url = new URL(window.location.href);
         const formData = new FormData(filterForm);
         for (let [key, value] of formData.entries()) {
@@ -156,24 +213,20 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // Replace Table
             const newTable = doc.getElementById('reports-table-container');
             if (newTable) {
                document.getElementById('reports-table-container').innerHTML = newTable.innerHTML;
             }
             
-            // Replace Title
             const newTitleElem = doc.querySelector('.topbar-title');
             if (newTitleElem) {
                document.querySelector('.topbar-title').innerHTML = newTitleElem.innerHTML;
             }
             
-            btn.innerHTML = origText;
             window.history.pushState({}, '', url);
           })
           .catch(err => {
              console.error('AJAX Error:', err);
-             btn.innerHTML = origText;
           });
       };
     }

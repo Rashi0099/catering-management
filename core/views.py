@@ -80,7 +80,7 @@ def contact(request):
 def manifest(request):
     """Dynamically serves manifest.json based on query parameters."""
     start_url = request.GET.get('start_url', '/')
-    name = request.GET.get('name', "Mastan's Catering")
+    name = request.GET.get('name', "Mastan Catering")
     short_name = request.GET.get('short_name', "Mastan")
     return render(request, 'manifest.json', {
         'start_url': start_url,

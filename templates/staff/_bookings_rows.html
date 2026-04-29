@@ -1,0 +1,15 @@
+{% for b in bookings %}
+<tr>
+  <td style="color:var(--muted);font-size:0.75rem">#{{ b.pk }}</td>
+  <td>{{ b.get_event_type_display }}</td>
+  <td>{{ b.get_session_display }}</td>
+  <td style="font-size:0.8rem">{{ b.event_date|date:"d M Y" }}</td>
+  <td><span class="badge b-{{ b.status }}">{{ b.get_status_display }}</span></td>
+  <td style="display:none;"></td>
+  <td><a href="/staff/bookings/{{ b.pk }}/" class="btn btn-ghost btn-sm">View</a></td>
+</tr>
+{% empty %}
+<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted)">
+  No bookings found.
+</td></tr>
+{% endfor %}

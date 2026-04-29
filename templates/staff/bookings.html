@@ -1,75 +1,54 @@
 {% extends 'staff/base.html' %}
-{% block title %}My Bookings  {% include 'pagination.html' with page_obj=bookings %}
-{% endblock %}
-{% block nav_book %}active  {% include 'pagination.html' with page_obj=bookings %}
-{% endblock %}
-{% block page_title %}My Bookings  {% include 'pagination.html' with page_obj=bookings %}
-{% endblock %}
+{% block title %}My Bookings{% endblock %}
+{% block nav_book %}active{% endblock %}
+{% block page_title %}My Bookings{% endblock %}
 
 {% block content %}
-<div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-  <form method="get" style="display:flex;gap:8px;flex:1;min-width:280px">
-    <input type="text" name="q" placeholder="Search by name" value="{{ search }}" style="flex:1"/>
-    <select name="status" style="width:auto" onchange="this.form.submit()">
-      <option value="">All</option>
-      <option value="pending"     {% if status_filter == 'pending'     %}selected{% endif %}>Pending</option>
-      <option value="confirmed"   {% if status_filter == 'confirmed'   %}selected{% endif %}>Confirmed</option>
-      <option value="completed"   {% if status_filter == 'completed'   %}selected{% endif %}>Completed</option>
-      <option value="cancelled"   {% if status_filter == 'cancelled'   %}selected{% endif %}>Cancelled</option>
-    </select>
-    <button type="submit" class="btn btn-teal btn-sm"><i class="fas fa-search"></i></button>
-  </form>
+<div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center;">
+  <div style="position:relative;flex:1;min-width:220px;">
+    <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:0.9rem;"></i>
+    <input type="text" id="bk-search" placeholder="Search by name, venue…" value="{{ search }}"
+      style="width:100%;padding:10px 12px 10px 36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:0.92rem;"/>
+  </div>
+  <select id="bk-status" style="height:42px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:0 14px;font-size:0.9rem;min-width:130px;">
+    <option value="">All Status</option>
+    <option value="pending"   {% if status_filter == 'pending'   %}selected{% endif %}>Pending</option>
+    <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+  </select>
+  <div id="bk-spinner" style="display:none;color:var(--muted);font-size:0.85rem;">
+    <i class="fas fa-spinner fa-spin"></i>
+  </div>
 </div>
 
 <style>
   @media (max-width: 768px) {
-    /* Premium Mobile Native ListTile UI */
     #bookings-table-container table { display: block; border: none; white-space: normal; }
     #bookings-table-container thead { display: none; }
     #bookings-table-container tbody { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-    
     #bookings-table-container tr {
-      display: grid;
-      position: relative;
-      background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 2px;
-      grid-template-columns: 1fr auto;
-      grid-template-rows: auto auto auto;
-      row-gap: 6px;
-      column-gap: 12px;
-      align-items: center;
-      grid-template-areas:
-        "event status"
-        "session date"
-        "action action";
+      display: grid; position: relative; background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.05); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 2px;
+      grid-template-columns: 1fr auto; grid-template-rows: auto auto auto;
+      row-gap: 6px; column-gap: 12px; align-items: center;
+      grid-template-areas: "event status" "session date" "action action";
     }
-    
     #bookings-table-container td { padding: 0 !important; border: none !important; text-align: left !important; display: block; }
-    #bookings-table-container td::before { display: none !important; } /* Removes ugly vertical text labels entirely */
-    
-    #bookings-table-container td:nth-child(1) { display: none; } 
-    
+    #bookings-table-container td::before { display: none !important; }
+    #bookings-table-container td:nth-child(1) { display: none; }
     #bookings-table-container td:nth-child(2) { grid-area: event; font-size: 1.05rem; font-weight: 600; color: var(--text); }
     #bookings-table-container td:nth-child(3) { grid-area: session; font-size: 0.8rem; color: var(--gold); font-weight: 500; }
     #bookings-table-container td:nth-child(4) { grid-area: date; font-size: 0.75rem; color: var(--muted); text-align: right !important; justify-self: end; }
-    
     #bookings-table-container td:nth-child(5) { grid-area: status; justify-self: end; align-self: center; margin-bottom: 2px; }
     #bookings-table-container td:nth-child(5) .badge { padding: 4px 8px; font-size: 0.65rem; border-radius: 6px; }
-    
     #bookings-table-container td:nth-child(6) { display: none; }
-    
     #bookings-table-container td:nth-child(7) { grid-area: action; justify-self: end; align-self: center; margin-top: 4px; }
     #bookings-table-container td:nth-child(7) a.btn { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; margin: 0; padding: 0; }
     #bookings-table-container td:nth-child(7)::after {
-      content: "\f054"; /* chevron-right */
-      font-family: "Font Awesome 5 Free";
-      font-weight: 900;
-      color: rgba(255,255,255,0.2);
-      font-size: 1rem;
-      pointer-events: none;
+      content: "\f054"; font-family: "Font Awesome 5 Free"; font-weight: 900;
+      color: rgba(255,255,255,0.2); font-size: 1rem; pointer-events: none;
     }
   }
 </style>
@@ -83,7 +62,7 @@
         <th>Status</th><th></th><th></th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="bk-tbody">
       {% for b in bookings %}
       <tr>
         <td style="color:var(--muted);font-size:0.75rem">#{{ b.pk }}</td>
@@ -91,7 +70,7 @@
         <td>{{ b.get_session_display }}</td>
         <td style="font-size:0.8rem">{{ b.event_date|date:"d M Y" }}</td>
         <td><span class="badge b-{{ b.status }}">{{ b.get_status_display }}</span></td>
-        <td style="display:none;"></td> <!-- Keep structure rigid for ListTile compatibility -->
+        <td style="display:none;"></td>
         <td><a href="{% url 'staff_booking_detail' b.pk %}" class="btn btn-ghost btn-sm">View</a></td>
       </tr>
       {% empty %}
@@ -103,5 +82,40 @@
   </table>
 </div>
 </div>
-  {% include 'pagination.html' with page_obj=bookings %}
+<div id="bk-pagination">{% include 'pagination.html' with page_obj=bookings %}</div>
+
+<script>
+(function() {
+  const searchInput  = document.getElementById('bk-search');
+  const statusSelect = document.getElementById('bk-status');
+  const tbody        = document.getElementById('bk-tbody');
+  const spinner      = document.getElementById('bk-spinner');
+  const pagination   = document.getElementById('bk-pagination');
+  let debounceTimer  = null;
+
+  function fetchBookings() {
+    const q      = searchInput.value.trim();
+    const status = statusSelect.value;
+    const url    = "{% url 'staff_bookings' %}?q=" + encodeURIComponent(q) + "&status=" + encodeURIComponent(status) + "&ajax=1";
+
+    spinner.style.display = 'inline-block';
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.json())
+      .then(data => {
+        spinner.style.display = 'none';
+        tbody.innerHTML = data.html;
+        pagination.innerHTML = data.pagination_html || '';
+      })
+      .catch(() => { spinner.style.display = 'none'; });
+  }
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(fetchBookings, 280);
+  });
+
+  statusSelect.addEventListener('change', fetchBookings);
+})();
+</script>
 {% endblock %}

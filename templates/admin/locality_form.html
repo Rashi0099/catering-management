@@ -1,0 +1,27 @@
+{% extends 'admin/custom_base.html' %}
+
+{% block title %}Locality | Admin Panel{% endblock %}
+{% block page_title %}
+<a href="{% url 'admin_locality_list' %}" class="back-link" style="color:var(--text); margin-right:12px; text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
+{% if item %}Edit Locality{% else %}Add Locality{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width:500px">
+  <div class="panel-header">
+    <div class="panel-title">{% if item %}Edit Locality{% else %}Add Locality{% endif %}</div>
+  </div>
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-group full">
+      <label>Locality Name</label>
+      <input type="text" name="name" value="{{ item.name|default:'' }}" required placeholder="e.g. Kozhikode">
+    </div>
+    
+    <button type="submit" class="btn btn-gold" style="margin-top:20px;">
+      <i class="fas fa-save"></i> Save Locality
+    </button>
+    <a href="{% url 'admin_locality_list' %}" class="btn btn-ghost" style="margin-top:20px;">Cancel</a>
+  </form>
+</div>
+{% endblock %}

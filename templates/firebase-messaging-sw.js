@@ -12,50 +12,60 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Let the browser handle the WebPush payload natively!
-// Since our Python backend explicitly sends the "webpush.notification" dictionary, Chrome and Safari handle it entirely natively.
+// ── Background Message Handler ──────────────────────────────────────────────
+// Uses Firebase SDK's onBackgroundMessage — this is the correct way to handle
+// FCM background messages on Android Chrome PWA.
+// NOTE: Do NOT add a manual self.addEventListener('push', ...) here — it would
+// conflict with Firebase messaging and break Android notifications.
+messaging.onBackgroundMessage(function(payload) {
+  // Extract from notification block (if backend sends one) or fall back to data
+  const notif  = payload.notification || {};
+  const data   = payload.data || {};
+  const title  = notif.title  || data.title  || "Mastan Catering";
+  const body   = notif.body   || data.body   || '';
+  const icon   = notif.icon   || data.icon   || '/static/icons/icon-192x192.png';
+  const badge  = data.icon    || '/static/icons/icon-192x192.png';
+  const link   = data.link    || notif.click_action || '/staff/';
 
-self.addEventListener('push', function(event) {
-  const payload = event.data ? event.data.json() : {};
-  const data = payload.data || {};
-  
-  const title = data.title || 'Notification';
-  const options = {
-    body: data.body || '',
-    icon: data.icon || '/static/icons/icon-192x192.png',
-    badge: data.icon || '/static/icons/icon-192x192.png',
-    data: {
-      url: data.link || '/staff/'
+  return self.registration.showNotification(title, {
+    body:  body,
+    icon:  icon,
+    badge: badge,
+    data:  { url: link },
+    // vibrate pattern for Android
+    vibrate: [200, 100, 200],
+  }).then(() => {
+    if (navigator.setAppBadge) {
+      return navigator.setAppBadge(1).catch(() => {});
     }
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options).then(() => {
-      if (navigator.setAppBadge) {
-        return navigator.setAppBadge(1).catch(()=>{});
-      }
-    })
-  );
+  });
 });
 
+// ── Notification Click Handler ──────────────────────────────────────────────
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   if (navigator.clearAppBadge) {
-    event.waitUntil(navigator.clearAppBadge().catch(()=>{}));
+    event.waitUntil(navigator.clearAppBadge().catch(() => {}));
   }
-  
-  var notifData = event.notification.data || {};
-  var urlToOpen = notifData.url || '/staff/';
-  
+
+  var notifData  = event.notification.data || {};
+  var urlToOpen  = notifData.url || '/staff/';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
-        if (client.url.indexOf(self.location.origin) === 0 && 'focus' in client) {
-          return client.focus();
+        if (client.url && client.url.indexOf(self.location.origin) === 0 && 'focus' in client) {
+          client.focus();
+          if ('navigate' in client && client.url !== urlToOpen) {
+            client.navigate(urlToOpen);
+          }
+          return;
         }
       }
-      return clients.openWindow(urlToOpen);
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
     })
   );
 });

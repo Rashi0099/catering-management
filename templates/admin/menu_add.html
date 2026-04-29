@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Add Menu Item — Mastan's Catering & Services{% endblock %}
+{% block title %}Add Menu Item — Mastan Catering & Services{% endblock %}
 {% block page_title %}Add Menu Item{% endblock %}
 
 {% block content %}
@@ -17,27 +17,22 @@
       {% csrf_token %}
       <div class="form-group">
         <label>Category *</label>
-        <select name="category" required style="margin-bottom:8px" onchange="this.nextElementSibling.style.display = this.value === '' ? 'block' : 'none'">
+        <select name="category" style="margin-bottom:8px" onchange="document.getElementById('new_cat_input').style.display = this.value === '' ? 'block' : 'none'; document.getElementById('new_cat_input').required = this.value === '';">
           <option value="">+ Create New Category</option>
           {% for cat in categories %}
           <option value="{{ cat.pk }}">{{ cat.icon }} {{ cat.name }}</option>
           {% endfor %}
         </select>
-        <input type="text" name="new_category" placeholder="Enter new category name">
-      </div>
-      <div class="responsive-grid cols-2" style="gap:16px">
-        <div class="form-group">
-          <label>Dish Name *</label>
-          <input type="text" name="name" required placeholder="e.g. Chicken Biryani"/>
-        </div>
-        <div class="form-group">
-          <label>Price (₹) *</label>
-          <input type="number" name="price" required step="0.01" placeholder="e.g. 299"/>
-        </div>
+        <input type="text" id="new_cat_input" name="new_category" placeholder="Enter new category name" required>
+
       </div>
       <div class="form-group">
-        <label>Description *</label>
-        <textarea name="description" required rows="3" placeholder="Describe the dish..."></textarea>
+        <label>Dish Name *</label>
+        <input type="text" name="name" required placeholder="e.g. Chicken Biryani"/>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" rows="3" placeholder="Describe the dish..."></textarea>
       </div>
       
       <div class="form-group">
@@ -45,23 +40,7 @@
         <input type="file" name="image" accept="image/*" style="padding:8px" />
       </div>
 
-      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:20px">
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
-          <input type="checkbox" name="is_vegetarian" style="width:auto;padding:0"/> Veg
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
-          <input type="checkbox" name="is_vegan" style="width:auto;padding:0"/> Vegan
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
-          <input type="checkbox" name="is_gluten_free" style="width:auto;padding:0"/> Gluten Free
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
-          <input type="checkbox" name="is_featured" style="width:auto;padding:0"/> Featured
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:0.88rem;cursor:pointer">
-          <input type="checkbox" name="is_available" checked style="width:auto;padding:0"/> Available
-        </label>
-      </div>
+
       <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">
         <i class="fas fa-plus"></i> Add to Menu
       </button>

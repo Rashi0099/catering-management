@@ -13,8 +13,8 @@ def replace_in_files():
                     with open(path, 'r', encoding='utf-8') as f:
                         content = f.read()
                     
-                    new_content = content.replace("Mastan's <span>Catering & Services</span>", "Mastan's <span>Catering & Services</span>")
-                    new_content = new_content.replace("Mastan's Catering & Services", "Mastan's Catering & Services")
+                    new_content = content.replace("Mastan <span>Catering & Services</span>", "Mastan <span>Catering & Services</span>")
+                    new_content = new_content.replace("Mastan Catering & Services", "Mastan Catering & Services")
                     
                     if new_content != content:
                         with open(path, 'w', encoding='utf-8') as f:

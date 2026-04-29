@@ -1,0 +1,33 @@
+{% extends 'admin/custom_base.html' %}
+{% block title %}{% if item %}Edit Invoice Item{% else %}Add Invoice Item{% endif %} | Admin Panel{% endblock %}
+{% block page_title %}
+<a href="{% url 'admin_invoice_items_list' %}" class="back-link" style="color:var(--text); margin-right:12px; text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
+{% if item %}Edit Invoice Item{% else %}Add New Invoice Item{% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">{% if item %}Edit Item{% else %}New Invoice Item{% endif %}</div>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Item / Service Name *</label>
+        <input type="text" name="name" value="{% if item %}{{ item.name }}{% endif %}" required placeholder="e.g., Captain, Juice, Hosting Boys" style="max-width:100%;">
+      </div>
+      <div class="form-group">
+        <label>Default Price (₹) <span style="color:var(--muted); font-size:0.8rem;">(Rate per person)</span></label>
+        <input type="number" name="default_price" value="{% if item %}{{ item.default_price }}{% else %}0{% endif %}" min="0" step="0.01" style="max-width:160px;">
+      </div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button type="submit" class="btn btn-gold" style="flex:1; justify-content:center;">
+          <i class="fas fa-save"></i> {% if item %}Update Item{% else %}Add Item{% endif %}
+        </button>
+        <a href="{% url 'admin_invoice_items_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

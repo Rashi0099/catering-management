@@ -26,8 +26,3 @@ class BookingForm(forms.ModelForm):
             raise forms.ValidationError("Event date cannot be in the past.")
         return event_date
 
-    def clean_guest_count(self):
-        guest_count = self.cleaned_data.get('guest_count')
-        if guest_count is None or guest_count < 1:
-            raise forms.ValidationError("Guest count must be at least 1.")
-        return guest_count

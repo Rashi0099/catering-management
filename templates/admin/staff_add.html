@@ -1,5 +1,5 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Add Staff — Mastan's Catering & Services Admin{% endblock %}
+{% block title %}Add Staff — Mastan Catering & Services Admin{% endblock %}
 {% block page_title %}Add Staff Member{% endblock %}
 
 {% block content %}
@@ -24,16 +24,25 @@
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
           <label>Level *</label>
-          <select name="level" required>
+          <select name="level" required onchange="updateDailyRate(this)">
             <option value="C" {% if form_data.level == 'C' or not form_data.level %}selected{% endif %}>C Level</option>
             <option value="B" {% if form_data.level == 'B' %}selected{% endif %}>B Level</option>
             <option value="A" {% if form_data.level == 'A' %}selected{% endif %}>A Level</option>
+            <option value="supervisor" {% if form_data.level == 'supervisor' %}selected{% endif %}>Supervisor</option>
             <option value="captain" {% if form_data.level == 'captain' %}selected{% endif %}>Captain</option>
           </select>
         </div>
         <div class="form-group">
           <label>Daily Rate (₹) *</label>
-          <input type="number" name="daily_rate" value="{{ form_data.daily_rate|default:'0' }}" required step="1" min="0"/>
+          <input type="number" name="daily_rate" value="{{ form_data.daily_rate|default:'450' }}" required step="1" min="0"/>
+          <script>
+            function updateDailyRate(selectObj) {
+              var w = document.querySelector('input[name="daily_rate"]');
+              if(selectObj.value === 'A') w.value = 500;
+              else if(selectObj.value === 'B') w.value = 480;
+              else if(selectObj.value === 'C') w.value = 450;
+            }
+          </script>
         </div>
       </div>
 
@@ -48,6 +57,7 @@
         </div>
       </div>
 
+      <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
           <label>Email Address</label>
           <input type="email" name="email" value="{{ form_data.email|default:'' }}" placeholder="e.g. john@example.com"/>
@@ -68,6 +78,7 @@
             <option value="Other" {% if form_data.gender == 'Other' %}selected{% endif %}>Other</option>
           </select>
         </div>
+      </div>
 
       <div class="responsive-grid cols-2" style="gap:16px">
         <div class="form-group">
@@ -96,12 +107,9 @@
           <label>Main Locality *</label>
           <select name="main_locality" required>
             <option value="" disabled {% if not form_data.main_locality %}selected{% endif %}>Select primary area</option>
-            <option value="Kondotty" {% if form_data.main_locality == 'Kondotty' %}selected{% endif %}>Kondotty</option>
-            <option value="Areekode" {% if form_data.main_locality == 'Areekode' %}selected{% endif %}>Areekode</option>
-            <option value="Edavannappara" {% if form_data.main_locality == 'Edavannappara' %}selected{% endif %}>Edavannappara</option>
-            <option value="Kizhisseri" {% if form_data.main_locality == 'Kizhisseri' %}selected{% endif %}>Kizhisseri</option>
-            <option value="University" {% if form_data.main_locality == 'University' %}selected{% endif %}>University</option>
-            <option value="Valluvambram" {% if form_data.main_locality == 'Valluvambram' %}selected{% endif %}>Valluvambram</option>
+            {% for loc in localities %}
+            <option value="{{ loc.name }}" {% if form_data.main_locality == loc.name %}selected{% endif %}>{{ loc.name }}</option>
+            {% endfor %}
           </select>
         </div>
         <div class="form-group">
@@ -126,11 +134,11 @@
           <label>Education</label>
           <select name="education">
             <option value="" {% if not form_data.education %}selected{% endif %}>Select Education</option>
-            <option value="10th" {% if form_data.education == '10th' %}selected{% endif %}>10th</option>
             <option value="+1" {% if form_data.education == '+1' %}selected{% endif %}>+1</option>
             <option value="+2" {% if form_data.education == '+2' %}selected{% endif %}>+2</option>
             <option value="UG" {% if form_data.education == 'UG' %}selected{% endif %}>UG</option>
             <option value="PG" {% if form_data.education == 'PG' %}selected{% endif %}>PG</option>
+            <option value="Other" {% if form_data.education == 'Other' %}selected{% endif %}>Other</option>
           </select>
         </div>
       </div>

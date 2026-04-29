@@ -1,0 +1,54 @@
+{% extends 'admin/custom_base.html' %}
+
+{% block title %}Manage Clients | Admin Panel{% endblock %}
+{% block page_title %}
+<a href="{% url 'admin_settings' %}" class="back-link" style="color:var(--text); margin-right:12px; text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
+Platform Clients
+{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'admin_client_add' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Client</a>
+{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Clients</div>
+      <a href="{% url 'admin_client_add' %}" class="btn btn-gold btn-sm"><i class="fas fa-plus"></i> Add New Client</a>
+    </div>
+    <div style="overflow-x:auto;">
+<div class="card fade-in">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Client Name</th>
+        <th>Phone Number</th>
+        <th style="width:120px;text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for client in clients %}
+      <tr>
+        <td style="color:var(--text-muted)">#{{ client.id }}</td>
+        <td><strong>{{ client.name }}</strong></td>
+        <td>{{ client.phone|default:"—" }}</td>
+        <td style="text-align:right">
+          <a href="{% url 'admin_client_edit' client.pk %}" class="btn btn-ghost btn-sm" title="Edit"><i class="fas fa-pencil"></i></a>
+          <form method="POST" action="{% url 'admin_client_delete' client.pk %}" style="display:inline;" onsubmit="return confirm('Delete this client completely?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger)" title="Delete"><i class="fas fa-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted)">
+          No clients found. <a href="{% url 'admin_client_add' %}">Add one now</a>.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

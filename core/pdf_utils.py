@@ -1,5 +1,5 @@
 """
-pdf_utils.py — Shared premium PDF styling for Mastan's Catering.
+pdf_utils.py — Shared premium PDF styling for Mastan Catering.
 All in-app attendance PDF downloads call build_attendance_pdf().
 """
 import os
@@ -63,7 +63,7 @@ def _build_header(booking):
 
     # ── Left side: text ───────────────────────────────────────────────────────
     left = [
-        _p('MASTAN\'S CATERING &amp; SERVICES', size=7, bold=True, color=GOLD),
+        _p('MASTAN CATERING &amp; SERVICES', size=7, bold=True, color=GOLD),
         Spacer(1, 3),
         _p('Event Attendance Report', size=16, bold=True, color=WHITE),
         Spacer(1, 3),
@@ -151,17 +151,35 @@ def _build_staff_table(assigned_staff, attendance_map, applications_map):
             0 if unif_ok  else 30,
             0 if groom_ok else 30,
         ])
-        wage = staff.daily_rate - penalty
+        
+        bonus_val = float(att.bonus) if att and getattr(att, 'bonus', 0) else 0.0
+        deduction_val = float(att.deduction) if att and getattr(att, 'deduction', 0) else 0.0
+        
+        wage = float(staff.daily_rate) + bonus_val - penalty - deduction_val
         if raw_status in ('present', 'half_day'):
             total_wage += wage
+        else:
+            wage = 0  # Absent staff aren't paid
 
         app   = applications_map.get(staff.pk)
-        phone = (app.applicant_phone if app and app.applicant_phone else staff.phone) or '—'
+        phone = staff.phone or '—'
         paid_p = _p('<font color="#2ecc85"><b>Yes</b></font>' if att and att.payment_given
                     else '<font color="#e05c5c">No</font>', size=9)
 
         # StaffID — prevent wrapping on hyphens by replacing with non-breaking hyphen
         sid = (staff.staff_id or '—').replace('-', '\u2011')
+
+        if raw_status == 'absent':
+            wage_display = _p('<font color="#e05c5c" size="9"><b>Absent</b></font>', size=9, bold=False, align=2)
+            # If absent, make sure the ticks/crosses are shown as crosses and time as Absent.
+            r_time = 'Absent'
+        else:
+            wage_details = [f'<b>Rs.{wage:,.0f}</b>']
+            if bonus_val > 0:
+                wage_details.append(f'<font size="7" color="#2ecc85">+{bonus_val:g} Bns</font>')
+            if (penalty + deduction_val) > 0:
+                wage_details.append(f'<font size="7" color="#e05c5c">-{penalty + deduction_val:g} Ded</font>')
+            wage_display = _p('<br/>'.join(wage_details), size=9, bold=False, color=DARK_BG, align=2)
 
         data.append([
             _p(sid, size=8),
@@ -174,7 +192,7 @@ def _build_staff_table(assigned_staff, attendance_map, applications_map):
             _tick() if unif_ok  else _cross(),
             _tick() if groom_ok else _cross(),
             paid_p,
-            _p(f'<b>Rs.{wage:,}</b>', size=9, bold=True, color=DARK_BG, align=2),
+            wage_display,
         ])
 
     # Total row — label spans cols 0-9, value in col 10
@@ -278,7 +296,7 @@ def build_attendance_pdf(booking, assigned_staff, attendance_map, applications_m
 
     wm_style = ParagraphStyle('wm', fontName='Helvetica', fontSize=7,
                                textColor=colors.HexColor('#cccccc'), alignment=2)
-    el.append(Paragraph("Mastan's Catering &amp; Services — Confidential Internal Document", wm_style))
+    el.append(Paragraph("Mastan Catering &amp; Services — Confidential Internal Document", wm_style))
 
     doc.build(el)
     return buffer
@@ -308,7 +326,7 @@ def build_invoice_pdf(invoice_data):
     if os.path.exists(_LOGO_PATH):
         logo_cell = RLImage(_LOGO_PATH, width=50, height=50)
 
-    brand_p = _p("Mastan's Catering &amp; Services", size=18, bold=True, color=colors.black)
+    brand_p = _p("Mastan Catering &amp; Services", size=18, bold=True, color=GREY_TEXT)
     sub_p   = _p("Kondotty, Kerala  ·  6235240942", size=10, color=colors.grey)
     
     head_t = Table([[ [brand_p, Spacer(1,2), sub_p], logo_cell ]], colWidths=[400, 125])
@@ -318,18 +336,27 @@ def build_invoice_pdf(invoice_data):
     ]))
     el.append(head_t)
     el.append(Spacer(1, 15))
-    el.append(HRFlowable(width='100%', thickness=2, color=colors.black, spaceAfter=20))
+    el.append(HRFlowable(width='100%', thickness=2, color=GOLD, spaceAfter=20))
 
     # ── Title & Meta ──────────────────────────────────────────────────────────
-    title_p = _p("INVOICE", size=24, bold=True, color=colors.black)
-    num_p   = _p(f"No: {invoice_data.get('inv_no','—')}   |   Date: {invoice_data.get('date','—')}", 
-                 size=10, color=colors.black, align=2)
+    title_p = _p("INVOICE", size=24, bold=True, color=GREY_TEXT)
+    
+    sn = invoice_data.get('site_name', '').strip()
+    ed = invoice_data.get('event_date', '').strip()
+    
+    parts = []
+    if sn: parts.append(f"Site / Event: {sn}")
+    if ed: parts.append(f"Event Date: {ed}")
+    site_str = f"<br/>{'   |   '.join(parts)}" if parts else ""
+    
+    num_p   = _p(f"No: {invoice_data.get('inv_no','—')}   |   Date: {invoice_data.get('date','—')}{site_str}", 
+                 size=10, color=GREY_TEXT, align=2)
     
     meta_t = Table([[title_p, num_p]], colWidths=[260, 265])
     meta_t.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-        ('LINEBELOW', (0,0), (-1,-1), 1, colors.black),
+        ('LINEBELOW', (0,0), (-1,-1), 1, GOLD),
     ]))
     el.append(meta_t)
     el.append(Spacer(1, 15))
@@ -339,12 +366,12 @@ def build_invoice_pdf(invoice_data):
         return [
             _p(label, size=8, bold=True, color=GOLD, align=align),
             Spacer(1, 2),
-            _p(val, size=12, bold=True, color=colors.black, align=align),
+            _p(val, size=12, bold=True, color=GREY_TEXT, align=align),
             _p(sub, size=10, color=colors.grey, align=align),
         ]
 
     bt_cell = meta_cell("BILL TO", invoice_data.get('bill_to','—').upper(), invoice_data.get('contact','—'))
-    fr_cell = meta_cell("FROM", "MASTAN'S CATERING", "Kondotty, Kerala", align=2)
+    fr_cell = meta_cell("FROM", "MASTAN CATERING", "Kondotty, Kerala", align=2)
     
     addr_t = Table([[ bt_cell, fr_cell ]], colWidths=[260, 265])
     addr_t.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
@@ -352,7 +379,7 @@ def build_invoice_pdf(invoice_data):
     el.append(Spacer(1, 25))
 
     # ── Items Table ───────────────────────────────────────────────────────────
-    headers = ['#', 'Description', 'HSN/SAC', 'Qty', 'Rate (Rs)', 'Amount (Rs)']
+    headers = ['#', 'Description', 'Qty', 'Rate (Rs)', 'Amount (Rs)']
     hdr_row = [_p(h, size=9, bold=True, color=colors.white) for h in headers]
     data = [hdr_row]
     
@@ -368,47 +395,213 @@ def build_invoice_pdf(invoice_data):
         data.append([
             _p(str(i+1), size=10, color=colors.grey),
             _p(item.get('name') or '—', size=11, bold=True),
-            _p(item.get('hsn') or '—', size=10, color=colors.grey),
             _p(f"{qty:g}", size=10),
             _p(f"{price:,.2f}", size=10, align=2),
             _p(f"{amt:,.2f}", size=11, bold=True, align=2),
         ])
 
-    tbl = Table(data, colWidths=[30, 205, 80, 50, 75, 85], repeatRows=1)
-    tbl.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2c2c2c')),
+    # Append a special row for quantity totals inside the main table
+    # so it perfectly aligns under the "Qty" column.
+    data.append([
+        "",
+        _p("TOTAL", size=8, bold=True, color=colors.grey, align=2),
+        _p(f"{total_qty:g}", size=11, bold=True),
+        "",
+        _p(f"Rs. {total_amt:,.2f}", size=9, bold=True, color=colors.grey, align=2)
+    ])
+
+    tbl = Table(data, colWidths=[30, 285, 50, 75, 85], repeatRows=1)
+    
+    # Calculate row indices for item backgrounds (row 1 to second-to-last)
+    last_item_idx = len(data) - 2 # data has header, items..., and quantity-total-row
+    
+    styles = [
+        ('BACKGROUND', (0,0), (-1,0), GOLD),
         ('TOPPADDING', (0,0), (-1,0), 8),
         ('BOTTOMPADDING', (0,0), (-1,0), 8),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#fafafa')]),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor('#eeeeee')),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LEFTPADDING', (0,0), (-1,-1), 8),
         ('RIGHTPADDING', (0,0), (-1,-1), 8),
-    ]))
+        # Special styling for the quantity total row at the very bottom (index -1)
+        ('LINEABOVE', (0,-1), (-1,-1), 1.5, GOLD),
+        ('TOPPADDING', (0,-1), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,-1), (-1,-1), 10),
+    ]
+    
+    if last_item_idx >= 1:
+        styles.append(('ROWBACKGROUNDS', (0,1), (-1, last_item_idx), [colors.white, colors.HexColor('#fafafa')]))
+        styles.append(('LINEBELOW', (0,0), (-1, last_item_idx), 0.5, colors.HexColor('#eeeeee')))
+        
+    tbl.setStyle(TableStyle(styles))
     el.append(tbl)
     
     # ── Total Row ─────────────────────────────────────────────────────────────
-    total_label = [
-        _p("TOTAL AMOUNT", size=10, bold=True, color=colors.grey),
-        _p(f"Total Qty: {total_qty:g}", size=8, color=colors.lightgrey),
-    ]
-    total_val = _p(f"Rs. {total_amt:,.2f}", size=16, bold=True, color=colors.black, align=2)
+    # Standardized Grand Total block
+    amt_str = f"Rs. {total_amt:,.2f}"
+    
+    total_label = _p('GRAND TOTAL', bold=True, size=10, color=colors.grey)
+    total_val_p = _p(amt_str, size=14, bold=True, color=GOLD, align=2)
 
-    tot_t = Table([[ total_label, total_val ]], colWidths=[300, 225])
+    tot_t = Table([[ total_label, total_val_p ]], colWidths=[340, 185])
     tot_t.setStyle(TableStyle([
-        ('LINEABOVE', (0,0), (-1,0), 2, colors.black),
-        ('TOPPADDING', (0,0), (-1,0), 15),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,0), 12),
+        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
     ]))
     el.append(tot_t)
     el.append(Spacer(1, 40))
     
     # ── Footer ────────────────────────────────────────────────────────────────
     el.append(HRFlowable(width='100%', thickness=0.5, color=colors.lightgrey))
-    footer_p = _p("Thank you for your business. This is a computer generated invoice.", 
+    footer_p = _p("Thank you for your business.", 
                   size=9, color=colors.grey, align=1)
     el.append(Spacer(1, 10))
     el.append(footer_p)
 
     doc.build(el)
     return buffer
+
+
+def generate_financial_reports_pdf(reports, totals, month_name, year_filter, client_filter=''):
+    """
+    Premium financial reports PDF styled like the attendance PDF:
+    dark header, gold separator, dark table with gold headers.
+    """
+    buffer = BytesIO()
+    from reportlab.lib.pagesizes import landscape, A4
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        leftMargin=22, rightMargin=22,
+        topMargin=22,  bottomMargin=22,
+    )
+    el = []
+    FIN_W = 801  # landscape A4 usable = 841 - 22*2
+
+    # 1 — Dark branded header
+    date_str   = timezone.now().strftime('%d %b %Y  \u00b7  %I:%M %p')
+    title_text = 'Financial Reports'
+    if month_name or year_filter:
+        title_text += f'  \u2014  {str(month_name).upper()} {str(year_filter)}'.strip()
+    if client_filter:
+        title_text += f' ({client_filter})'
+
+    left = [
+        _p("MASTAN CATERING &amp; SERVICES", size=7, bold=True, color=GOLD),
+        Spacer(1, 3),
+        _p(title_text, size=16, bold=True, color=WHITE),
+        Spacer(1, 3),
+        _p('Manual Financial Summary Report', size=9, color=colors.HexColor('#9ba3ba')),
+    ]
+    right_items = [_p(date_str, size=8, color=colors.HexColor('#9ba3ba'), align=2)]
+    if os.path.exists(_LOGO_PATH):
+        right_items.append(RLImage(_LOGO_PATH, width=46, height=46))
+
+    hdr = Table([[left, right_items]], colWidths=[FIN_W * 0.66, FIN_W * 0.34])
+    hdr.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), DARK_BG),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN',         (1, 0), (1, -1),  'RIGHT'),
+        ('TOPPADDING',    (0, 0), (-1, -1), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 18),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 18),
+    ]))
+    el.append(hdr)
+
+    # 2 — Gold separator
+    el.append(HRFlowable(width='100%', thickness=3, color=GOLD, spaceAfter=0, spaceBefore=0))
+
+    # 3 — Data starts directly after header
+    reports_list = list(reports)
+    t_boys     = totals.get('t_boys') or 0
+    t_bill     = float(totals.get('t_bill') or 0)
+    t_received = float(totals.get('t_received') or 0)
+    t_profit   = float(totals.get('t_profit') or 0)
+    el.append(Spacer(1, 14))
+
+    # 4 — Main data table (col widths sum = 797)
+    COL_FIN = [22, 55, 106, 126, 35, 78, 70, 70, 62, 58, 68, 47]
+    headers  = ['SL','DATE','SITE NAME','EVENT NAME','BOYS',
+                'INCHARGE','BILL (Rs)','RECEIVED (Rs)','PAID ON','PENDING','PROFIT','SETTLED']
+    data = [[_p(h, size=8, bold=True, color=GOLD) for h in headers]]
+
+    for i, r in enumerate(reports_list):
+        paid_on   = r.payment_received_on.strftime('%d %b %Y') if r.payment_received_on else '\u2014'
+        settled_p = _p(
+            '<font color="#2ecc85"><b>YES</b></font>' if r.is_settled
+            else '<font color="#e05c5c">NO</font>', size=8
+        )
+        pending = float(r.pending_amount or 0)
+        profit  = float(r.profit or 0)
+        data.append([
+            _p(str(i+1), size=8, color=colors.HexColor('#999')),
+            _p(r.event_date.strftime('%d-%m-%Y') if r.event_date else '\u2014', size=8),
+            _p(r.site_name or '\u2014', size=8, bold=True, color=DARK_BG),
+            _p(r.event_name or '\u2014', size=8),
+            _p(str(r.boys_count or 0), size=8),
+            _p(r.bill_incharge or '\u2014', size=8),
+            _p(f'{float(r.bill_amount or 0):,.0f}', size=9, bold=True, color=DARK_BG),
+            _p(f'{float(r.amount_received or 0):,.0f}', size=9, bold=True,
+               color=colors.HexColor('#2ecc85')),
+            _p(paid_on, size=8),
+            _p(f'{pending:,.0f}' if pending else '\u2014', size=8,
+               color=colors.HexColor('#e67e22') if pending else GREY_TEXT),
+            _p(f'{profit:,.0f}', size=9, bold=True,
+               color=colors.HexColor('#2ecc85') if profit >= 0 else RED),
+            settled_p,
+        ])
+
+    data.append([
+        _p('<b>TOTALS</b>', size=9, bold=True, color=DARK_BG), '', '', '',
+        _p(f'<b>{t_boys}</b>', size=9, bold=True), '',
+        _p(f'<b>{t_bill:,.0f}</b>', size=10, bold=True, color=DARK_BG),
+        _p(f'<b>{t_received:,.0f}</b>', size=10, bold=True, color=DARK_BG),
+        '', '',
+        _p(f'<b>{t_profit:,.0f}</b>', size=10, bold=True,
+           color=colors.HexColor('#2ecc85')), '',
+    ])
+
+    tbl = Table(data, colWidths=COL_FIN, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0),  (-1, 0),  DARK_BG),
+        ('TOPPADDING',    (0, 0),  (-1, 0),  9),
+        ('BOTTOMPADDING', (0, 0),  (-1, 0),  9),
+        ('LEFTPADDING',   (0, 0),  (-1, -1), 6),
+        ('RIGHTPADDING',  (0, 0),  (-1, -1), 6),
+        ('ROWBACKGROUNDS',(0, 1),  (-1, -2), [WHITE, CREAM]),
+        ('TOPPADDING',    (0, 1),  (-1, -2), 7),
+        ('BOTTOMPADDING', (0, 1),  (-1, -2), 7),
+        ('VALIGN',        (0, 0),  (-1, -2), 'MIDDLE'),
+        ('LINEBELOW',     (0, 0),  (-1, -2), 0.4, LINE),
+        ('BOX',           (0, 0),  (-1, -2), 0.5, LINE),
+        ('SPAN',          (0, -1), (3, -1)),
+        ('BACKGROUND',    (0, -1), (-1, -1), TOTAL_BG),
+        ('LINEABOVE',     (0, -1), (-1, -1), 2,   GOLD),
+        ('LINEBELOW',     (0, -1), (-1, -1), 0.5, LINE),
+        ('TOPPADDING',    (0, -1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, -1), (-1, -1), 10),
+        ('VALIGN',        (0, -1), (-1, -1), 'MIDDLE'),
+    ]))
+    el.append(tbl)
+
+    # 5 — Footer
+    el.append(Spacer(1, 14))
+    el.append(HRFlowable(width='100%', thickness=0.5, color=LINE))
+    el.append(Spacer(1, 6))
+    gen_str = timezone.now().strftime('%d %b %Y  \u00b7  %I:%M %p')
+    ft = Table([[
+        _p("MASTAN CATERING &amp; SERVICES", size=8, bold=True,
+           color=colors.HexColor('#aaa')),
+        _p(f'Generated: {gen_str}', size=8, color=colors.HexColor('#bbb'), align=2),
+    ]], colWidths=[FIN_W * 0.5, FIN_W * 0.5])
+    ft.setStyle(TableStyle([
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING',    (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    el.append(ft)
+
+    doc.build(el)
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf

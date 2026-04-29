@@ -1,6 +1,6 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Staff Requests — Admin{% endblock %}
-{% block page_title %}Staff Requests{% endblock %}
+{% block title %}Event Requests — Admin{% endblock %}
+{% block page_title %}Event Requests{% endblock %}
 
 {% block content %}
 <style>
@@ -59,7 +59,13 @@
 {% if live_quota_data %}
 <div style="margin-bottom:20px;" id="quota-bar">
   <div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;font-weight:600">Event Approval Progress</div>
-  <div class="responsive-grid cols-4" style="gap:10px;">
+  <div class="responsive-grid cols-5" style="gap:10px;">
+      <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">Supervisors</div>
+          <div style="font-size:1.1rem;font-weight:600;color:var(--cyan)" id="quota-supervisor-display">
+              <span id="quota-supervisor-count">{{ live_quota_data.supervisor.c }}</span> / {% if live_quota_data.supervisor.q > 0 %}<span id="quota-supervisor-max">{{ live_quota_data.supervisor.q }}</span>{% else %}<span style="font-size:0.8rem">No Limit</span>{% endif %}
+          </div>
+      </div>
       <div style="background:var(--surface);padding:8px;border-radius:6px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase">Captains</div>
           <div style="font-size:1.1rem;font-weight:600;color:var(--gold)" id="quota-captain-display">
@@ -104,17 +110,17 @@
     </thead>
     <tbody>
       {% for app in pending_apps %}
-      <tr {% if app.has_double_shift %}style="background: rgba(241, 196, 15, 0.05); border-color: rgba(241, 196, 15, 0.3) !important;"{% endif %}>
+      <tr {% if app.is_double_work %}style="background: rgba(251, 146, 60, 0.06); border-color: rgba(251, 146, 60, 0.4) !important;"{% endif %}>
         <td>
           <div style="font-weight:500">
             {{ app.applicant_name }}
-            {% if app.has_double_shift %}
-            <span class="badge" style="background:#f1c40f; color:#000; padding:2px 6px; font-size:0.65rem; margin-left:4px; vertical-align:middle; font-weight:600"><i class="fas fa-exclamation-triangle"></i> Double Shift: {{ app.double_shift_event }}</span>
+            {% if app.is_double_work %}
+            <span class="badge" style="background:rgba(251,146,60,0.2); color:#fb923c; border:1px solid rgba(251,146,60,0.4); padding:2px 7px; font-size:0.65rem; margin-left:4px; vertical-align:middle; font-weight:700"><i class="fas fa-exclamation-triangle"></i> Double Work</span>
             {% endif %}
             <span style="float:right; font-size:0.7rem; color:var(--muted); font-weight:normal" title="Applied On"><i class="fas fa-clock"></i> {{ app.created_at|date:"d M, h:i A" }}</span>
           </div>
           <div style="font-size:0.75rem;color:var(--muted)">
-            {{ app.staff.staff_id }} | <i class="fas fa-phone"></i> {{ app.applicant_phone }}<br>
+            {{ app.staff.staff_id }} | <i class="fas fa-phone"></i> {{ app.staff.phone }}<br>
             <span style="color:var(--gold);">{{ app.staff.get_level_display }}</span> &middot; {{ app.staff.main_locality|default:"No Locality" }}
           </div>
           {% if app.note %}
@@ -172,7 +178,7 @@
             <span style="float:right; font-size:0.7rem; color:var(--muted); font-weight:normal" title="Requested On"><i class="fas fa-clock"></i> {{ req.created_at|date:"d M, h:i A" }}</span>
           </div>
           <div style="font-size:0.75rem;color:var(--muted)">
-            {{ req.staff.staff_id }} | <i class="fas fa-phone"></i> {{ req.applicant_phone }}<br>
+            {{ req.staff.staff_id }} | <i class="fas fa-phone"></i> {{ req.staff.phone }}<br>
             <span style="color:var(--gold);">{{ req.staff.get_level_display }}</span> &middot; {{ req.staff.main_locality|default:"No Locality" }}
           </div>
           {% if req.note %}
@@ -242,6 +248,7 @@
               if(data.quota) {
                 const q = data.quota;
                 const update = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+                update('quota-supervisor-count', q.supervisor.c);
                 update('quota-captain-count', q.captain.c);
                 update('quota-a-count', q.a.c);
                 update('quota-b-count', q.b.c);

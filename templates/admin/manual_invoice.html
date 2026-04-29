@@ -4,6 +4,10 @@
 {% block title %}Invoice | Admin Panel{% endblock %}
 {% block page_title %}Invoice Generator{% endblock %}
 
+{% block header_actions %}
+<a href="{% url 'admin_invoice_history' %}" class="btn btn-ghost" style="color:var(--text);"><i class="fas fa-history" style="color:var(--gold);"></i> View History</a>
+{% endblock %}
+
 {% block extra_css %}
 <style>
   .inv-page { display:flex; flex-direction:column; align-items:center; gap:24px; padding:16px 0; }
@@ -43,8 +47,16 @@
         <input type="text" id="inp-inv-no">
       </div>
       <div class="form-group">
-        <label>Date</label>
-        <input type="text" id="inp-date">
+        <label>Invoice Date</label>
+        <input type="date" id="inp-date">
+      </div>
+      <div class="form-group">
+        <label>Site Name / Event Venue</label>
+        <input type="text" id="inp-site-name" placeholder="e.g. Kozhikode Trade Centre">
+      </div>
+      <div class="form-group">
+        <label>Event Date</label>
+        <input type="date" id="inp-event-date">
       </div>
     </div>
 
@@ -52,7 +64,8 @@
     <div class="grid-2" style="gap:12px;">
       <div class="form-group">
         <label>Client Name</label>
-        <input type="text" id="inp-bill-to" placeholder="e.g. Flora Events">
+        <input type="text" id="inp-bill-to" placeholder="e.g. Flora Events" list="client-list">
+        <datalist id="client-list"></datalist>
       </div>
       <div class="form-group">
         <label>Contact No.</label>
@@ -65,67 +78,132 @@
       <thead>
         <tr>
           <th>Description</th>
-          <th style="width:76px">HSN/SAC</th>
           <th style="width:56px">Qty</th>
           <th style="width:96px">Rate (₹)</th>
           <th style="width:24px"></th>
         </tr>
       </thead>
       <tbody></tbody>
+      <tfoot id="items-tfoot">
+        <tr style="border-top:2px solid var(--border);">
+          <td style="padding:10px 3px; font-size:0.75rem; font-weight:700; color:var(--text-muted); text-align:right;">TOTAL:</td>
+          <td><input type="text" id="total-qty-val" value="0" readonly style="border:none; background:transparent; font-weight:700; color:var(--gold);"></td>
+          <td><input type="text" id="total-amt-val" value="₹ 0.00" readonly style="border:none; background:transparent; font-weight:700; color:var(--gold);"></td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
     <button class="btn btn-ghost btn-xs" onclick="addItemRow()" style="margin:8px 0 18px;">
       <i class="fas fa-plus"></i> Add Row
     </button>
 
-    <button id="dl-btn" class="btn btn-gold" style="width:100%;justify-content:center;padding:12px;font-size:0.9rem;font-weight:700;" onclick="downloadPDF()">
-      <i class="fas fa-file-pdf"></i>&nbsp; Download Invoice PDF
-    </button>
+    <button class="btn btn-gold" id="btn-generate" style="width:100%;justify-content:center;padding:12px;font-size:0.9rem;font-weight:700;" onclick="generateInvoice()">
+  <i class="fas fa-file-invoice"></i> Generate Invoice
+</button>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  // Predefined service items loaded dynamically from database
+  let PREDEF = [];
+  fetch("{% url 'admin_api_invoice_items' %}")
+    .then(r => r.json())
+    .then(data => {
+      PREDEF = data;
+      renderInputTable(); // Re-render so datalist picks up items
+    })
+    .catch(() => {
+      // Fallback to empty list if API fails
+      PREDEF = [];
+    });
+
+
   let items = [
-    { name:'Supervisor', hsn:'', qty:2,  price:900  },
-    { name:'Captain',    hsn:'', qty:5,  price:750  },
-    { name:'Boys',       hsn:'', qty:32, price:600  },
+    { name:'', qty:1, price:0 },
   ];
 
   function renderInputTable() {
     const tbody = document.querySelector('#items-input-table tbody');
     tbody.innerHTML = '';
+    
+    let totalQty = 0;
+    let totalAmt = 0;
+
     items.forEach((item, i) => {
+      totalQty += (parseFloat(item.qty) || 0);
+      totalAmt += ((parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0));
+
       const tr = document.createElement('tr');
+      const dlId = `predef-dl-${i}`;
       tr.innerHTML = `
-        <td><input type="text"   value="${item.name}"  oninput="items[${i}].name=this.value" placeholder="Item"></td>
-        <td><input type="text"   value="${item.hsn}"   oninput="items[${i}].hsn=this.value" placeholder="—"></td>
-        <td><input type="number" value="${item.qty}"   oninput="items[${i}].qty=parseFloat(this.value)||0" min="0"></td>
-        <td><input type="number" value="${item.price}" oninput="items[${i}].price=parseFloat(this.value)||0" min="0" step="0.01"></td>
+        <td style="position:relative;">
+          <input type="text" value="${item.name}" list="${dlId}"
+            oninput="items[${i}].name=this.value"
+            onchange="applyPredef(${i}, this.value)"
+            placeholder="Item / Service">
+          <datalist id="${dlId}">${PREDEF.map(p=>`<option value="${p.name}">`).join('')}</datalist>
+        </td>
+        <td><input type="number" value="${item.qty}"   oninput="items[${i}].qty=parseFloat(this.value)||0; updateUITotals();" min="0"></td>
+        <td><input type="number" value="${item.price}" oninput="items[${i}].price=parseFloat(this.value)||0; updateUITotals();" min="0" step="0.01" id="rate-${i}"></td>
         <td><button class="btn btn-danger btn-xs" onclick="removeItem(${i})" style="padding:3px 6px;"><i class="fas fa-times"></i></button></td>
       `;
       tbody.appendChild(tr);
     });
+
+    document.getElementById('total-qty-val').value = totalQty;
+    document.getElementById('total-amt-val').value = '₹ ' + totalAmt.toLocaleString('en-IN', {minimumFractionDigits:2});
   }
 
-  function addItemRow()  { items.push({name:'',hsn:'',qty:1,price:0}); renderInputTable(); }
+  function updateUITotals() {
+    let tq = 0, ta = 0;
+    items.forEach(it => {
+        const q = parseFloat(it.qty) || 0;
+        const p = parseFloat(it.price) || 0;
+        tq += q;
+        ta += (q * p);
+    });
+    document.getElementById('total-qty-val').value = tq;
+    document.getElementById('total-amt-val').value = '₹ ' + ta.toLocaleString('en-IN', {minimumFractionDigits:2});
+  }
+
+  function applyPredef(i, val) {
+    const found = PREDEF.find(p => p.name.toLowerCase() === val.toLowerCase());
+    if (found && found.price > 0) {
+      items[i].price = found.price;
+      const rateInput = document.getElementById(`rate-${i}`);
+      if (rateInput) rateInput.value = found.price;
+    }
+  }
+
+  function addItemRow()  { items.push({name:'',qty:1,price:0}); renderInputTable(); }
   function removeItem(i) { items.splice(i,1); renderInputTable(); }
 
-  function downloadPDF() {
-    const btn = document.getElementById('dl-btn');
+  function formatReadableDate(dString) {
+    if(!dString) return '';
+    const parts = dString.split('-');
+    if(parts.length !== 3) return dString;
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${parts[2]}-${months[parseInt(parts[1], 10)-1]}-${parts[0]}`;
+  }
+
+  function generateInvoice() {
+    const btn = document.getElementById('btn-generate');
     const oldHtml = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
 
     const data = {
-      inv_no:  document.getElementById('inp-inv-no').value,
-      date:    document.getElementById('inp-date').value,
-      bill_to: document.getElementById('inp-bill-to').value,
-      contact: document.getElementById('inp-contact').value,
-      items:   items
+      inv_no:    document.getElementById('inp-inv-no').value,
+      date:      formatReadableDate(document.getElementById('inp-date').value),
+      event_date: formatReadableDate(document.getElementById('inp-event-date').value),
+      site_name: document.getElementById('inp-site-name').value,
+      bill_to:   document.getElementById('inp-bill-to').value,
+      contact:   document.getElementById('inp-contact').value,
+      items:     items
     };
 
-    // Use standard fetch blob proxy to force mobile browser to save the file rather than inline fallback
     fetch('{% url "admin_download_invoice_pdf" %}', {
         method: 'POST',
         headers: {
@@ -136,32 +214,49 @@
             'invoice_data': JSON.stringify(data)
         })
     })
-    .then(r => r.blob())
-    .then(blob => {
-        const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(blob);
-        a.download = `Invoice_${data.inv_no}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        btn.disabled = false;
-        btn.innerHTML = oldHtml;
-        if(typeof showNotifToast !== 'undefined') showNotifToast("✅ Invoice Downloaded!", "success");
+    .then(r => r.json())
+    .then(res => {
+        if(res.ok) {
+            window.location.href = "{% url 'admin_invoice_history' %}";
+        } else {
+            throw new Error(res.error || "Unknown error");
+        }
     })
     .catch(err => {
         btn.disabled = false;
         btn.innerHTML = oldHtml;
-        if(typeof showNotifToast !== 'undefined') showNotifToast("❌ Download Failed", "error");
+        if(typeof showNotifToast !== 'undefined') showNotifToast("❌ Generation Failed: " + err.message, "error");
     });
   }
 
   function initDefaults() {
     const d=new Date(), p=n=>String(n).padStart(2,'0');
-    document.getElementById('inp-date').value   = `${p(d.getDate())}-${p(d.getMonth()+1)}-${d.getFullYear()}`;
+    document.getElementById('inp-date').value   = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; // YYYY-MM-DD
     document.getElementById('inp-inv-no').value = 'INV-' + Math.floor(100000+Math.random()*900000);
   }
 
   initDefaults();
   renderInputTable();
+
+  // Client Autocomplete Logic
+  let allClients = [];
+  fetch("{% url 'admin_api_clients' %}")
+    .then(r => r.json())
+    .then(data => {
+      allClients = data;
+      const dl = document.getElementById('client-list');
+      data.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        dl.appendChild(opt);
+      });
+    });
+
+  document.getElementById('inp-bill-to').addEventListener('change', function() {
+    const selected = allClients.find(c => c.name === this.value);
+    if (selected && selected.phone) {
+      document.getElementById('inp-contact').value = selected.phone;
+    }
+  });
 </script>
 {% endblock %}

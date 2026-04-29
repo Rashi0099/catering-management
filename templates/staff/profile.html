@@ -1,5 +1,5 @@
 {% extends 'staff/base.html' %}
-{% block title %}My Profile — Mastan's Catering &amp; Services{% endblock %}
+{% block title %}My Profile — Mastan Catering &amp; Services{% endblock %}
 {% block nav_prof %}active{% endblock %}
 {% block page_title %}My Profile{% endblock %}
 
@@ -10,6 +10,39 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
 <style>
+@keyframes pulseBlueBox {
+  0% { box-shadow: 0 0 10px rgba(56, 126, 255, 0.2); border-color: rgba(56, 126, 255, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(56, 126, 255, 0.4); border-color: rgba(56, 126, 255, 0.6); }
+  100% { box-shadow: 0 0 10px rgba(56, 126, 255, 0.2); border-color: rgba(56, 126, 255, 0.2); }
+}
+.level-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 768px) {
+  .level-grid-4 { grid-template-columns: 1fr !important; }
+}
+
+.profile-header-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 20px;
+}
+.profile-header-card:hover { border-color: var(--teal); background: rgba(56, 201, 176, 0.05); }
+
+#personal-info-panel {
+  display: none;
+  animation: slideInDown 0.3s ease-out;
+}
+@keyframes slideInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.detail-mini-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.85rem; }
+.detail-mini-item i { color: var(--teal); width: 14px; text-align: center; }
+
 /* ── Crop Modal ─────────────────────────────────── */
 #crop-modal-overlay {
   display: none;
@@ -113,9 +146,186 @@
   <div id="crop-saving-spinner"><i class="fas fa-spinner fa-spin"></i> Uploading...</div>
 </div>
 
-<div class="panel" style="max-width: 800px; margin: 0 auto;">
-  <div class="panel-hdr">
+<!-- ── PROFILE HEADER ── -->
+<div class="profile-header-card" id="compact-profile-header" onclick="togglePersonalInfo()">
+  <div style="width:58px; height:58px; border-radius:50%; overflow:hidden; border:2px solid var(--gold); flex-shrink:0;">
+    {% if me.photo %}
+      <img src="{{ me.photo.url }}" style="width:100%; height:100%; object-fit:cover;">
+    {% else %}
+      <div style="width:100%; height:100%; background:rgba(56,201,176,0.1); display:flex; align-items:center; justify-content:center; color:var(--teal);">
+        <i class="fas fa-user-circle" style="font-size:1.5rem;"></i>
+      </div>
+    {% endif %}
+  </div>
+  <div style="flex:1">
+    <h3 style="font-family:'Playfair Display',serif; color:var(--gold); font-size:1.15rem; margin-bottom:2px;">{{ me.full_name }}</h3>
+    <div style="font-size:0.7rem; color:var(--muted); font-family:monospace;">ID: {{ me.staff_id }}</div>
+  </div>
+  <div style="text-align:right">
+    <div class="badge b-confirmed" style="font-size:0.65rem;">{{ me.get_level_display }} Level</div>
+  </div>
+</div>
+
+<!-- ── LEVEL PROGRESS TRACKING ── -->
+<div class="panel" id="level-progress-panel" style="margin-bottom:24px;">
+  <div class="panel-hdr" style="margin-bottom:8px;">
+    <div class="panel-title" style="font-size: 0.9rem;"><i class="fas fa-layer-group" style="color:var(--teal); margin-right:8px;"></i> Level Progress Tracking</div>
+  </div>
+  
+  <div class="level-grid-4" style="padding:4px 0; gap:10px;">
+    <!-- Box 1: Current Level -->
+    <div style="padding:16px 8px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <div style="font-family:'Outfit',sans-serif; font-weight:800; font-size:1.6rem; color:var(--gold); text-shadow:0 0 10px rgba(224,171,74,0.3);">{{ me.get_level_display }}</div>
+      <div style="font-size:0.55rem; color:var(--muted); margin-top:4px; text-transform:uppercase; font-weight:600;">Level</div>
+    </div>
+    
+    <!-- Box 2: Completed Events -->
+    <div style="padding:16px 8px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:1.6rem; color:var(--teal);">{{ me.total_events_completed }}</div>
+      <div style="font-size:0.55rem; color:var(--muted); margin-top:4px; text-transform:uppercase; font-weight:600;">Events</div>
+    </div>
+
+    <!-- Box 3: Progression Tracking -->
+    <div style="background:var(--surface); border-radius:10px; border:1px solid #0a1a4a; animation:pulseBlueBox 3s infinite ease-in-out; overflow:hidden;">
+      {% if me.level == 'C' %}
+      <div style="display: grid; grid-template-rows: auto auto auto; font-family: 'Outfit', sans-serif; text-align: center;">
+        <!-- Row 1: Numbers -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 2px solid #0a1a4a; background: rgba(255,255,255,0.02);">
+          <div style="border-right: 1px solid #0a1a4a; font-size: 1.6rem; font-weight: 800; color: #fff; padding: 12px 2px;">{{ rem_day }}</div>
+          <div style="border-right: 1px solid #0a1a4a; font-size: 1.6rem; font-weight: 800; color: #fff; padding: 12px 2px;">{{ rem_night }}</div>
+          <div style="font-size: 1.6rem; font-weight: 800; color: #fff; padding: 12px 2px;">{{ rem_long }}</div>
+        </div>
+        <!-- Row 2: Labels -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid #0a1a4a;">
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid #0a1a4a; letter-spacing: 0.05em;">Day</div>
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid #0a1a4a; letter-spacing: 0.05em;">Night</div>
+          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800; padding: 6px 2px; letter-spacing: 0.05em;">Long</div>
+        </div>
+        <!-- Row 3: Progress Note -->
+        <div style="padding: 10px 4px; font-size: 0.75rem; color: var(--teal); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(56, 201, 176, 0.06);">
+          Reaching to B Level
+        </div>
+      </div>
+      {% elif me.level == 'B' %}
+      <div style="display: grid; grid-template-rows: auto auto; font-family: 'Outfit', sans-serif; text-align: center;">
+        <div style="padding: 18px 5px; background: rgba(255,255,255,0.02); border-bottom: 1px solid #0a1a4a;">
+          <div style="font-family:'Outfit',sans-serif; font-size: 1rem; font-weight: 800; color: var(--blue);">Admin Decision</div>
+          <div style="font-size: 0.55rem; color: rgba(255,255,255,0.45); margin-top: 4px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Evaluation Phase</div>
+        </div>
+        <div style="padding: 10px 4px; font-size: 0.75rem; color: var(--teal); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(56, 201, 176, 0.06);">
+          Reaching to A Level
+        </div>
+      </div>
+      {% else %}
+      <div style="padding:22px 10px; text-align:center;">
+        <div style="font-family:'Outfit',sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--green);">MAX LEVEL reached</div>
+        <div style="font-size: 0.6rem; color: rgba(255,255,255,0.5); margin-top: 6px; text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px;">Congratulations 🎉</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Box 4: Promotion Status -->
+    <div style="padding:16px 8px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      {% if latest_promotion %}
+        <div style="font-family:'Outfit',sans-serif; font-size:0.8rem; font-weight:600; color:var(--orange);">{% if latest_promotion.status == 'pending' %}In Review{% else %}{{ latest_promotion.get_status_display }}{% endif %}</div>
+      {% else %}
+        <div style="font-family:'Outfit',sans-serif; font-size:0.8rem; font-weight:500; color:rgba(255,255,255,0.2);">None</div>
+      {% endif %}
+      <div style="font-size:0.55rem; color:var(--muted); margin-top:4px; text-transform:uppercase; font-weight:600;">Promotion</div>
+    </div>
+  </div>
+</div>
+
+<div id="security-panel" style="margin-top: 10px; padding: 20px; border-radius: 16px; background: var(--card); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px;">
+  <h3 style="font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Account Security & Documents</h3>
+  
+  <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+    <span style="display: flex; align-items: center; gap: 12px; color: var(--text);">
+      <i class="fas fa-bell" style="color: var(--blue); font-size: 1.1rem; width: 20px; text-align: center;"></i> 
+      <span style="display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-weight: 500;">Push Notifications</span>
+        <span id="prof-notif-status" style="font-size: 0.75rem; color: var(--muted);">Checking status...</span>
+      </span>
+    </span>
+    <button id="prof-notif-action" class="btn btn-ghost btn-sm" style="padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1); display: none; font-size: 0.75rem;" onclick="triggerProfNotif()">Turn On</button>
+  </div>
+  <script>
+    function checkProfNotif() {
+      const text = document.getElementById('prof-notif-status');
+      const btn = document.getElementById('prof-notif-action');
+      if (!('Notification' in window)) {
+        text.innerHTML = 'Not supported';
+        text.style.color = 'var(--red)';
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        const status = localStorage.getItem('fcm_status');
+        const msg = localStorage.getItem('fcm_message');
+        if (status === 'error') {
+          text.innerHTML = msg || '❌ Setup incomplete<br>Click Fix to retry server sync.';
+          text.style.color = 'var(--red)';
+          text.style.lineHeight = '1.3';
+          btn.style.display = 'inline-flex';
+          btn.innerHTML = '<i class="fas fa-sync-alt"></i> Fix';
+          btn.style.borderColor = 'rgba(231,76,60,0.4)';
+          btn.style.color = '#e74c3c';
+          btn.onclick = () => { if (typeof requestFCMToken === 'function') requestFCMToken(() => checkProfNotif()); };
+        } else if (status === 'active') {
+          text.innerHTML = '✅ Enabled (Active)';
+          text.style.color = 'var(--green)';
+          btn.style.display = 'none';
+        } else {
+          text.innerHTML = '⏳ Verifying connection...';
+          text.style.color = 'var(--blue)';
+          btn.style.display = 'none';
+        }
+      } else if (Notification.permission === 'denied') {
+        text.innerHTML = '🚫 Blocked in settings';
+        text.style.color = 'var(--red)';
+        btn.style.display = 'inline-flex';
+        btn.innerHTML = '<i class="fas fa-cog"></i> Guide';
+        btn.style.borderColor = 'rgba(231,76,60,0.4)';
+        btn.style.color = '#e74c3c';
+        btn.onclick = () => alert('Notifications are strictly blocked by your device. Open your phone Settings -> Apps -> Chrome/Mastan App -> Permissions -> Allow Notifications.');
+      } else {
+        text.innerHTML = '⚠️ Currently Disabled';
+        text.style.color = 'var(--orange)';
+        btn.style.display = 'inline-flex';
+        btn.innerHTML = 'Turn On';
+        btn.style.borderColor = 'rgba(255,255,255,0.1)';
+        btn.style.color = 'inherit';
+        btn.onclick = () => triggerProfNotif();
+      }
+    }
+    function triggerProfNotif() {
+      const floatingBtn = document.getElementById('notif-enable-btn');
+      if (floatingBtn) {
+        floatingBtn.click();
+        setTimeout(checkProfNotif, 2500);
+      } else if (typeof requestFCMToken === 'function') {
+         requestFCMToken((success) => checkProfNotif());
+      }
+    }
+    document.addEventListener('DOMContentLoaded', checkProfNotif);
+    document.addEventListener('fcmStatus', checkProfNotif);
+  </script>
+
+  <a href="{% url 'staff_change_password' %}" class="btn btn-ghost" style="justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+    <span style="display: flex; align-items: center; gap: 12px; color: var(--text);"><i class="fas fa-lock" style="color: var(--teal); font-size: 1.1rem; width: 20px; text-align: center;"></i> <span style="font-weight: 500;">Change Account Password</span></span>
+    <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--muted);"></i>
+  </a>
+  <a href="{% url 'staff_terms' %}" class="btn btn-ghost" style="justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+    <span style="display: flex; align-items: center; gap: 12px; color: var(--text);"><i class="fas fa-file-contract" style="color: var(--gold); font-size: 1.1rem; width: 20px; text-align: center;"></i> <span style="font-weight: 500;">View Terms & Conditions</span></span>
+    <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--muted);"></i>
+  </a>
+</div>
+
+<div class="panel" id="personal-info-panel" style="max-width: 800px; margin: 0 auto; display: none;">
+  <div class="panel-hdr" style="display: flex; justify-content: space-between; align-items: center;">
     <div class="panel-title">Personal Information</div>
+    <button class="btn btn-ghost btn-sm" onclick="togglePersonalInfo()" style="font-size: 0.75rem; color: var(--muted); border: 1px solid rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px;">
+      <i class="fas fa-arrow-left" style="margin-right: 6px;"></i>Back to Stats
+    </button>
   </div>
   
   <div style="display:flex; gap:20px; align-items:center; margin-bottom:30px; padding-bottom:20px; border-bottom:1px solid var(--border);">
@@ -147,7 +357,6 @@
       <h2 style="font-family:'Playfair Display',serif; color:var(--gold); margin-bottom:4px;">{{ me.full_name }}</h2>
       <div style="color:var(--muted); font-family:monospace; font-size:0.9rem;">ID: {{ me.staff_id }}</div>
       <div style="margin-top:6px;"><span class="badge b-confirmed">{{ me.get_level_display }} Level</span></div>
-
     </div>
   </div>
 
@@ -501,92 +710,7 @@ document.getElementById('crop-modal-overlay').addEventListener('click', function
     </div>
   </div>
 
-  <div style="margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px;">
-    <h3 style="font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Account Security & Documents</h3>
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
-      <span style="display: flex; align-items: center; gap: 12px; color: var(--text);">
-        <i class="fas fa-bell" style="color: var(--blue); font-size: 1.1rem; width: 20px; text-align: center;"></i> 
-        <span style="display: flex; flex-direction: column; gap: 2px;">
-          <span style="font-weight: 500;">Push Notifications</span>
-          <span id="prof-notif-status" style="font-size: 0.75rem; color: var(--muted);">Checking status...</span>
-        </span>
-      </span>
-      <button id="prof-notif-action" class="btn btn-ghost btn-sm" style="padding: 6px 12px; border: 1px solid rgba(255,255,255,0.1); display: none; font-size: 0.75rem;" onclick="triggerProfNotif()">Turn On</button>
-    </div>
-    <script>
-      function checkProfNotif() {
-        const text = document.getElementById('prof-notif-status');
-        const btn = document.getElementById('prof-notif-action');
-        if (!('Notification' in window)) {
-          text.innerHTML = 'Not supported';
-          text.style.color = 'var(--red)';
-          return;
-        }
-        if (Notification.permission === 'granted') {
-          const status = localStorage.getItem('fcm_status');
-          const msg = localStorage.getItem('fcm_message');
-          if (status === 'error') {
-            text.innerHTML = msg || '❌ Setup incomplete<br>Click Fix to retry server sync.';
-            text.style.color = 'var(--red)';
-            text.style.lineHeight = '1.3';
-            btn.style.display = 'inline-flex';
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Fix';
-            btn.style.borderColor = 'rgba(231,76,60,0.4)';
-            btn.style.color = '#e74c3c';
-            btn.onclick = () => { if (typeof requestFCMToken === 'function') requestFCMToken(() => checkProfNotif()); };
-          } else if (status === 'active') {
-            text.innerHTML = '✅ Enabled (Active)';
-            text.style.color = 'var(--green)';
-            btn.style.display = 'none';
-          } else {
-            text.innerHTML = '⏳ Verifying connection...';
-            text.style.color = 'var(--blue)';
-            btn.style.display = 'none';
-          }
-        } else if (Notification.permission === 'denied') {
-          text.innerHTML = '🚫 Blocked in settings';
-          text.style.color = 'var(--red)';
-          btn.style.display = 'inline-flex';
-          btn.innerHTML = '<i class="fas fa-cog"></i> Guide';
-          btn.style.borderColor = 'rgba(231,76,60,0.4)';
-          btn.style.color = '#e74c3c';
-          btn.onclick = () => alert('Notifications are strictly blocked by your device. Open your phone Settings -> Apps -> Chrome/Mastan App -> Permissions -> Allow Notifications.');
-        } else {
-          text.innerHTML = '⚠️ Currently Disabled';
-          text.style.color = 'var(--orange)';
-          btn.style.display = 'inline-flex';
-          btn.innerHTML = 'Turn On';
-          btn.style.borderColor = 'rgba(255,255,255,0.1)';
-          btn.style.color = 'inherit';
-          btn.onclick = () => triggerProfNotif();
-        }
-      }
-      function triggerProfNotif() {
-        const floatingBtn = document.getElementById('notif-enable-btn');
-        if (floatingBtn) {
-          floatingBtn.click();
-          setTimeout(checkProfNotif, 2500);
-        } else if (typeof requestFCMToken === 'function') {
-           requestFCMToken((success) => checkProfNotif());
-        }
-      }
-      document.addEventListener('DOMContentLoaded', checkProfNotif);
-      document.addEventListener('fcmStatus', checkProfNotif);
-    </script>
-
-    <a href="{% url 'staff_change_password' %}" class="btn btn-ghost" style="justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
-      <span style="display: flex; align-items: center; gap: 12px; color: var(--text);"><i class="fas fa-lock" style="color: var(--teal); font-size: 1.1rem; width: 20px; text-align: center;"></i> <span style="font-weight: 500;">Change Account Password</span></span>
-      <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--muted);"></i>
-    </a>
-    <a href="{% url 'staff_terms' %}" class="btn btn-ghost" style="justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
-      <span style="display: flex; align-items: center; gap: 12px; color: var(--text);"><i class="fas fa-file-contract" style="color: var(--gold); font-size: 1.1rem; width: 20px; text-align: center;"></i> <span style="font-weight: 500;">View Terms & Conditions</span></span>
-      <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--muted);"></i>
-    </a>
   </div>
-
-  </div>
-</div>
 
 <div id="photo-viewer-overlay" onclick="closePhotoViewer()" style="flex-direction: column;">
   <img id="full-photo" src="" alt="Full Profile Photo" onclick="event.stopPropagation()" style="margin-bottom: 30px;">
@@ -619,5 +743,27 @@ document.getElementById('crop-modal-overlay').addEventListener('click', function
   </div>
 </div>
 
+<script>
+function togglePersonalInfo() {
+  const infoPanel = document.getElementById('personal-info-panel');
+  const progressPanel = document.getElementById('level-progress-panel');
+  const compactHeader = document.getElementById('compact-profile-header');
+  const securityPanel = document.getElementById('security-panel');
+  
+  if (infoPanel.style.display === 'block') {
+    // Switch to Progress Mode (Stats View)
+    infoPanel.style.display = 'none';
+    progressPanel.style.display = 'block';
+    compactHeader.style.display = 'flex';
+    securityPanel.style.display = 'flex';
+  } else {
+    // Switch to Info Mode (Personal Details View)
+    infoPanel.style.display = 'block';
+    progressPanel.style.display = 'none';
+    compactHeader.style.display = 'none';
+    securityPanel.style.display = 'none';
+  }
+}
+</script>
 {% endblock %}
 
