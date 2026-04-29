@@ -278,9 +278,9 @@
       <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
     </div>
     <div class="topbar-right">
-      <button id="pwa-install-btn" onclick="installPWA()" class="btn btn-teal btn-sm" style="display:none; gap:6px;" title="Install as Desktop App">
-        <i class="fas fa-download"></i> Install App
-      </button>
+      <a href="{% static 'app/MastanStaff.apk' %}" download id="pwa-install-btn" class="btn btn-teal btn-sm" style="display:inline-flex; gap:6px;" title="Download Staff App">
+        <i class="fas fa-download"></i> Download App
+      </a>
       {% if request.resolver_match.url_name == 'staff_profile' %}
       <a href="{% url 'staff_logout' %}" onclick="return confirmLogout(event)" style="color:var(--red); font-size:1.1rem; padding:8px; opacity:0.8;" title="Sign Out">
         <i class="fas fa-sign-out-alt"></i>
@@ -432,24 +432,8 @@
     document.body.style.overflow = document.getElementById('sidebar').classList.contains('open') ? 'hidden' : 'auto';
   }
 
-  // PWA Install Prompt
-  let _deferredInstall = null;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    _deferredInstall = e;
-    const btn = document.getElementById('pwa-install-btn');
-    if (btn) btn.style.display = 'inline-flex';
-  });
-  window.addEventListener('appinstalled', () => {
-    _deferredInstall = null;
-    const btn = document.getElementById('pwa-install-btn');
-    if (btn) btn.style.display = 'none';
-  });
-  function installPWA() {
-    if (!_deferredInstall) return;
-    _deferredInstall.prompt();
-    _deferredInstall.userChoice.then(() => { _deferredInstall = null; });
-  }
+  // PWA Install Prompt Removed
+
 
   // Navigation Pre-fetching — desktop hover + mobile touchstart
   function prefetchUrl(url) {

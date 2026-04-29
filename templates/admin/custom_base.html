@@ -462,9 +462,9 @@
         <span class="today-dot"></span>
         {% now "l, j F Y" %}
       </span>
-      <button id="pwa-install-btn" onclick="installPWA()" class="btn btn-secondary" style="display:none; font-size:0.78rem; padding:7px 14px; gap:6px;" title="Install as Desktop App">
-        <i class="fas fa-download"></i> Install App
-      </button>
+      <a href="{% static 'app/MastanAdmin.apk' %}" download id="pwa-install-btn" class="btn btn-secondary" style="display:inline-flex; font-size:0.78rem; padding:7px 14px; gap:6px;" title="Download Admin App">
+        <i class="fas fa-download"></i> Download App
+      </a>
       {% if request.resolver_match.url_name == 'admin_dashboard' or request.resolver_match.url_name == 'admin_bookings' %}
       <a href="{% url 'admin_create_booking' %}" class="btn btn-gold" id="global-new-booking-btn">
         <i class="fas fa-plus"></i> New Booking
@@ -571,24 +571,8 @@
     }
   });
 
-  // Service Worker Registration & PWA Install Prompt
-  let _deferredInstall = null;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    _deferredInstall = e;
-    const btn = document.getElementById('pwa-install-btn');
-    if (btn) btn.style.display = 'inline-flex';
-  });
-  window.addEventListener('appinstalled', () => {
-    _deferredInstall = null;
-    const btn = document.getElementById('pwa-install-btn');
-    if (btn) btn.style.display = 'none';
-  });
-  function installPWA() {
-    if (!_deferredInstall) return;
-    _deferredInstall.prompt();
-    _deferredInstall.userChoice.then(() => { _deferredInstall = null; });
-  }
+  // Service Worker Registration & PWA Install Prompt Removed
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register("{% url 'sw.js' %}")

@@ -392,23 +392,9 @@ function requestFCMToken(onDone) {
 
   } else if (Notification.permission === 'default') {
     if (!isStandalone) {
-      // If browser supports install prompt, show it
-      if (window._deferredInstallPrompt) {
-        showInstallBtn();
-        return;
-      }
-      // Listen for the prompt — if it fires, show Install button
-      let promptFired = false;
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        window._deferredInstallPrompt = e;
-        promptFired = true;
-        // Remove the Enable button if it appeared, show Install instead
-        const existing = document.getElementById('notif-enable-btn');
-        if (existing) existing.remove();
-        showInstallBtn();
-      });
+
       // Wait 2s — if no install prompt fires, show Enable Notifications anyway
+
       // (handles: app already installed but opened in browser, or unsupported browser)
       setTimeout(() => {
         if (!promptFired && !isStandalone) {
@@ -461,56 +447,8 @@ function requestFCMToken(onDone) {
     else showBtn();
   }
 
-  function showInstallBtn() {
-    if (document.getElementById('pwa-install-btn') || isStandalone) return;
-    
-    // Create professional install button
-    const btn = document.createElement('button');
-    btn.id = 'pwa-install-btn';
-    btn.innerHTML = '📱 Install App';
-    
-    // Style mimicking the notification button but distinct
-    btn.style.position = 'fixed';
-    btn.style.bottom = '20px';
-    btn.style.right = '20px';
-    btn.style.zIndex = '99999';
-    btn.style.background = 'linear-gradient(135deg, #2a4a7a, #1e3a5c)';
-    btn.style.color = '#fff';
-    btn.style.fontFamily = "'DM Sans', sans-serif";
-    btn.style.fontWeight = '700';
-    btn.style.fontSize = '0.85rem';
-    btn.style.border = 'none';
-    btn.style.padding = '13px 20px';
-    btn.style.borderRadius = '30px';
-    btn.style.cursor = 'pointer';
-    btn.style.boxShadow = '0 6px 20px rgba(42, 74, 122, 0.4)';
-    btn.style.display = 'flex';
-    btn.style.alignItems = 'center';
-    btn.style.gap = '8px';
-    btn.style.transition = 'transform 0.2s, opacity 0.3s';
-    
-    btn.onmouseover = () => btn.style.transform = 'scale(1.05)';
-    btn.onmouseout = () => btn.style.transform = 'scale(1)';
-    
-    btn.onclick = async () => {
-      const promptEvent = window._deferredInstallPrompt;
-      if (!promptEvent) return;
-      
-      btn.innerHTML = '⏳ Installing…';
-      promptEvent.prompt();
-      const { outcome } = await promptEvent.userChoice;
-      if (outcome === 'accepted') {
-        btn.style.opacity = '0';
-        setTimeout(() => btn.remove(), 400);
-        showNotifToast('✅ App installed! Please open it from your Home Screen to enable notifications.', 'success', 8000);
-      } else {
-        btn.innerHTML = '📱 Install App';
-      }
-      window._deferredInstallPrompt = null;
-    };
-    
-    document.body.appendChild(btn);
-  }
+  // showInstallBtn removed
+
 })();
 </script>
 
