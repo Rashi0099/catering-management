@@ -186,20 +186,20 @@
     </div>
 
     <!-- Box 3: Progression Tracking -->
-    <div style="background:var(--surface); border-radius:10px; border:1px solid #0a1a4a; animation:pulseBlueBox 3s infinite ease-in-out; overflow:hidden;">
+    <div style="background:var(--surface); border-radius:10px; border:1px solid var(--border); overflow:hidden;">
       {% if me.level == 'C' %}
       <div style="display: grid; grid-template-rows: auto auto auto; font-family: 'Outfit', sans-serif; text-align: center;">
         <!-- Row 1: Numbers -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 2px solid #0a1a4a; background: rgba(255,255,255,0.02);">
-          <div style="border-right: 1px solid #0a1a4a; font-size: 1.6rem; font-weight: 800; color: #fff; padding: 12px 2px;">{{ rem_day }}</div>
-          <div style="border-right: 1px solid #0a1a4a; font-size: 1.6rem; font-weight: 800; color: #fff; padding: 12px 2px;">{{ rem_night }}</div>
-          <div style="font-size: 1.6rem; font-weight: 800; color: #fff; padding: 12px 2px;">{{ rem_long }}</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+          <div style="border-right: 1px solid var(--border); font-size: 1.6rem; font-weight: 800; color: var(--gold); padding: 12px 2px; text-shadow: 0 0 10px rgba(224,171,74,0.2);">{{ rem_day }}</div>
+          <div style="border-right: 1px solid var(--border); font-size: 1.6rem; font-weight: 800; color: var(--gold); padding: 12px 2px; text-shadow: 0 0 10px rgba(224,171,74,0.2);">{{ rem_night }}</div>
+          <div style="font-size: 1.6rem; font-weight: 800; color: var(--gold); padding: 12px 2px; text-shadow: 0 0 10px rgba(224,171,74,0.2);">{{ rem_long }}</div>
         </div>
         <!-- Row 2: Labels -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid #0a1a4a;">
-          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid #0a1a4a; letter-spacing: 0.05em;">Day</div>
-          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid #0a1a4a; letter-spacing: 0.05em;">Night</div>
-          <div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800; padding: 6px 2px; letter-spacing: 0.05em;">Long</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--border);">
+          <div style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid var(--border); letter-spacing: 0.05em;">Day</div>
+          <div style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 800; padding: 6px 2px; border-right: 1px solid var(--border); letter-spacing: 0.05em;">Night</div>
+          <div style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 800; padding: 6px 2px; letter-spacing: 0.05em;">Long</div>
         </div>
         <!-- Row 3: Progress Note -->
         <div style="padding: 10px 4px; font-size: 0.75rem; color: var(--teal); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(56, 201, 176, 0.06);">
@@ -208,9 +208,9 @@
       </div>
       {% elif me.level == 'B' %}
       <div style="display: grid; grid-template-rows: auto auto; font-family: 'Outfit', sans-serif; text-align: center;">
-        <div style="padding: 18px 5px; background: rgba(255,255,255,0.02); border-bottom: 1px solid #0a1a4a;">
-          <div style="font-family:'Outfit',sans-serif; font-size: 1rem; font-weight: 800; color: var(--blue);">Admin Decision</div>
-          <div style="font-size: 0.55rem; color: rgba(255,255,255,0.45); margin-top: 4px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Evaluation Phase</div>
+        <div style="padding: 18px 5px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border);">
+          <div style="font-family:'Outfit',sans-serif; font-size: 1rem; font-weight: 800; color: var(--gold);">Admin Decision</div>
+          <div style="font-size: 0.55rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Evaluation Phase</div>
         </div>
         <div style="padding: 10px 4px; font-size: 0.75rem; color: var(--teal); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(56, 201, 176, 0.06);">
           Reaching to A Level
