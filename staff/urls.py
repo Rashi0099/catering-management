@@ -1,4 +1,6 @@
 from django.urls import path
+from django.views.decorators.cache import cache_control
+from django.views.generic import TemplateView
 from . import views
 
 urlpatterns = [
