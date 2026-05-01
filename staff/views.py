@@ -1075,5 +1075,10 @@ def staff_apply(request):
     else:
         form = StaffApplicationForm()
         
-    return render(request, 'staff/apply.html', {'form': form, 'error': error})
+    from staff.models import Locality
+    return render(request, 'staff/apply.html', {
+        'form': form, 
+        'error': error,
+        'localities': Locality.objects.all().order_by('name'),
+    })
 

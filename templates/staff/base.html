@@ -163,10 +163,13 @@
     /* Form */
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 0.74rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
-    input, select, textarea { width: 100%; max-width: 100%; box-sizing: border-box; padding: 10px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.87rem; transition: border-color 0.2s; }
+    input, select, textarea { width: 100%; max-width: 100%; box-sizing: border-box; padding: 10px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.87rem; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
     input[type="date"], input[type="time"] { -webkit-appearance: none; min-height: 42px; display: block; width: 100%; }
+    input[type="checkbox"], input[type="radio"] { width: auto; appearance: auto; -webkit-appearance: auto; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: var(--teal); }
     textarea { resize: vertical; min-height: 80px; }
+    /* Fix Android autocomplete/suggestion bar appearing outside the input field */
+    input { caret-color: var(--teal); }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
     /* Alert */
