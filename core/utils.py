@@ -21,7 +21,10 @@ def auto_complete_past_bookings():
         return
 
     today = timezone.now().date()
-    past_events = Booking.objects.filter(status__in=['pending', 'confirmed'], event_date__lt=today)
+    # FIX: Use prefetch_related to eliminate N+1 DB queries per booking
+    past_events = Booking.objects.filter(
+        status__in=['pending', 'confirmed'], event_date__lt=today
+    ).prefetch_related('assigned_to')
 
     if past_events.exists():
         # Process up to 50 at a time to avoid long-running requests
@@ -54,8 +57,6 @@ def auto_complete_past_bookings():
     cache.set(lock_key, True, 600)
 
 
-
-
 def get_pending_count():
     """Returns pending booking count, cached for 2 minutes."""
     count = cache.get('pending_booking_count')
@@ -66,7 +67,11 @@ def get_pending_count():
 
 
 def pending_count_context(request):
-    """Context processor — injects pending_count into every template."""
+    """Context processor — injects pending_count into every template.
+    NOTE: admin_pending_count in context_processors.py serves the same purpose
+    for /admin-panel/ — this is kept for backward-compat but both now share
+    the same cache key to avoid redundant DB queries.
+    """
     if request.path.startswith('/admin-panel/') and request.user.is_authenticated and request.user.is_staff:
         return {'pending_count': get_pending_count()}
     return {}
@@ -93,23 +98,25 @@ def validate_phone(phone):
 def send_fcm_notification(staff, title, body, link=None):
     """
     Unified utility to send push notifications and handle stale token cleanup.
+    Uses data-only payload to prevent double OS + in-app notifications.
+    The frontend (fcm_init.html onMessage + firebase-messaging-sw.js onBackgroundMessage)
+    handles displaying the notification exactly once.
     """
     try:
         from firebase_admin import messaging
         BASE_URL = "https://mastan.in"
+        # FIX: Use set() to deduplicate tokens — prevents same device getting double push
         tokens = list(set(staff.fcm_devices.values_list('token', flat=True)))
         if not tokens:
             return None
-        
-        # Cleanup potential duplicate tokens from other users if any
-        # (Already handled in save_fcm_token view, but safety first)
-        
+
         icon = f"{BASE_URL}/static/images/logo.png"
-        badge = f"{BASE_URL}/static/icons/icon-192x192.png"
         abs_link = link if (link and link.startswith('http')) else f"{BASE_URL}{link or '/staff/'}"
-        
+
+        # FIX: Data-only payload — NO notification block, NO webpush notification block.
+        # This ensures the Service Worker (onBackgroundMessage) shows exactly ONE notification.
+        # The fcm_init.html foreground handler shows a toast only (not another native notification).
         message = messaging.MulticastMessage(
-            # Using data-only payload to prevent double OS + Browser notifications
             data={
                 'title': str(title),
                 'body': str(body),
@@ -119,16 +126,13 @@ def send_fcm_notification(staff, title, body, link=None):
             tokens=tokens,
         )
         response = messaging.send_each_for_multicast(message)
-        
-        # Cleanup expired tokens
+
+        # Cleanup expired/invalid tokens
         if response.failure_count > 0:
-            stale_tokens = []
-            for idx, resp in enumerate(response.responses):
-                if not resp.success:
-                    stale_tokens.append(tokens[idx])
+            stale_tokens = [tokens[idx] for idx, resp in enumerate(response.responses) if not resp.success]
             if stale_tokens:
                 staff.fcm_devices.filter(token__in=stale_tokens).delete()
-        
+
         return response
     except Exception as e:
         print(f"FCM Notification Error: {e}")
@@ -148,55 +152,47 @@ send_push_notification = send_fcm_notification
 
 
 def _notify_all_task(title, body, link):
-    """Internal task function to broadcast FCM to all active staff."""
+    """Internal task function to broadcast FCM to all active staff.
+    FIX: Uses data-only payload (no notification block) to prevent double notifications.
+    FIX: Deduplicates tokens using set().
+    """
     from firebase_admin import messaging
     from staff.models import FCMDevice
     BASE_URL = "https://mastan.in"
     icon = f"{BASE_URL}/static/images/logo.png"
     abs_link = link if (link and link.startswith('http')) else f"{BASE_URL}{link or '/staff/'}"
-    
-    # Get all tokens for active staff
+
+    # FIX: Deduplicate tokens at source
     devices = FCMDevice.objects.filter(staff__is_active=True).values_list('token', flat=True)
-    tokens = list(devices)
+    tokens = list(set(devices))
     if not tokens:
         return
-        
-    chunk_size = 500 # FCM MulticastMessage supports up to 500 tokens at a time
+
+    chunk_size = 500  # FCM MulticastMessage supports up to 500 tokens at a time
     for i in range(0, len(tokens), chunk_size):
         chunk_tokens = tokens[i:i + chunk_size]
         try:
+            # FIX: Data-only payload — no notification or webpush notification blocks
+            # Service Worker onBackgroundMessage handles display exactly once
             message = messaging.MulticastMessage(
-                # notification block = Android Chrome shows native OS-level notification
-                notification=messaging.Notification(
-                    title=str(title),
-                    body=str(body),
-                ),
                 data={
                     'title': str(title),
                     'body': str(body),
                     'link': abs_link,
                     'icon': icon
                 },
-                # Android-specific: override icon and deep-link URL
-                webpush=messaging.WebpushConfig(
-                    notification=messaging.WebpushNotification(
-                        icon=f"{BASE_URL}/static/images/logo.png",
-                        badge=f"{BASE_URL}/static/icons/icon-192x192.png",
-                    ),
-                    fcm_options=messaging.WebpushFCMOptions(
-                        link=abs_link
-                    ),
-                ),
                 tokens=chunk_tokens,
             )
             response = messaging.send_each_for_multicast(message)
-            
+
+            # FIX: Clean up stale tokens (was missing before)
             if response.failure_count > 0:
                 stale_tokens = [chunk_tokens[idx] for idx, resp in enumerate(response.responses) if not resp.success]
                 if stale_tokens:
                     FCMDevice.objects.filter(token__in=stale_tokens).delete()
         except Exception as e:
             print(f"FCM Bulk Background Error: {e}")
+
 
 def notify_all_staff_background(title, body, link='/staff/dashboard/'):
     """Sends global push notification asynchronously to all active staff"""

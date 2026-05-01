@@ -24,14 +24,15 @@ class Command(BaseCommand):
             if not assigned_staff.exists():
                 # Try fallback to approved event applications
                 assigned_ids = booking.applications.filter(status='approved').values_list('staff_id', flat=True)
-                tokens = list(FCMDevice.objects.filter(staff_id__in=assigned_ids).values_list('token', flat=True))
+                tokens = list(set(FCMDevice.objects.filter(staff_id__in=assigned_ids).values_list('token', flat=True)))
             else:
-                tokens = list(FCMDevice.objects.filter(staff__in=assigned_staff).values_list('token', flat=True))
+                tokens = list(set(FCMDevice.objects.filter(staff__in=assigned_staff).values_list('token', flat=True)))
 
             if tokens:
                 try:
                     title = "⏰ Event Reminder"
                     body = f"Reminder: You have a shift for {booking.name} tomorrow!"
+                    # FIX: Data-only payload — no notification block to prevent double notifications
                     message = messaging.MulticastMessage(
                         data={
                             'title': str(title),
@@ -39,15 +40,17 @@ class Command(BaseCommand):
                             'link': '/staff/events/',
                             'icon': '/static/images/logo.png'
                         },
-                        android=messaging.AndroidConfig(priority='high'),
-                        webpush=messaging.WebpushConfig(
-                            headers={"Urgency": "high"},
-                            fcm_options=messaging.WebpushFCMOptions(link='/staff/events/')
-                        ),
                         tokens=tokens,
                     )
-                    messaging.send_each_for_multicast(message)
-                    staff_notified_count += len(tokens)
+                    response = messaging.send_each_for_multicast(message)
+                    staff_notified_count += response.success_count
+                    
+                    # FIX: Clean up stale/invalid tokens (was missing before)
+                    if response.failure_count > 0:
+                        stale = [tokens[i] for i, r in enumerate(response.responses) if not r.success]
+                        if stale:
+                            FCMDevice.objects.filter(token__in=stale).delete()
+                            self.stdout.write(self.style.WARNING(f'Removed {len(stale)} stale tokens.'))
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"Error sending reminders for booking {booking.id}: {e}"))
         

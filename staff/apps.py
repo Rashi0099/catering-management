@@ -5,4 +5,5 @@ class StaffConfig(AppConfig):
     name = 'staff'
 
     def ready(self):
-        pass
+        # FIX: Import signals here so Django registers them exactly once.
+        import staff.signals  # noqa: F401

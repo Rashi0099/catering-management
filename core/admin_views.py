@@ -1720,30 +1720,15 @@ def staff_notice(request):
                     body_text = notice.message[:150] + ("..." if len(notice.message) > 150 else "")
                     title = "MASTAN CATERING — Official Notice"
                     icon = f"{base_url}/static/images/logo.png"
-                    badge = f"{base_url}/static/icons/icon-192x192.png"
                     link = f"{base_url}/staff/"
+                    # FIX: Use data-only payload. NO notification block, NO AndroidNotification,
+                    # NO WebpushNotification. This prevents the triple-notification bug where
+                    # Android shows: 1 from notification block + 1 from WebpushNotification +
+                    # 1 from the JS onBackgroundMessage handler = 3 popups for one notice.
+                    # The Service Worker onBackgroundMessage in firebase-messaging-sw.js
+                    # is the SINGLE place that shows the notification.
                     fcm_msg = messaging.MulticastMessage(
-                        notification=messaging.Notification(title=title, body=body_text),
                         data={'title': title, 'body': body_text, 'link': link, 'icon': icon},
-                        android=messaging.AndroidConfig(
-                            priority='high',
-                            notification=messaging.AndroidNotification(
-                                title=title,
-                                body=body_text,
-                                icon='ic_notification',
-                                color='#D4A852',
-                            )
-                        ),
-                        webpush=messaging.WebpushConfig(
-                            headers={"Urgency": "high"},
-                            notification=messaging.WebpushNotification(
-                                icon=icon,
-                                badge=badge,
-                                title=title,
-                                body=body_text,
-                            ),
-                            fcm_options=messaging.WebpushFCMOptions(link=link)
-                        ),
                         tokens=tokens,
                     )
                     try:

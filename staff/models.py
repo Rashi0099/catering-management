@@ -5,31 +5,34 @@ from django.utils import timezone
 
 
 def generate_staff_id():
-    """Generates unique staff ID like MS-0001 sequentially with numeric logic"""
+    """Generates unique staff ID like MS-0001 sequentially.
+    FIX: Uses select_for_update() inside a transaction to prevent race condition
+    when 2 staff members are created simultaneously under high load.
+    """
     from staff.models import Staff
     from django.db.utils import ProgrammingError, OperationalError
+    from django.db import transaction
     
     try:
-        # Fetch all MS- IDs and find the numeric maximum
-        ms_ids = Staff.objects.filter(staff_id__startswith='MS-').values_list('staff_id', flat=True)
-        max_num = 0
-        for sid in ms_ids:
-            try:
-                # Extract number from 'MS-XXXX'
-                num = int(sid.split('-')[1])
-                if num > max_num:
-                    max_num = num
-            except (IndexError, ValueError):
-                continue
-        
-        new_num = max_num + 1
-        
-        # Collision check loop
-        while True:
-            generated_id = f"MS-{new_num:04d}"
-            if not Staff.objects.filter(staff_id=generated_id).exists():
-                return generated_id
-            new_num += 1
+        with transaction.atomic():
+            ms_ids = Staff.objects.select_for_update().filter(
+                staff_id__startswith='MS-'
+            ).values_list('staff_id', flat=True)
+            max_num = 0
+            for sid in ms_ids:
+                try:
+                    num = int(sid.split('-')[1])
+                    if num > max_num:
+                        max_num = num
+                except (IndexError, ValueError):
+                    continue
+            
+            new_num = max_num + 1
+            while True:
+                generated_id = f"MS-{new_num:04d}"
+                if not Staff.objects.filter(staff_id=generated_id).exists():
+                    return generated_id
+                new_num += 1
             
     except (ProgrammingError, OperationalError):
         # Fallback for fresh DBs or migration issues
@@ -181,19 +184,8 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         return result['total'] or 0
 
     def total_paid_out(self):
-        from django.db.models import Sum
-        result = self.payouts.filter(status='paid').aggregate(total=Sum('amount'))
-        return result['total'] or 0
-
-    def pending_payout(self):
-        from django.db.models import Sum
-        result = self.payouts.filter(status='pending').aggregate(total=Sum('amount'))
-        return result['total'] or 0
-
-    def total_earned(self):
-        from django.db.models import Sum
-        result = self.payouts.filter(status='paid').aggregate(total=Sum('amount'))
-        return result['total'] or 0
+        """Alias kept for backward-compatibility with any templates referencing it."""
+        return self.total_earned()
 
     def pending_payout_amount(self):
         from django.db.models import Sum

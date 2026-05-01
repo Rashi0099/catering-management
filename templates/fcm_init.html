@@ -484,6 +484,10 @@ window.addEventListener('load', () => {
       const messaging = firebase.messaging();
 
       // Handle foreground (in-app) notifications
+      // FIX: When the app is OPEN (foreground), Firebase onMessage fires.
+      // We ONLY show the in-app toast here. We do NOT call reg.showNotification()
+      // because that would show a 2nd native OS popup on top of the toast.
+      // The Service Worker onBackgroundMessage handles native popups when app is CLOSED.
       messaging.onMessage((payload) => {
         if (navigator.setAppBadge) {
           navigator.setAppBadge(1).catch(()=>{});
@@ -492,14 +496,9 @@ window.addEventListener('load', () => {
         const notif = payload.notification || {};
         const title = data.title || notif.title || 'Notification';
         const body  = data.body  || notif.body  || '';
-        const icon  = data.icon  || notif.icon  || '/static/icons/icon-192x192.png';
 
-        // Show as a native notification via SW
-        navigator.serviceWorker && navigator.serviceWorker.ready.then(reg => {
-          reg.showNotification(title, { body, icon });
-        });
-        // Also show in-app toast
-        if (typeof showNotifToast === 'function') { showNotifToast('📢 ' + title + ': ' + body, 'info'); }
+        // Show ONLY the in-app toast — no native OS popup while app is open
+        if (typeof showNotifToast === 'function') { showNotifToast('📢 ' + title + ': ' + body, 'info', 8000); }
       });
     } catch(e) {
       console.warn('[FCM] Firebase SDK init failed:', e.message);

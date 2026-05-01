@@ -62,9 +62,8 @@ def notify_staff_application_status(sender, instance, created, **kwargs):
             print(f"Notification error: {e}")
 
 
-@receiver(post_save, sender=EventApplication)
-def notify_admin_cancellation_request(sender, instance, created, **kwargs):
-    """Handled within the status check above to avoid redundant signals, but keeping as placeholder."""
+# NOTE: cancel_requested logic is fully handled inside notify_staff_application_status above.
+# The empty function below was removed to avoid unnecessary signal handler registration.
 
 @receiver(post_save, sender=EventReport)
 def notify_admin_on_report_submit(sender, instance, created, **kwargs):
