@@ -365,6 +365,16 @@
         document.getElementById('app-splash').style.display = 'none';
     }
   </script>
+  <script>
+    // Disable iOS/Android autocomplete suggestions dropdown below fields
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('input[type="text"], input[type="search"], input[type="tel"], input[type="number"]').forEach(function(el) {
+        if (!el.getAttribute('autocomplete')) {
+          el.setAttribute('autocomplete', 'off');
+        }
+      });
+    });
+  </script>
 <div id="nav-progress"></div>
 
 <!-- SIDEBAR OVERLAY -->

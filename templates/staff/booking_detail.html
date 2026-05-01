@@ -4,6 +4,7 @@
 {% block page_title %}Booking #{{ booking.pk }}{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div style="margin-bottom:16px">
   <a href="{% url 'staff_bookings' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
 </div>
