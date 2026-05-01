@@ -62,8 +62,15 @@
         font-family:'DM Sans',sans-serif; 
         font-size:0.95rem; 
         transition:all 0.2s;
+    }
+    input[type="text"], input[type="email"], input[type="number"], input[type="tel"], select, textarea {
         -webkit-appearance: none;
         appearance: none;
+    }
+    input[type="date"] {
+        width: 100%;
+        display: block;
+        text-align: left;
     }
     input:focus, select:focus, textarea:focus { outline:none; border-color:var(--teal); box-shadow: 0 0 0 1px var(--teal); }
     /* Fix for iOS/Android autocomplete dropdown appearing outside field */

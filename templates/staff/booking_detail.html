@@ -35,21 +35,21 @@
           <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
             <i class="fas fa-calendar-alt" style="color:var(--teal); font-size:1.2rem; margin-bottom:8px;"></i>
             <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Date</div>
-            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{{ booking.event_date|date:"d M y" }}</div>
+            <div style="font-weight:600; font-size:0.85rem; color:var(--text); word-break: break-word; line-height: 1.2;">{{ booking.event_date|date:"d M y" }}</div>
           </div>
           
           <!-- Time -->
           <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
             <i class="fas fa-clock" style="color:var(--blue); font-size:1.2rem; margin-bottom:8px;"></i>
             <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Time</div>
-            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{% if booking.event_time %}{{ booking.event_time|time:"h:i A" }}{% else %}TBD{% endif %}</div>
+            <div style="font-weight:600; font-size:0.85rem; color:var(--text); word-break: break-word; line-height: 1.2;">{% if booking.event_time %}{{ booking.event_time|time:"h:i A" }}{% else %}TBD{% endif %}</div>
           </div>
           
           <!-- Session -->
           <div style="background:var(--surface); display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 4px; border-radius:12px; border:1px solid var(--border);">
             <i class="fas fa-sun" style="color:var(--orange); font-size:1.2rem; margin-bottom:8px;"></i>
             <div style="font-size:0.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:4px;">Session</div>
-            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; color:var(--text);">{{ booking.get_session_display }}</div>
+            <div style="font-weight:600; font-size:0.85rem; color:var(--text); word-break: break-word; line-height: 1.2;">{{ booking.get_session_display }}</div>
           </div>
         </div>
       </div>
@@ -59,9 +59,9 @@
         <div style="width:48px; height:48px; border-radius:12px; background:rgba(56, 201, 176, 0.1); border:1px solid rgba(56, 201, 176, 0.2); display:flex; align-items:center; justify-content:center; color:var(--teal); flex-shrink:0;">
           <i class="fas fa-map-marker-alt" style="font-size:1.4rem;"></i>
         </div>
-        <div style="flex:1;">
+        <div style="flex:1; min-width:0;">
           <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:600; margin-bottom:2px;">Location</div>
-          <div style="font-size:1rem; font-weight:500; color:var(--text); line-height:1.4;">
+          <div style="font-size:1rem; font-weight:500; color:var(--text); line-height:1.4; word-wrap:break-word; overflow-wrap:break-word;">
             {% if booking.location_link %}
               <a href="{{ booking.location_link }}" target="_blank" style="color:var(--text); text-decoration:none;">
                 {{ booking.location_name|default:booking.venue|default:"Tap to open Map Route" }}
@@ -146,8 +146,8 @@
         }
         </script>
 
-        <!-- Using minmax 240px to safely stack 2 grid elements in the Left Column dynamically -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:16px; margin-top:16px;">
+        <!-- Using minmax 100% safely stack 2 grid elements in the Left Column dynamically without overflowing -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap:16px; margin-top:16px;">
           {% for item in assigned_staff_list %}
           <div class="prm-att-card">
             <input type="hidden" name="staff_ids[]" value="{{ item.staff.id }}"/>
