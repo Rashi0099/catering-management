@@ -1,6 +1,6 @@
 {
   "name": "Mastan Admin",
-  "short_name": "Admin",
+  "short_name": "Mastan Admin",
   "description": "Mastan Catering Admin Management Application",
   "start_url": "/admin-panel/",
   "scope": "/",

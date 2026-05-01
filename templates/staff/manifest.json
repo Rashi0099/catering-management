@@ -1,6 +1,6 @@
 {
   "name": "Mastan Staff",
-  "short_name": "Mastan",
+  "short_name": "Mastan Staff",
   "description": "Mastan Catering Staff Management Application",
   "start_url": "/staff/",
   "scope": "/",
