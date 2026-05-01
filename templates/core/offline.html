@@ -1,13 +1,78 @@
-{% extends "base.html" %}
-{% load static %}
-{% block title %}Offline - Mastan Catering{% endblock %}
-{% block content %}
-<section style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center;">
-  <i class="fas fa-wifi" style="font-size:4rem; color:var(--muted); margin-bottom:20px; opacity:0.5;"></i>
-  <h1 class="section-title">You are <em>Offline</em></h1>
-  <p class="section-sub" style="margin-bottom:30px;">It looks like you've lost internet connection. Please check your network and try again.</p>
-  <button class="btn-primary" onclick="window.location.reload();">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline — Mastan Catering</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Outfit', sans-serif;
+      background: #0a0e17;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .icon-wrap {
+      font-size: 4rem;
+      color: #f59e0b;
+      margin-bottom: 24px;
+      opacity: 0.8;
+      animation: pulse 2s infinite;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    p {
+      color: rgba(255,255,255,0.6);
+      max-width: 80%;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    .btn {
+      background: #f59e0b;
+      color: #000;
+      padding: 14px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.3s;
+    }
+    .btn:active {
+      transform: scale(0.95);
+    }
+    @keyframes pulse {
+      0% { opacity: 0.6; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0.6; transform: scale(0.95); }
+    }
+  </style>
+</head>
+<body>
+  <div class="icon-wrap">
+    <i class="fas fa-wifi" style="position:relative;">
+      <div style="position:absolute; top:40%; left:-10%; right:-10%; height:4px; background:#e74c3c; transform:rotate(-45deg);"></div>
+    </i>
+  </div>
+  <h1>You're Offline</h1>
+  <p>Please check your internet connection. Mastan Catering requires an active connection to sync data.</p>
+  <button class="btn" onclick="window.location.reload();">
     <i class="fas fa-redo"></i> Retry Connection
   </button>
-</section>
-{% endblock %}
+</body>
+</html>

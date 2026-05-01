@@ -52,6 +52,17 @@
           margin-left: -22px; margin-right: -22px;
           padding-left: 22px; padding-right: 22px;
       }
+      
+      /* Sticky Columns for Mobile Context */
+      #reports-table-container th:nth-child(1), #reports-table-container td:nth-child(1) {
+          position: sticky; left: 0; z-index: 10; background: var(--surface); box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      }
+      #reports-table-container th:nth-child(2), #reports-table-container td:nth-child(2) {
+          position: sticky; left: 40px; z-index: 10; background: var(--surface); box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      }
+      #reports-table-container th:nth-child(1), #reports-table-container th:nth-child(2) {
+          background: rgba(46,204,133,0.25) !important;
+      }
   }
 </style>
 
@@ -145,16 +156,20 @@
     const client = document.querySelector('select[name=client]').value;
     const url   = "{% url 'admin_reports_pdf' %}?month=" + month + "&year=" + year + "&client=" + encodeURIComponent(client);
 
-    // iOS Safari does not support blob anchor downloads — open in new tab instead
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIOS) {
-      window.open(url, '_blank');
-      return;
-    }
-
+    
     const oldHtml = btn.innerHTML;
     btn.disabled  = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+
+    if (isIOS) {
+      setTimeout(() => {
+         window.open(url, '_blank');
+         btn.disabled = false;
+         btn.innerHTML = oldHtml;
+      }, 500);
+      return;
+    }
 
     // Android / desktop: force blob download
     fetch(url, { credentials: 'same-origin' })

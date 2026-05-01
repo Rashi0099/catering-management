@@ -63,6 +63,7 @@
   background: #111;
   border-radius: 16px;
   overflow: hidden;
+  touch-action: none;
 }
 #crop-container img { display: block; max-width: 100%; max-height: 100%; }
 #crop-actions {
@@ -521,17 +522,25 @@ function saveCroppedPhoto() {
           setTimeout(() => flash.remove(), 3000);
 
         } else {
-          alert('❌ Upload failed: ' + (data.error || 'Unknown error'));
+          showErrorToast('❌ Upload failed: ' + (data.error || 'Unknown error'));
           spinner.style.display = 'none';
         }
       })
       .catch(err => {
         spinner.style.display = 'none';
-        alert('❌ Network error: ' + err.message);
+        showErrorToast('❌ Network error: ' + err.message);
       });
     };
     reader.readAsDataURL(blob);
   }, 'image/jpeg', 0.92);
+}
+
+function showErrorToast(msg) {
+  const flash = document.createElement('div');
+  flash.textContent = msg;
+  flash.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:10px 22px;border-radius:12px;font-weight:600;z-index:99999;font-size:0.9rem;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 4000);
 }
 
 function confirmRemovePhoto() {

@@ -106,6 +106,7 @@
            document.getElementById('reports-container').innerHTML = newContent.innerHTML;
         }
         window.history.pushState({}, '', url);
+        window.scrollTo({top: 0, behavior: 'smooth'});
       })
       .catch(err => console.error('AJAX Error:', err));
   }

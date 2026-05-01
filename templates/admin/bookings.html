@@ -1,8 +1,6 @@
 {% extends 'admin/custom_base.html' %}
-{% block title %}Bookings — Mastan Catering & Services  {% include 'pagination.html' with page_obj=bookings %}
-{% endblock %}
-{% block page_title %}Bookings  {% include 'pagination.html' with page_obj=bookings %}
-{% endblock %}
+{% block title %}Bookings — Mastan Catering & Services{% endblock %}
+{% block page_title %}Bookings{% endblock %}
 
 {% block content %}
 
@@ -204,7 +202,7 @@
       });
 
       // Auto-submit on form input or select change
-      filterForm.querySelectorAll('input, select').forEach(el => {
+      filterForm.querySelectorAll('select').forEach(el => {
         el.addEventListener('change', () => {
            fetchFilteredData();
         });
@@ -213,8 +211,17 @@
       let timeout = null;
       const searchInput = filterForm.querySelector('input[name="search"]');
       if (searchInput) {
-        searchInput.addEventListener('keyup', () => {
+        searchInput.addEventListener('input', () => {
           clearTimeout(timeout);
+          const btn = filterForm.querySelector('button[type="submit"]');
+          if (btn && !btn.innerHTML.includes('fa-spinner')) {
+             btn.dataset.origText = btn.innerHTML;
+             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+          }
+          // Optionally add a global spinner or dim the container
+          const container = document.getElementById('bookings-table-container');
+          if (container) container.style.opacity = '0.5';
+          
           timeout = setTimeout(() => {
             fetchFilteredData();
           }, 400); // 400ms debounce
@@ -223,8 +230,11 @@
       
       const fetchFilteredData = () => {
         const btn = filterForm.querySelector('button[type="submit"]');
-        const origText = btn ? btn.innerHTML : '';
+        const origText = btn ? (btn.dataset.origText || btn.innerHTML) : '';
         if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        const container = document.getElementById('bookings-table-container');
+        if (container) container.style.opacity = '0.5';
         
         const url = new URL(window.location.href);
         const formData = new FormData(filterForm);
@@ -242,8 +252,9 @@
             const doc = parser.parseFromString(html, 'text/html');
             
             const newTable = doc.getElementById('bookings-table-container');
-            if (newTable) {
-               document.getElementById('bookings-table-container').innerHTML = newTable.innerHTML;
+            if (newTable && container) {
+               container.innerHTML = newTable.innerHTML;
+               container.style.opacity = '1';
             }
             
             if (btn) btn.innerHTML = origText;

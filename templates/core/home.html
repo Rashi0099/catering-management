@@ -446,6 +446,9 @@ body { overflow-x: hidden; }
   transform: translateX(8px); transition: all 0.25s;
 }
 #wa-fab:hover .wa-tip { opacity: 1; transform: translateX(0); }
+@media (max-width: 768px) {
+  #wa-fab { bottom: 80px; }
+}
 
 /* ── REVEAL ── */
 .rv { opacity: 0; transform: translateY(34px); transition: opacity 0.75s cubic-bezier(0.2,0,0,1), transform 0.75s cubic-bezier(0.2,0,0,1); }
@@ -477,8 +480,8 @@ body { overflow-x: hidden; }
 #s-marquee { padding: 0; overflow: hidden; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .mq-label { text-align: center; padding: 52px 5% 32px; font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
 .mq-row { display: flex; width: max-content; will-change: transform; }
-.mq-row.left  { animation: mq-l 32s linear infinite; }
-.mq-row.right { animation: mq-r 28s linear infinite; margin-top: 16px; }
+.mq-row.left  { animation: mq-l 50s linear infinite; }
+.mq-row.right { animation: mq-r 45s linear infinite; margin-top: 16px; }
 .mq-row:hover { animation-play-state: paused; }
 @keyframes mq-l { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes mq-r { from { transform: translateX(-50%); } to { transform: translateX(0); } }
@@ -645,14 +648,15 @@ body { overflow-x: hidden; }
           <i class="fas fa-check-circle"></i>
           Message sent! We’ll get back to you shortly.
         </div>
-      {% elif contact_error %}
-        <div class="cf-banner cf-err">
-          <i class="fas fa-exclamation-circle"></i>
-          Something went wrong. Make sure your name & message are filled.
-        </div>
-      {% endif %}
-      <form method="post" action="{% url 'contact' %}" id="homeContactForm" novalidate>
-        {% csrf_token %}
+      {% else %}
+        {% if contact_error %}
+          <div class="cf-banner cf-err">
+            <i class="fas fa-exclamation-circle"></i>
+            Something went wrong. Make sure your name & message are filled.
+          </div>
+        {% endif %}
+        <form method="post" action="{% url 'contact' %}" id="homeContactForm" novalidate>
+          {% csrf_token %}
         <input type="hidden" name="source" value="home">
         <div class="frow">
           <div class="ff">
@@ -665,20 +669,21 @@ body { overflow-x: hidden; }
             <input type="tel" name="phone" id="cf-phone" placeholder="+91 0876543210" autocomplete="tel">
           </div>
         </div>
-        <div class="ff">
-          <label>Email</label>
-          <input type="email" name="email" id="cf-email" placeholder="example@gmail.com" autocomplete="email">
-          <span class="verr" id="cf-email-err">Enter a valid email address</span>
-        </div>
-        <div class="ff">
-          <label>Message <span class="req">*</span></label>
-          <textarea name="message" id="cf-msg" rows="5" placeholder="Tell us about your event..."></textarea>
-          <span class="verr" id="cf-msg-err">Please write a brief message</span>
-        </div>
-        <button type="submit" class="btn-send" id="cf-submit">
-          <i class="fas fa-paper-plane"></i> Send Message
-        </button>
-      </form>
+          <div class="ff">
+            <label>Email <span style="text-transform:none; font-size:0.65rem; color:var(--muted); font-weight:normal;">(Optional)</span></label>
+            <input type="email" name="email" id="cf-email" placeholder="example@gmail.com" autocomplete="email">
+            <span class="verr" id="cf-email-err">Enter a valid email address</span>
+          </div>
+          <div class="ff">
+            <label>Message <span class="req">*</span></label>
+            <textarea name="message" id="cf-msg" rows="5" placeholder="Tell us about your event..."></textarea>
+            <span class="verr" id="cf-msg-err">Please write a brief message</span>
+          </div>
+          <button type="submit" class="btn-send" id="cf-submit">
+            <i class="fas fa-paper-plane"></i> Send Message
+          </button>
+        </form>
+      {% endif %}
     </div>
   </div>
 </section>

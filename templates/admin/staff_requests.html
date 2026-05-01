@@ -42,7 +42,7 @@
 
 <div class="search-bar" style="margin-bottom:20px;">
   <form method="get" style="display:flex; gap:10px; width:100%; max-width:600px; align-items:center;">
-    <select name="booking_id" class="filter-select" style="flex:1; height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); padding:0 14px; font-size:0.9rem;" onchange="this.form.submit()">
+    <select name="booking_id" class="filter-select" style="flex:1; height:42px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); padding:0 14px; font-size:0.9rem;" onchange="this.disabled=true; this.style.opacity='0.5'; this.form.submit()">
       <option value="">All Events (Mixed)</option>
       {% for b in active_bookings %}
       <option value="{{ b.pk }}" {% if selected_booking == b.pk|stringformat:"s" %}selected{% endif %}>
@@ -236,13 +236,20 @@
           });
           if(res.ok) {
             const data = await res.json();
-            if(data.status === 'success') {
+              if(data.status === 'success') {
               const tr = form.closest("tr");
+              const tbody = tr.closest("tbody");
               if(tr) {
                 tr.style.transition = "all 0.3s ease";
                 tr.style.opacity = "0";
                 tr.style.transform = "translateX(20px)";
-                setTimeout(() => tr.remove(), 300);
+                setTimeout(() => {
+                  tr.remove();
+                  if(tbody && tbody.querySelectorAll("tr").length === 0) {
+                    const colspan = tbody.closest("table").id === "booking-req-table" ? "5" : "4";
+                    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;color:var(--muted);padding:30px">No pending applications</td></tr>`;
+                  }
+                }, 300);
               }
               // Update quota counts live if server returned them
               if(data.quota) {
@@ -256,7 +263,8 @@
               }
             } else {
                if(btn) { btn.disabled = false; btn.innerHTML = originalText; }
-               alert(data.message || 'Error occurred.');
+               if(typeof showErrorToast === 'function') showErrorToast(data.message || 'Error occurred.');
+               else alert(data.message || 'Error occurred.');
             }
           } else {
              if(btn) { btn.disabled = false; btn.innerHTML = originalText; }
@@ -264,7 +272,8 @@
         } catch(err) {
           console.error(err);
           if(btn) { btn.disabled = false; btn.innerHTML = originalText; }
-          alert('Network Error.');
+          if(typeof showErrorToast === 'function') showErrorToast('Network Error.');
+          else alert('Network Error.');
         }
       });
     });

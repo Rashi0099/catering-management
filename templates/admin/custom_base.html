@@ -105,7 +105,10 @@
     .sidebar-logo .brand-icon { font-size: 1.6rem; }
     .sidebar-logo .subtitle { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
 
-    .sidebar-nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+    .sidebar-nav { padding: 16px 12px; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .sidebar-nav::-webkit-scrollbar { width: 5px; }
+    .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     .nav-section-label {
       font-size: 0.65rem; color: var(--muted); letter-spacing: 0.12em;
       text-transform: uppercase; padding: 12px 12px 6px;
@@ -148,6 +151,7 @@
       color: var(--red); text-decoration: none; font-size: 0.82rem; font-weight: 500;
       transition: background 0.2s; width: 100%;
     }
+    .logout-btn:hover { background: rgba(224,92,92,0.22); }
     .logout-btn:hover { background: rgba(224,92,92,0.22); }
 
     /* ── MAIN ── */
@@ -482,7 +486,7 @@
        <div class="user-role">Staff Member</div>
       </div>
     </div>
-    <form method="post" action="{% url 'admin_logout' %}" style="margin:0;">
+    <form method="post" action="{% url 'admin_logout' %}" style="margin:0;" onsubmit="return confirm('Are you sure you want to log out from the Admin panel?');">
       {% csrf_token %}
       <button type="submit" class="logout-btn" style="background:none;border:none;cursor:pointer;width:100%;text-align:left;padding:0;">
         <i class="fas fa-sign-out-alt"></i> Sign Out

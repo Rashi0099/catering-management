@@ -28,7 +28,7 @@
       <div class="grid-2">
         <div class="form-group">
           <label style="color:var(--muted); font-size:0.75rem;">Date</label>
-          <div style="font-weight: 600;">{{ booking.event_date|date:"d/m/Y" }}</div>
+          <div style="font-weight: 600;">{{ booking.event_date|date:"d M Y" }}</div>
         </div>
         <div class="form-group">
           <label style="color:var(--muted); font-size:0.75rem;">Site Name</label>
@@ -60,15 +60,15 @@
       </div>
       <div class="form-group">
         <label>Total Amount</label>
-        <input type="text" name="total_amount" placeholder="NIL" value="{{ report.total_amount|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+        <input type="text" inputmode="numeric" name="total_amount" placeholder="NIL" value="{{ report.total_amount|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
       </div>
       <div class="form-group">
         <label>Balance Amount</label>
-        <input type="text" name="balance_amount" placeholder="NIL" value="{{ report.balance_amount|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+        <input type="text" inputmode="numeric" name="balance_amount" placeholder="NIL" value="{{ report.balance_amount|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
       </div>
       <div class="form-group">
         <label>Pending</label>
-        <input type="text" name="pending" placeholder="NIL" value="{{ report.pending|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
+        <input type="text" inputmode="numeric" name="pending" placeholder="NIL" value="{{ report.pending|default:'' }}" {% if report and report.status == 'submitted' %}readonly{% endif %}>
       </div>
     </div>
 
@@ -176,7 +176,7 @@
       <i class="fas fa-lock"></i> This report has been finalized and submitted securely.
     </div>
     {% else %}
-    <div style="margin-top:24px; display:flex; gap:16px;">
+    <div style="margin-top:24px; display:flex; gap:24px; padding-bottom: 20px;">
       <button type="submit" name="action" value="draft" class="btn btn-ghost" style="flex:1; padding:14px; font-size:1rem; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
         <i class="fas fa-save" style="margin-right:6px;"></i> Save Draft
       </button>

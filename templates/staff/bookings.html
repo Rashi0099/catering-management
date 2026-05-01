@@ -34,6 +34,11 @@
       grid-template-columns: 1fr auto; grid-template-rows: auto auto auto;
       row-gap: 6px; column-gap: 12px; align-items: center;
       grid-template-areas: "event status" "session date" "action action";
+      transition: background 0.2s, transform 0.1s;
+    }
+    #bookings-table-container tr:active {
+      background: rgba(255,255,255,0.08);
+      transform: scale(0.98);
     }
     #bookings-table-container td { padding: 0 !important; border: none !important; text-align: left !important; display: block; }
     #bookings-table-container td::before { display: none !important; }
@@ -112,6 +117,7 @@
 
   searchInput.addEventListener('input', function() {
     clearTimeout(debounceTimer);
+    spinner.style.display = 'inline-block';
     debounceTimer = setTimeout(fetchBookings, 280);
   });
 

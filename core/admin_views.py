@@ -919,11 +919,13 @@ def staff_applications(request):
     applications = StaffApplication.objects.filter(status='pending').order_by('-created_at')
     
     wa_url = request.session.pop('auto_whatsapp_url', None)
+    wa_type = request.session.pop('auto_whatsapp_type', 'approve')
     
     context = {
         'applications': applications,
         'page': 'staff_applications',
         'auto_whatsapp_url': wa_url,
+        'auto_whatsapp_type': wa_type,
     }
     return render(request, 'admin/staff_applications.html', context)
 
@@ -980,6 +982,7 @@ def handle_staff_application(request, pk, action):
             
             wa_link = f"https://wa.me/{phone_raw}?text={urllib.parse.quote(msg)}"
             request.session['auto_whatsapp_url'] = wa_link
+            request.session['auto_whatsapp_type'] = 'approve'
             
             messages.success(request, f'✅ Staff created! ID: {new_id} | Default Password: password123')
         except Exception as e:
@@ -987,7 +990,23 @@ def handle_staff_application(request, pk, action):
     elif action == 'reject':
         application.status = 'rejected'
         application.save()
-        messages.success(request, 'Application rejected.')
+        
+        # WhatsApp Rejection Message
+        import urllib.parse
+        phone_raw = str(application.phone_1).replace('+', '').replace(' ', '').replace('-', '')
+        if len(phone_raw) == 10:
+            phone_raw = '91' + phone_raw
+            
+        msg = (
+            f"Dear {application.full_name},\n\n"
+            f"Thank you for applying to join the Mastan Catering team. Unfortunately, we are not proceeding with your application at this time.\n\n"
+            f"We wish you all the best in your future endeavors."
+        )
+        wa_link = f"https://wa.me/{phone_raw}?text={urllib.parse.quote(msg)}"
+        request.session['auto_whatsapp_url'] = wa_link
+        request.session['auto_whatsapp_type'] = 'reject'
+        
+        messages.success(request, 'Application rejected. You can notify the applicant via WhatsApp.')
         
     return redirect('admin_staff_applications')
 

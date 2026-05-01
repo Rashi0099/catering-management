@@ -4,6 +4,7 @@
 <a href="{% url 'admin_settings' %}" class="back-link" style="color:var(--text); margin-right:12px; text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
 Terms & Conditions
 {% endblock %}
+{% block nav_settings %}active{% endblock %}
 {% block header_actions %}
 <a href="{% url 'admin_term_add' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Term</a>
 {% endblock %}

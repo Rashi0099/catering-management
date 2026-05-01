@@ -142,11 +142,11 @@
         </label>
       </div>
 
-      <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; padding:14px; font-size:1.05rem; letter-spacing:0.05em; {% if booking.allow_direct_join %}background:linear-gradient(135deg, #10b981, #059669);border:none;{% else %}background:linear-gradient(135deg, #3b82f6, #2563eb);border:none;{% endif %} color:white; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.3);">
-        {% if booking.allow_direct_join %}
+      <button type="submit" class="btn btn-gold" style="width:100%; justify-content:center; padding:14px; font-size:1.05rem; letter-spacing:0.05em; {% if booking.allow_direct_join and not is_double_work %}background:linear-gradient(135deg, #10b981, #059669);border:none;{% else %}background:linear-gradient(135deg, #3b82f6, #2563eb);border:none;{% endif %} color:white; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.3);">
+        {% if booking.allow_direct_join and not is_double_work %}
           <i class="fas fa-check-circle" style="margin-right:6px;"></i> Join Event
         {% else %}
-          <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Apply for Event
+          <i class="fas fa-paper-plane" style="margin-right:6px;"></i> Apply for Event (Review Needed)
         {% endif %}
       </button>
     </form>

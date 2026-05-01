@@ -68,8 +68,8 @@
         <td style="color:var(--muted);font-size:0.82rem">{{ req.created_at|date:"d M Y" }}</td>
         <td>
           <div style="display:flex; gap:6px;">
-            <a href="{% url 'admin_handle_promotion' req.pk 'approve' %}" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;">Approve</a>
-            <a href="{% url 'admin_handle_promotion' req.pk 'reject' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;">Reject</a>
+            <a href="{% url 'admin_handle_promotion' req.pk 'approve' %}" class="btn btn-gold" style="padding:4px 8px; font-size:0.8rem;" onclick="return handleCustomConfirm(this, 'Approve this promotion?', event);">Approve</a>
+            <a href="{% url 'admin_handle_promotion' req.pk 'reject' %}" class="btn btn-ghost" style="padding:4px 8px; font-size:0.8rem; color:#e74c3c;" onclick="return handleCustomConfirm(this, 'Reject this promotion?', event);">Reject</a>
           </div>
         </td>
       </tr>

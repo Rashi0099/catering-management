@@ -432,6 +432,18 @@
             text.innerHTML = '⏳ Verifying connection...';
             text.style.color = 'var(--blue)';
             btn.style.display = 'none';
+            // Fallback timeout to prevent infinite checking loop
+            setTimeout(() => {
+               if(text.innerHTML.includes('Verifying')) {
+                  text.innerHTML = '⚠️ State unknown. Click Turn On to sync.';
+                  text.style.color = 'var(--orange)';
+                  btn.style.display = 'inline-flex';
+                  btn.innerHTML = 'Turn On';
+                  btn.style.borderColor = 'rgba(255,255,255,0.1)';
+                  btn.style.color = 'inherit';
+                  btn.onclick = () => triggerAdminNotif();
+               }
+            }, 3000);
           }
         } else if (Notification.permission === 'denied') {
           text.innerHTML = '🚫 Blocked in Settings';

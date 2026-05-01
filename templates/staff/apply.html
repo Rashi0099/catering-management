@@ -122,7 +122,7 @@
       <div class="form-group">
         <label>Primary Phone / WhatsApp</label>
         {{ form.phone_1 }}
-        <div style="font-size:0.7rem; color:var(--gold); margin-top:4px; font-weight:600;"><i class="fab fa-whatsapp"></i> Must be correct WhatsApp number as messages will be sent to this.</div>
+        <div style="font-size:0.7rem; color:var(--gold); margin-top:8px; font-weight:600; display:flex; gap:6px; align-items:flex-start;"><i class="fab fa-whatsapp" style="margin-top:2px;"></i> Must be correct WhatsApp number as messages will be sent to this.</div>
         <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.phone_1.errors }}</div>
       </div>
       <div class="form-group">
@@ -156,10 +156,6 @@
       <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.main_locality.errors }}</div>
     </div>
     
-    <div class="form-group" style="padding-top: 10px;">
-        <label>Recent Photo (Optional)</label>
-        {{ form.photo }}
-    </div>
 
     <div style="padding: 16px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 20px; border: 1px dashed var(--border);">
       <h3 style="font-size:0.9rem; color:var(--text); margin-bottom:12px;">Physical Profile (Uniforms)</h3>
@@ -207,5 +203,28 @@
     Already approved? <a href="{% url 'staff_login' %}">Go to Login</a>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Add placeholder to height to guide users
+  const heightInput = document.querySelector('input[name="height"]');
+  if(heightInput) heightInput.placeholder = "e.g. 170cm or 5'6\"";
+  
+  // Add numeric pattern to phone
+  const phone1Input = document.querySelector('input[name="phone_1"]');
+  if(phone1Input) {
+      phone1Input.setAttribute('inputmode', 'tel');
+      phone1Input.setAttribute('pattern', '^[0-9]{10}$');
+      phone1Input.setAttribute('title', 'Please enter a valid 10-digit mobile number');
+      phone1Input.placeholder = "10-digit WhatsApp number";
+  }
+
+  // Auto-scroll to first error if exists
+  const firstError = document.querySelector('.error-box');
+  if(firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+</script>
 </body>
 </html>

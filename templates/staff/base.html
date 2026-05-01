@@ -309,7 +309,7 @@
         <div class="s-id">{{ request.user.staff_id }}</div>
       </div>
     </div>
-    <a href="{% url 'staff_logout' %}" class="s-logout">
+    <a href="{% url 'staff_logout' %}" class="s-logout" onclick="return confirmLogout(event)">
       <i class="fas fa-sign-out-alt"></i> Sign Out
     </a>
   </div>

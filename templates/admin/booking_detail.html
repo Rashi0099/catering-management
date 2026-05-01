@@ -77,10 +77,10 @@
           </select>
           <i class="fas fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:0.7rem; pointer-events:none;"></i>
         </div>
-        {% if total_quota > 0 %}
+          {% if total_quota > 0 %}
             <button type="submit" name="action" value="publish" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(46,204,133,0.1); color:var(--green); border:1px solid rgba(46,204,133,0.4); font-size:0.85rem; font-weight:500; cursor:pointer; transition:background 0.2s;"><i class="fas fa-broadcast-tower"></i> Publish to Staff Feed</button>
           {% else %}
-            <button type="button" onclick="alert('Cannot publish event with zero quotas. Please click Edit Details to set the required staff counts first.')" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(255,255,255,0.05); color:var(--muted); border:1px solid rgba(255,255,255,0.1); font-size:0.85rem; font-weight:500; cursor:not-allowed;"><i class="fas fa-lock"></i> Publish Restricted</button>
+            <button type="button" onclick="if(typeof showNotifToast !== 'undefined') { showNotifToast('Cannot publish event with zero quotas. Please set staff quotas first.', 'error'); } else { alert('Cannot publish event with zero quotas. Please click Edit Details to set the required staff counts first.'); }" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:rgba(224,92,92,0.1); color:var(--red); border:1px solid rgba(224,92,92,0.4); font-size:0.85rem; font-weight:500; cursor:not-allowed;"><i class="fas fa-lock"></i> Publish Restricted</button>
           {% endif %}
       {% endif %}
     </form>
@@ -132,8 +132,8 @@
   <div class="ribbon-card" style="border-left:2px solid var(--green); padding:0; overflow:hidden; background:rgba(10, 25, 47, 0.4); border-radius:12px; border:1px solid #1a2c4e;">
     <div style="padding:12px 16px; border-bottom:1px solid #1a2c4e; background:rgba(10, 25, 47, 0.6); display:flex; justify-content:space-between; align-items:center;">
       <div class="rb-label" style="margin-bottom:0; color:#7a849a;">STAFF REQUIRED</div>
-      <div id="quota-total-display" style="font-size:0.85rem; font-weight:700; color:{% if total_filled >= total_quota %}var(--green){% else %}#fff{% endif %}; letter-spacing:0.5px;">
-        <span id="total-filled-num">{{ total_filled }}</span> / <span id="total-quota-num">{{ total_quota }}</span> <span style="font-size:0.65rem; color:var(--muted); margin-left:4px;">TOTAL</span>
+      <div id="quota-total-display" style="font-size:0.85rem; font-weight:700; color:{% if total_quota == 0 %}var(--red){% elif total_filled >= total_quota %}var(--green){% else %}#fff{% endif %}; letter-spacing:0.5px;">
+        <span id="total-filled-num">{{ total_filled }}</span> / <span id="total-quota-num">{{ total_quota }}</span> <span style="font-size:0.65rem; color:{% if total_quota == 0 %}var(--red){% else %}var(--muted){% endif %}; margin-left:4px;">TOTAL</span>
       </div>
     </div>
     <div style="display:grid; grid-template-columns: repeat(5, 1fr); text-align:center; border-bottom:1px solid #1a2c4e;">
