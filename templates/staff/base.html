@@ -314,22 +314,6 @@
       <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
     </div>
     <div class="topbar-right">
-      <a href="{% static 'app/MastanStaff.apk' %}" download id="pwa-install-btn" class="btn btn-teal btn-sm" style="display:inline-flex; gap:6px;" title="Download Staff App">
-        <i class="fas fa-download"></i> Download App
-      </a>
-      <script>
-        // Hide download button when already running as installed app
-        (function(){
-          var isApp = window.matchMedia('(display-mode: standalone)').matches
-            || window.matchMedia('(display-mode: minimal-ui)').matches
-            || window.navigator.standalone === true
-            || document.referrer.startsWith('android-app://');
-          if (isApp) {
-            var btn = document.getElementById('pwa-install-btn');
-            if (btn) btn.style.display = 'none';
-          }
-        })();
-      </script>
       {% if request.resolver_match.url_name == 'staff_profile' %}
       <a href="{% url 'staff_logout' %}" onclick="return confirmLogout(event)" style="color:var(--red); font-size:1.1rem; padding:8px; opacity:0.8;" title="Sign Out">
         <i class="fas fa-sign-out-alt"></i>

@@ -495,22 +495,6 @@
         <span class="today-dot"></span>
         {% now "l, j F Y" %}
       </span>
-      <a href="{% static 'app/MastanAdmin.apk' %}" download id="pwa-install-btn" class="btn btn-secondary" style="display:inline-flex; font-size:0.78rem; padding:7px 14px; gap:6px;" title="Download Admin App">
-        <i class="fas fa-download"></i> Download App
-      </a>
-      <script>
-        // Hide download button when already running as installed app
-        (function(){
-          var isApp = window.matchMedia('(display-mode: standalone)').matches
-            || window.matchMedia('(display-mode: minimal-ui)').matches
-            || window.navigator.standalone === true
-            || document.referrer.startsWith('android-app://');
-          if (isApp) {
-            var btn = document.getElementById('pwa-install-btn');
-            if (btn) btn.style.display = 'none';
-          }
-        })();
-      </script>
       {% if request.resolver_match.url_name == 'admin_dashboard' or request.resolver_match.url_name == 'admin_bookings' %}
       <a href="{% url 'admin_create_booking' %}" class="btn btn-gold" id="global-new-booking-btn">
         <i class="fas fa-plus"></i> New Booking
