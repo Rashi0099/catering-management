@@ -52,16 +52,27 @@
           margin-left: -22px; margin-right: -22px;
           padding-left: 22px; padding-right: 22px;
       }
-      
-      /* Sticky Columns for Mobile Context */
-      #reports-table-container th:nth-child(1), #reports-table-container td:nth-child(1) {
-          position: sticky; left: 0; z-index: 10; background: var(--surface); box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      .search-bar {
+          flex-direction: column;
+          align-items: stretch !important;
+          gap: 15px;
       }
-      #reports-table-container th:nth-child(2), #reports-table-container td:nth-child(2) {
-          position: sticky; left: 40px; z-index: 10; background: var(--surface); box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      .search-bar > div {
+          flex-direction: column;
+          width: 100%;
       }
-      #reports-table-container th:nth-child(1), #reports-table-container th:nth-child(2) {
-          background: rgba(46,204,133,0.25) !important;
+      .search-bar .btn {
+          width: 100%;
+          justify-content: center;
+      }
+      #report-filter-form {
+          flex-wrap: wrap;
+      }
+      .filter-select {
+          flex: 1;
+          min-width: calc(50% - 5px) !important;
+          font-size: 0.8rem;
+          height: 38px !important;
       }
   }
 </style>

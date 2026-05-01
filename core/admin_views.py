@@ -1240,7 +1240,7 @@ def staff_detail(request, pk):
     payouts    = member.payouts.all().order_by('-created_at')
     revenue    = member.total_revenue_generated()
     total_paid = member.total_paid_out()
-    pending    = member.pending_payout()
+    pending    = member.pending_payout_amount()
 
     if request.method == 'POST' and request.POST.get('action') == 'add_payout':
         StaffPayout.objects.create(

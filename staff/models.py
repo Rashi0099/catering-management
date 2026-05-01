@@ -184,8 +184,9 @@ class Staff(AbstractBaseUser, PermissionsMixin):
         return result['total'] or 0
 
     def total_paid_out(self):
-        """Alias kept for backward-compatibility with any templates referencing it."""
-        return self.total_earned()
+        from django.db.models import Sum
+        result = self.payouts.filter(status='paid').aggregate(total=Sum('amount'))
+        return result['total'] or 0
 
     def pending_payout_amount(self):
         from django.db.models import Sum

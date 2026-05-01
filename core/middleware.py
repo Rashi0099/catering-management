@@ -39,8 +39,8 @@ class SplitSessionMiddleware(SessionMiddleware):
             if modified or settings.SESSION_SAVE_EVERY_REQUEST:
                 response.set_cookie(
                     cookie_name,
-                    request.session.session_key, max_age=request.session.get_expiry_age(),
-                    expires=request.session.get_expiry_date(),
+                    request.session.session_key,
+                    max_age=request.session.get_expiry_age(),
                     domain=settings.SESSION_COOKIE_DOMAIN,
                     path=settings.SESSION_COOKIE_PATH,
                     secure=settings.SESSION_COOKIE_SECURE or None,

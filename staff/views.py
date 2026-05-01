@@ -76,9 +76,15 @@ def save_fcm_token(request):
 def staff_change_password(request):
     """Handles password change for authenticated staff members."""
     from django.contrib.auth import update_session_auth_hash
-    from django.contrib.auth.forms import PasswordChangeForm
+    from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
+    
+    is_forced = request.user.must_change_password
+    
     if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
+        if is_forced:
+            form = SetPasswordForm(request.user, request.POST)
+        else:
+            form = PasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)  # Prevents logout after change
@@ -91,7 +97,10 @@ def staff_change_password(request):
         else:
             messages.error(request, 'Please correct the error below.')
     else:
-        form = PasswordChangeForm(request.user)
+        if is_forced:
+            form = SetPasswordForm(request.user)
+        else:
+            form = PasswordChangeForm(request.user)
     
     is_forced = request.user.must_change_password
     return render(request, 'staff/password_change.html', {

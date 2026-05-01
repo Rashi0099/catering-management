@@ -782,12 +782,19 @@ function forceDownloadAttendance(url, filename, btn) {
     fetch(url)
     .then(r => r.blob())
     .then(blob => {
-        const a = document.createElement('a');
-        a.href = window.URL.createObjectURL(blob);
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        
+        if (isIOS || isSafari) {
+            window.location.href = url; // Direct download works better on iOS Safari
+        } else {
+            const a = document.createElement('a');
+            a.href = window.URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
         btn.disabled = false;
         btn.innerHTML = oldHtml;
         if(typeof showNotifToast !== 'undefined') showNotifToast("✅ PDF Downloaded Successfully", "success");
