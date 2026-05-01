@@ -184,18 +184,6 @@
 </div>
 </div>
 
-<!-- Custom Category Prompt Modal -->
-<div id="catModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-  <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; width:90%; max-width:350px; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
-    <h3 style="margin-top:0; color:var(--text); font-size:1.1rem; margin-bottom:16px;">New Category</h3>
-    <input type="text" id="catNameInput" placeholder="Enter category name..." style="width:100%; padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); margin-bottom:20px; outline:none;" autofocus>
-    <div style="display:flex; justify-content:flex-end; gap:10px;">
-      <button onclick="closeCatModal(false)" style="padding:8px 16px; background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; cursor:pointer;">Cancel</button>
-      <button onclick="closeCatModal(true)" style="padding:8px 16px; background:var(--gold); border:none; color:#fff; border-radius:6px; cursor:pointer; font-weight:600;">Save</button>
-    </div>
-  </div>
-</div>
-
 <script>
 const CATEGORIES = [
   {% for cat in categories %}
@@ -359,57 +347,36 @@ function deleteNote(id) {
   });
 }
 
-let pendingCatCallback = null;
-let pendingCatSelect = null;
-
 function handleCategoryChange(selectElement, id, card) {
     if (selectElement.value === 'NEW_CATEGORY') {
-        pendingCatSelect = selectElement;
-        pendingCatCallback = (catName) => {
-            if (catName && catName.trim() !== '') {
-                fetch("{% url 'admin_note_category_add' %}", {
-                    method: "POST",
-                    headers: {
-                        'X-CSRFToken': CSRF,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `name=${encodeURIComponent(catName)}`
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.error) {
-                        alert(data.error);
-                        selectElement.value = '';
-                    } else {
-                        CATEGORIES.push({id: data.id, name: data.name});
-                        updateAllCategoryDropdowns(data.id, selectElement);
-                        saveNote(id, card);
-                    }
-                });
-            } else {
-                selectElement.value = '';
-            }
-        };
-        const modal = document.getElementById('catModal');
-        const input = document.getElementById('catNameInput');
-        modal.style.display = 'flex';
-        input.value = '';
-        setTimeout(() => input.focus(), 100);
+        const catName = prompt("Enter new note category name:");
+        if (catName && catName.trim() !== '') {
+            fetch("{% url 'admin_note_category_add' %}", {
+                method: "POST",
+                headers: {
+                    'X-CSRFToken': CSRF,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `name=${encodeURIComponent(catName)}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) {
+                    alert(data.error);
+                    selectElement.value = '';
+                } else {
+                    CATEGORIES.push({id: data.id, name: data.name});
+                    updateAllCategoryDropdowns(data.id, selectElement);
+                    saveNote(id, card);
+                }
+            });
+        } else {
+            selectElement.value = '';
+        }
     } else {
         saveNote(id, card);
     }
-}
-
-function closeCatModal(save) {
-    document.getElementById('catModal').style.display = 'none';
-    if(save && pendingCatCallback) {
-        pendingCatCallback(document.getElementById('catNameInput').value);
-    } else if (!save && pendingCatSelect) {
-        pendingCatSelect.value = '';
-    }
-    pendingCatCallback = null;
-    pendingCatSelect = null;
 }
 
 function updateAllCategoryDropdowns(newOptionId, currentSelectElement) {
