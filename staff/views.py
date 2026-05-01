@@ -229,7 +229,7 @@ def staff_dashboard(request):
             'confirmed_count': my_bookings.filter(status='confirmed').count(),
             'completed_count': my_bookings.filter(status='completed').count(),
         }
-        cache.set(cache_key, cached_stats, 60) # 1 minute cache for fast reaction
+        cache.set(cache_key, cached_stats, 300) # Increased to 5 minutes for "pacha vellum" flow
         
     # Calculate Published Bookings Quota dynamic availability (already optimized with prefetch)
     available_bookings_qs = Booking.objects.filter(

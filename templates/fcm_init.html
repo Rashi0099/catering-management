@@ -441,6 +441,21 @@ function requestFCMToken(onDone) {
 
   // showInstallBtn removed
 
+  // ── Prefetch Core Pages for "Pacha Vellum" flow ─────────────────────────────
+  function prefetchPages() {
+    const pages = ['/staff/dashboard/', '/staff/profile/', '/staff/bookings/'];
+    pages.forEach(url => {
+        if (location.pathname !== url) {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = url;
+            document.head.appendChild(link);
+        }
+    });
+  }
+  if (document.readyState === 'complete') prefetchPages();
+  else window.addEventListener('load', prefetchPages);
+
 })();
 </script>
 
