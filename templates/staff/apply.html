@@ -113,12 +113,13 @@
     
     <div class="grid">
       <div class="form-group">
-        <label>Primary Phone</label>
+        <label>Primary Phone / WhatsApp</label>
         {{ form.phone_1 }}
+        <div style="font-size:0.7rem; color:var(--gold); margin-top:4px; font-weight:600;"><i class="fab fa-whatsapp"></i> Must be correct WhatsApp number as messages will be sent to this.</div>
         <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.phone_1.errors }}</div>
       </div>
       <div class="form-group">
-        <label>Secondary / WhatsApp</label>
+        <label>Secondary Phone</label>
         {{ form.phone_2 }}
         <div style="color:var(--red); font-size:0.8rem; margin-top:4px;">{{ form.phone_2.errors }}</div>
       </div>

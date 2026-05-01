@@ -40,22 +40,35 @@ class StaffApplicationForm(forms.ModelForm):
             self.localities = []
 
     def clean_phone_1(self):
-        phone = self.cleaned_data.get('phone_1')
-        if not phone.isdigit() or len(phone) < 10:
-            raise forms.ValidationError("Enter a valid 10-digit phone number.")
+        phone = self.cleaned_data.get('phone_1', '')
+        if not phone.isdigit() or len(phone) != 10 or not phone[0] in '6789':
+            raise forms.ValidationError("Enter a valid 10-digit primary phone number starting with 6-9.")
         return phone
 
     def clean_guardian_phone(self):
-        phone = self.cleaned_data.get('guardian_phone')
-        if not phone.isdigit() or len(phone) < 10:
-            raise forms.ValidationError("Enter a valid 10-digit guardian phone number.")
+        phone = self.cleaned_data.get('guardian_phone', '')
+        if not phone.isdigit() or len(phone) != 10 or not phone[0] in '6789':
+            raise forms.ValidationError("Enter a valid 10-digit guardian phone number starting with 6-9.")
         return phone
 
     def clean_phone_2(self):
-        phone = self.cleaned_data.get('phone_2')
-        if phone and (not phone.isdigit() or len(phone) < 10):
-            raise forms.ValidationError("Enter a valid 10-digit phone number.")
+        phone = self.cleaned_data.get('phone_2', '')
+        if phone:
+            if not phone.isdigit() or len(phone) != 10 or not phone[0] in '6789':
+                raise forms.ValidationError("Enter a valid 10-digit phone number starting with 6-9.")
         return phone
+
+    def clean_home_address(self):
+        address = self.cleaned_data.get('home_address', '')
+        if len(address.strip()) < 10:
+            raise forms.ValidationError("Please provide a detailed address (minimum 10 characters).")
+        return address
+
+    def clean_height(self):
+        height = self.cleaned_data.get('height', '')
+        if len(height.strip()) < 2:
+            raise forms.ValidationError("Please provide a valid height (e.g. 165 cm or 5'5\").")
+        return height
 
     def clean_date_of_birth(self):
         dob = self.cleaned_data.get('date_of_birth')
