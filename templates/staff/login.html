@@ -77,8 +77,8 @@
     <div class="form-group" style="position:relative;">
       <label>Password</label>
       <input type="password" name="password" id="login-pwd" placeholder="••••••••" required style="padding-right: 40px;"/>
-      <button type="button" onclick="togglePwd()" style="position:absolute; right:10px; top:36px; background:transparent; border:none; color:var(--muted); font-size:1rem; cursor:pointer;">
-        <span id="pwd-eye">👁️</span>
+      <button type="button" onclick="togglePwd()" style="position:absolute; right:10px; top:36px; background:transparent; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center;">
+        <i id="pwd-eye" class="fas fa-eye"></i>
       </button>
     </div>
     <button type="submit" class="btn">Login →</button>
@@ -101,10 +101,10 @@ function togglePwd() {
   const eye = document.getElementById('pwd-eye');
   if(pwd.type === 'password') {
     pwd.type = 'text';
-    eye.textContent = '🙈';
+    eye.className = 'fas fa-eye-slash';
   } else {
     pwd.type = 'password';
-    eye.textContent = '👁️';
+    eye.className = 'fas fa-eye';
   }
 }
 </script>

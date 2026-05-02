@@ -105,7 +105,7 @@ urlpatterns = [
          cache_control(no_cache=True, must_revalidate=True)(
              TemplateView.as_view(
                  template_name='admin/manifest.json',
-                 content_type='application/json'
+                 content_type='application/manifest+json'
              )
          ),
          name='admin_manifest'),

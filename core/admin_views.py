@@ -235,8 +235,17 @@ def booking_detail(request, pk):
             from bookings.models import EventApplication
             # If manually added to event, mark any pending app as approved
             EventApplication.objects.filter(booking=booking, staff_id__in=new_assigned_ids, status='pending').update(status='approved')
-            # If manually removed from event, mark any cancel_request as cancelled
+            # If manually removed from event:
+            # 1. Cancel any cancel_requested apps for removed staff
             EventApplication.objects.filter(booking=booking, status='cancel_requested').exclude(staff_id__in=new_assigned_ids).update(status='cancelled')
+            # 2. Also cancel any APPROVED apps for staff who were manually removed — this is the key fix
+            #    so their dashboard no longer shows the Join/Apply button
+            if removed_ids:
+                EventApplication.objects.filter(
+                    booking=booking,
+                    staff_id__in=removed_ids,
+                    status='approved'
+                ).update(status='cancelled')
             
             messages.success(request, 'Booking updated!')
         elif action == 'add_payment':
@@ -998,9 +1007,8 @@ def handle_staff_application(request, pk, action):
             phone_raw = '91' + phone_raw
             
         msg = (
-            f"Dear {application.full_name},\n\n"
-            f"Thank you for applying to join the Mastan Catering team. Unfortunately, we are not proceeding with your application at this time.\n\n"
-            f"We wish you all the best in your future endeavors."
+            f"Greetings from Mastan Catering. We regret to inform you that your registration application for the staff portal has been rejected.\n\n"
+            f"If you have any questions, please contact our support team."
         )
         wa_link = f"https://wa.me/{phone_raw}?text={urllib.parse.quote(msg)}"
         request.session['auto_whatsapp_url'] = wa_link

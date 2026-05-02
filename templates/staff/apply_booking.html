@@ -4,32 +4,66 @@
 
 {% block extra_css %}
 <style>
-  /* Terms Modal Styles */
+  /* Terms Modal — Mobile-first fix */
   .terms-modal {
-    display: none; position: fixed; inset: 0; 
-    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-    z-index: 2000; align-items: flex-start; justify-content: center;
-    padding: 20px; overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    animation: fadeIn 0.3s ease;
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
   }
   .terms-modal.active { display: flex; }
+
   .terms-modal-content {
-    background: var(--surface); width: 100%; max-width: 600px;
-    border-radius: 16px; margin: auto;
-    padding: 24px; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-    position: relative; animation: slideUp 0.3s ease;
+    background: var(--surface);
+    width: 100%;
+    max-width: 560px;
+    height: 85vh; /* Fallback */
+    height: 85dvh;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes modalScaleUp {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .terms-modal-header {
+    flex-shrink: 0;
+    padding: 20px 20px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .terms-modal-body {
+    flex: 1 1 0;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 20px;
     overscroll-behavior: contain;
   }
-  .terms-close {
-    position: absolute; top: 16px; right: 16px; cursor: pointer;
-    background: rgba(255,255,255,0.05); width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center; border-radius: 50%;
-    color: var(--muted); transition: all 0.2s; border: 1px solid var(--border);
+
+  .terms-modal-footer {
+    flex-shrink: 0;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 0 0 16px 16px;
   }
-  .terms-close:hover { background: rgba(255,255,255,0.1); color: var(--gold); transform: rotate(90deg); }
+
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
 {% endblock %}
 
@@ -118,6 +152,48 @@
     </div>
     {% endif %}
 
+    {% if existing_app %}
+    <div class="panel-hdr" style="margin-bottom:16px;">
+      <div class="panel-title" style="font-size:1.1rem;">Application Status</div>
+    </div>
+    <div style="background:var(--surface); border-radius:12px; border:1px solid var(--border); padding:24px 20px; text-align:center;">
+      {% if existing_app.status == 'approved' %}
+        <i class="fas fa-check-circle" style="font-size:3rem; color:var(--green); margin-bottom:15px;"></i>
+        <h4 style="color:var(--text); margin-bottom:10px; font-family:'Playfair Display',serif; font-size:1.3rem;">Application Approved</h4>
+        <p style="color:var(--muted); font-size:0.9rem; margin-bottom:24px; line-height:1.5;">You are successfully assigned to this event.</p>
+        <form method="post" action="{% url 'staff_cancel_request' booking.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2); width:100%; justify-content:center; padding:14px; border-radius:10px; font-weight:500;" onclick="return confirm('Are you sure you want to request cancellation for this event?');">
+            <i class="fas fa-times-circle" style="margin-right:8px;"></i> Request Cancellation
+          </button>
+        </form>
+      {% elif existing_app.status == 'pending' %}
+        <i class="fas fa-clock" style="font-size:3rem; color:var(--gold); margin-bottom:15px;"></i>
+        <h4 style="color:var(--text); margin-bottom:10px; font-family:'Playfair Display',serif; font-size:1.3rem;">Application Pending</h4>
+        <p style="color:var(--muted); font-size:0.9rem; margin-bottom:24px; line-height:1.5;">Your application is currently under review by the admin.</p>
+        <form method="post" action="{% url 'staff_cancel_request' booking.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn" style="background:rgba(231,76,60,0.1); color:var(--red); border:1px solid rgba(231,76,60,0.2); width:100%; justify-content:center; padding:14px; border-radius:10px; font-weight:500;" onclick="return confirm('Are you sure you want to withdraw your application?');">
+            <i class="fas fa-undo" style="margin-right:8px;"></i> Withdraw Application
+          </button>
+        </form>
+      {% elif existing_app.status == 'cancel_requested' %}
+        <i class="fas fa-exclamation-circle" style="font-size:3rem; color:#f97316; margin-bottom:15px;"></i>
+        <h4 style="color:var(--text); margin-bottom:10px; font-family:'Playfair Display',serif; font-size:1.3rem;">Cancellation Requested</h4>
+        <p style="color:var(--muted); font-size:0.9rem; margin-bottom:0; line-height:1.5;">You have requested to cancel your assignment. Please wait for admin approval.</p>
+      {% elif existing_app.status == 'cancelled' %}
+        <div style="width:64px; height:64px; background:rgba(239,68,68,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+          <i class="fas fa-user-slash" style="font-size:2rem; color:var(--red);"></i>
+        </div>
+        <h4 style="color:var(--text); margin-bottom:8px; font-family:'Playfair Display',serif; font-size:1.3rem;">Removed</h4>
+        <p style="color:var(--muted); font-size:0.95rem; margin-bottom:0; line-height:1.5;">You are no longer assigned to this event or your application was cancelled.</p>
+      {% elif existing_app.status == 'rejected' %}
+        <i class="fas fa-times-circle" style="font-size:3rem; color:var(--red); margin-bottom:15px;"></i>
+        <h4 style="color:var(--text); margin-bottom:10px; font-family:'Playfair Display',serif; font-size:1.3rem;">Application Rejected</h4>
+        <p style="color:var(--muted); font-size:0.9rem; margin-bottom:0; line-height:1.5;">Your application for this event was not approved.</p>
+      {% endif %}
+    </div>
+    {% else %}
     <div class="panel-hdr" style="margin-bottom:16px;">
       <div class="panel-title" style="font-size:1.1rem;">Your Application</div>
     </div>
@@ -137,7 +213,7 @@
         <label style="display:flex; align-items:center; gap:12px; cursor:pointer; margin:0;">
           <input type="checkbox" id="termsCheck" name="agree_terms" required style="width:20px; height:20px; accent-color:var(--gold); margin:0;">
           <span style="font-size:0.88rem; font-weight:normal; text-transform:none; letter-spacing:normal; color:#ddd; line-height:1.4;">
-            I agree to the <a href="{% url 'staff_terms' %}" onclick="openTermsModal(event)" style="color:var(--gold);text-decoration:underline;font-weight:500;">Terms & Conditions</a>
+            I agree to the <a href="{% url 'staff_terms' %}" onclick="openTermsModal(event)" style="color:var(--gold);text-decoration:underline;font-weight:500;">Terms &amp; Conditions</a>
           </span>
         </label>
       </div>
@@ -150,6 +226,7 @@
         {% endif %}
       </button>
     </form>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
@@ -157,12 +234,13 @@
 {% block extra_js %}
 <!-- Terms Modal -->
 <div id="termsModal" class="terms-modal">
-  <div class="terms-modal-content" style="max-height: 85vh; display: flex; flex-direction: column; padding: 20px;">
-    <div style="font-family:'Cormorant Garamond',serif; font-size:1.6rem; font-weight:600; color:var(--gold); margin-bottom:12px; line-height:1.3; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-shrink: 0;">
-      Terms & Conditions
+  <div class="terms-modal-content">
+    <div class="terms-modal-header">
+      <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; color:var(--gold); line-height:1.3;">Terms &amp; Conditions</div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-top:3px;">Read carefully before agreeing</div>
     </div>
     
-    <div id="termsScrollBox" style="font-size:0.95rem; line-height:1.6; color:var(--text); overflow-y: auto; padding-right: 5px; flex-grow: 1; -webkit-overflow-scrolling: touch;">
+    <div class="terms-modal-body" id="termsScrollBox">
       <div style="margin-bottom:15px; font-weight:600; color:var(--gold);">MASTAN കാറ്ററിങ് മാനേജ്മെന്റിൽ.. പാർടൈമായും ജോലി ചെയ്യാനുള്ള "ഉപാധികളും നിബന്ധനകളും"</div>
       {% if terms %}
       <ol style="padding-left:18px; margin-bottom: 0;">
@@ -173,74 +251,49 @@
       {% else %}
       <p style="color:var(--muted); font-style:italic;">No terms have been set yet. Please contact the admin.</p>
       {% endif %}
-      <!-- Small spacer so they literally have to scroll to the very end -->
-      <div style="height: 30px;"></div>
     </div>
     
-    <div style="margin-top:12px; padding-top: 12px; border-top: 1px solid var(--border); text-align:right; display:flex; justify-content:flex-end; gap:10px; flex-shrink: 0;">
-      <button type="button" id="understandBtn" class="btn btn-gold" onclick="closeTermsModal()" disabled style="flex: 1; justify-content: center; font-size: 1.05rem; padding: 12px; opacity: 0.5; filter: grayscale(100%); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: not-allowed;">
-        <i class="fas fa-arrow-down" id="understandIcon" style="margin-right: 8px;"></i>
-        <span id="understandText" style="letter-spacing: 0.03em;">Scroll down to Agree</span>
+    <div class="terms-modal-footer">
+      <button type="button" class="btn btn-gold" onclick="closeTermsModal()"
+        style="width:100%; justify-content:center; font-size:1rem; padding:14px; border-radius:10px;">
+        <i class="fas fa-check-circle" style="margin-right:8px;"></i> I Understand &amp; Agree
       </button>
     </div>
   </div>
 </div>
 
 <script>
-let termsAccepted = false;
-const tb = document.getElementById('termsScrollBox');
-const uBtn = document.getElementById('understandBtn');
-const uIcon = document.getElementById('understandIcon');
-const uText = document.getElementById('understandText');
-
 function openTermsModal(e) {
   if (e) e.preventDefault();
-  document.getElementById('termsModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
-  
-  // Re-check scroll on open in case it's a small screen that fits all
-  setTimeout(checkTermsScroll, 100);
+  const modal = document.getElementById('termsModal');
+  if (modal) {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function closeTermsModal() {
-  if (!termsAccepted) return; // Prevent closing if not accepted
-  document.getElementById('termsModal').classList.remove('active');
-  document.body.style.overflow = 'auto';
-  
-  // Auto-check terms checkbox if it exists on the main page form
-  const cb = document.getElementById('termsCheck');
-  if(cb) cb.checked = true;
-}
-
-function checkTermsScroll() {
-  if (termsAccepted) return;
-  // If content height is smaller than container, auto accept
-  if (tb.scrollHeight <= tb.clientHeight + 1) {
-      acceptTerms();
-      return;
-  }
-  // If scrolled to bottom
-  if (tb.scrollHeight - tb.scrollTop <= tb.clientHeight + 20) {
-      acceptTerms();
+  const modal = document.getElementById('termsModal');
+  if (modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Auto-check terms checkbox
+    const cb = document.getElementById('termsCheck');
+    if (cb) {
+      cb.checked = true;
+      // Scroll to the checkbox so the user knows it's checked
+      cb.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 }
 
-function acceptTerms() {
-    termsAccepted = true;
-    uBtn.disabled = false;
-    uBtn.style.opacity = '1';
-    uBtn.style.filter = 'grayscale(0%)';
-    uBtn.style.cursor = 'pointer';
-    uBtn.classList.add('pulse-anim'); // Add a small visual bounce if needed
-    uIcon.className = 'fas fa-check-circle';
-    uText.innerText = 'I Understand & Agree';
+// Close if tapping outside modal box
+const modalOverlay = document.getElementById('termsModal');
+if (modalOverlay) {
+  modalOverlay.addEventListener('click', function(e) {
+    if (e.target === this) closeTermsModal();
+  });
 }
-
-tb.addEventListener('scroll', checkTermsScroll);
-
-// Close on click outside ONLY IF accepted
-document.getElementById('termsModal').addEventListener('click', function(e) {
-  if (e.target === this && termsAccepted) closeTermsModal();
-});
 </script>
 {% endblock %}

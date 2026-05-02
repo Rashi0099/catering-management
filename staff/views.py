@@ -530,11 +530,15 @@ def staff_apply_booking(request, pk):
     if request.method == 'GET':
         from core.models import TermAndCondition
         terms = TermAndCondition.objects.all()
+        # Check if they already applied or are assigned
+        existing_app = EventApplication.objects.filter(booking=booking, staff=request.user).first()
+        
         return render(request, 'staff/apply_booking.html', {
             'booking': booking,
             'user': request.user,
             'is_double_work': is_double_work,
             'terms': terms,
+            'existing_app': existing_app,
         })
     
     # If POST, process the application
